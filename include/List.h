@@ -522,7 +522,7 @@ public:
 		}
 	}
 
-	void push(T& node) {
+	void push(T node) {
 		T* n = &node;
 		if (head == nullptr) {
 			// The list is empty
@@ -580,18 +580,19 @@ public:
 	}
 
 	void pushNew(T* ref) {
-		T n = *ref;
+		T* n = new T;
+		*n = *ref;
 		if (head == nullptr) {
 			// The list is empty
-			head = &n;
+			head = n;
 			head->next = nullptr;
 			head->prev = nullptr;
 			tail = head;
 		} else {
-			n.next = nullptr;
-			n.prev = tail;
-			tail->next = &n;
-			tail = &n;
+			n->next = nullptr;
+			n->prev = tail;
+			tail->next = n;
+			tail = n;
 		}
 	}
 

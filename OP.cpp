@@ -10,7 +10,7 @@ OP::OP(std::vector<TA*> unvisitedVec, std::vector<std::vector<double>> ttMatrix,
 	mDepot = depot;
 	mStartTime = startTime;
 	mEndTime = endTime;
-	mProcessSolution = Solution(*depot, unvisited, mStartTime, mEndTime);
+	mProcessSolution = Solution(depot, unvisited, mStartTime, mEndTime);
 }
 
 OP::~OP() {

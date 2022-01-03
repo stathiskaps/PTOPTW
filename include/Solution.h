@@ -27,13 +27,13 @@ public:
 		mOpenTime = 0;
 		mCloseTime = 0;
 	};
-	Solution(TA depot, ListTA unvisited, double openTime, double closeTime) {
+	Solution(TA* depot, ListTA unvisited, double openTime, double closeTime) {
 		mScore = 0;
 		mOpenTime = openTime;
 		mCloseTime = closeTime;
 		mUnvisited = unvisited;
-		mWalk.pushNew(&depot);
-		mWalk.pushNew(&depot);
+		mWalk.pushNew(depot);
+		mWalk.pushNew(depot);
 
 		mWalk.first()->arrTime = openTime;
 		mWalk.first()->startOfVisitTime = openTime;
