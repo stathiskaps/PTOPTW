@@ -146,6 +146,11 @@ typedef struct TouristAttraction {
 		std::cout << "default ta printMin" << std::endl;
 	}
 
+	virtual TouristAttraction* clone() const {
+		std::cout << "default ta clone" << std::endl;
+		return new TouristAttraction(*this);
+	};
+
 	
 
 	virtual ~TouristAttraction() {} //virtual destructor to ensure our subclasses are correctly deallocated
@@ -188,6 +193,10 @@ struct Sight : TA {
 		}
 
 		std::cout << out << std::endl;
+	}
+
+	TouristAttraction* clone() const override {
+		return new Sight(*this);
 	}
 
 };
@@ -257,6 +266,10 @@ struct Route : TA {
 		std::cout << out << std::endl;
 	}
 
+	TouristAttraction* clone() const override {
+		return new Route(*this);
+	}
+
 };
 
 struct Cluster {
@@ -283,7 +296,7 @@ struct Cluster {
 	void setCentroid(int id) {
 		double totalLat = .0;
 		double totalLon = .0;
-		double nodesSize = nodes.size();
+		size_t nodesSize = nodes.size();
 		for (auto& node : nodes) {
 			totalLat += node->point.pos.lat;
 			totalLon += node->point.pos.lon;
@@ -324,6 +337,7 @@ public:
 	List<T>() {
 		head = nullptr;
 		tail = nullptr;
+		length = 0;
 	}
 
 	List<T>(T* start) {
@@ -355,30 +369,33 @@ public:
 	}
 
 	void print() {
+		char type = '_';
+		Sight* s = nullptr;
+		Route* r = nullptr;
 		if (head != nullptr)
 		{
 			T* curr = head;
 			while (curr != nullptr)
 			{
-				if(curr == head){
-					std::cout << curr->id << "(" << curr << ")" << "[d]" << "(head)" << "\t<=>\t";
-				} else if (curr == tail){
-					std::cout << curr->id << "(" << curr << ")" << "[d]" << "(tail)";
-				} else {
-					char type = '_';
-					Sight* s = nullptr;
-					Route* r = nullptr;
-					if ((s = dynamic_cast<Sight*>(curr))) {
-						type = 's';
-					}
-					else if ((r = dynamic_cast<Route*>(curr))) {
-						type = 'r';
-					}
+				if ((s = dynamic_cast<Sight*>(curr))) {
+					type = 's';
+				}
+				else if ((r = dynamic_cast<Route*>(curr))) {
+					type = 'r';
+				}
+				if (curr == head) {
+					std::cout << curr->id << "(" << curr << ")" << "[" << type << "]" << "(head)" << "\t <=> \t";
+				}
+				else if (curr == tail) {
+					std::cout << curr->id << "(" << curr << ")" << "[" << type << "]" << "(tail)";
+				}
+				else {
+
 					std::cout << curr->id << "(" << curr << ")" << "[" << type << "]" << "\t<=>\t";
 				}
 				curr = curr->next;
 			}
-			
+
 			// std::cout << "<=\ttail(" << tail << ")";
 			std::cout << std::endl;
 		}
@@ -390,25 +407,26 @@ public:
 
 	void print(std::string msg) {
 		std::cout << msg << std::endl;
+		char type = '_';
+		Sight* s = nullptr;
+		Route* r = nullptr;
 		if (head != nullptr)
 		{
 			T* curr = head;
 			while (curr != nullptr)
 			{
+				if ((s = dynamic_cast<Sight*>(curr))) {
+					type = 's';
+				}
+				else if ((r = dynamic_cast<Route*>(curr))) {
+					type = 'r';
+				}
 				if(curr == head){
-					std::cout << curr->id << "(" << curr << ")" << "[d]" << "(head)" << "\t<=>\t";
+					std::cout << curr->id << "(" << curr << ")" << "[" << type <<  "]" << "(head)" << "\t <=> \t";
 				} else if (curr == tail){
-					std::cout << curr->id << "(" << curr << ")" << "[d]" << "(tail)";
+					std::cout << curr->id << "(" << curr << ")" << "[" << type << "]" << "(tail)";
 				} else {
-					char type = '_';
-					Sight* s = nullptr;
-					Route* r = nullptr;
-					if ((s = dynamic_cast<Sight*>(curr))) {
-						type = 's';
-					}
-					else if ((r = dynamic_cast<Route*>(curr))) {
-						type = 'r';
-					}
+					
 					std::cout << curr->id << "(" << curr << ")" << "[" << type << "]" << "\t<=>\t";
 				}
 				curr = curr->next;
@@ -580,8 +598,8 @@ public:
 	}
 
 	void pushNew(T* ref) {
-		T* n = new T;
-		*n = *ref;
+		T* n = ref->clone();
+		//*n = *ref;
 		if (head == nullptr) {
 			// The list is empty
 			head = n;
@@ -634,22 +652,17 @@ public:
 	}
 
 	int getLength() {
-		print("Printing myself");
 		int length = 0;
-		std::cout << "yikes1" << std::endl;
 		if (head != nullptr)
 		{
-			std::cout << "yikes2" << std::endl;
 			T* curr = head;
 			while (curr != nullptr)
 			{
-				std::cout << "yikes" << length << std::endl;
 				length++;
 				curr = curr->next;
 			}
 		}
 
-		std::cout << "yokos" << length << std::endl;
 		return length;
 	}
 
@@ -704,6 +717,23 @@ public:
 		tail = curr;
 	}
 
+	//void pushNew(TA* ref) {
+	//	Sight* s = nullptr;
+	//	Route* r = nullptr;
+
+	//	if (head == nullptr) {
+	//		if ((s = dynamic_cast<Sight*>(ref))) {
+	//			return;
+	//		}
+	//		else if ((r = dynamic_cast<Route*>(ref))) {
+	//			return;
+	//		}
+	//	}
+	//	else {
+	//		return;
+	//	}
+	//	
+	//}
 
 	//insert ta n right before index
 	void insertAt(TA* n, int index, int arrPointId, int depPointId, std::vector<std::vector<double>> ttMatrix) {

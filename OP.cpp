@@ -1,6 +1,10 @@
 ﻿#include "OP.h"
 
-OP::OP() {}
+OP::OP() {
+	mDepot = nullptr;
+	mStartTime = OPEN_DAY_TIME;
+	mEndTime = MAX_MINUTES;
+}
 
 //Constructor uses the received unvisited TAs, it doesn't create new ones
 OP::OP(std::vector<TA*> unvisitedVec, std::vector<std::vector<double>> ttMatrix, TA* depot, double startTime, double endTime) {
@@ -11,6 +15,16 @@ OP::OP(std::vector<TA*> unvisitedVec, std::vector<std::vector<double>> ttMatrix,
 	mStartTime = startTime;
 	mEndTime = endTime;
 	mProcessSolution = Solution(depot, unvisited, mStartTime, mEndTime);
+}
+
+OP::OP(std::vector<TA*> unvisitedVec, Walk walk, std::vector<std::vector<double>> ttMatrix, TA* depot, double startTime, double endTime) {
+	ListTA unvisited = convertVecToList(unvisitedVec);
+	//mDepot = (unvisited.grabUsingPos(0));	//remove first node from unvisited and store it as depot
+	mTtMatrix = ttMatrix;
+	mDepot = depot;
+	mStartTime = startTime;
+	mEndTime = endTime;
+	mProcessSolution = Solution(depot, walk, unvisited, mStartTime, mEndTime);
 }
 
 OP::~OP() {
@@ -29,11 +43,8 @@ Walk OP::convertVecToList(std::vector<TA*> v) {
 
 std::tuple<int, double, int, int> OP::getBestPos(TA* ta) {
 
-	std::cout << "hi1" << std::endl;
 	double minShift = DBL_MAX;
-	std::cout << "hiccups1" << std::endl;
 	int length = mProcessSolution.mWalk.getLength();
-	std::cout << "hiccups2" << std::endl;
 	double shift;
 	int pos = 1;
 	std::tuple<int, double, int, int> res = std::make_tuple(-1, -1, -1, -1);
@@ -46,7 +57,6 @@ std::tuple<int, double, int, int> OP::getBestPos(TA* ta) {
 	Sight* s = nullptr;
 	Route* r = nullptr;
 
-	std::cout << "hi2" << std::endl;
 	int tempArrPointId, tempDepPointId;
 
 	if (length < 2) {
@@ -54,7 +64,7 @@ std::tuple<int, double, int, int> OP::getBestPos(TA* ta) {
 		return res;
 	}
 	else {
-		std::cout << "hi3" << std::endl;
+
 		if ((s = dynamic_cast<Sight*>(ta))) {
 			while (curr != nullptr) {
 				shift = mTtMatrix[temp->depPointId][s->point.id] + s->visitDuration + mTtMatrix[s->point.id][curr->arrPointId] - mTtMatrix[temp->depPointId][curr->arrPointId];
@@ -76,7 +86,6 @@ std::tuple<int, double, int, int> OP::getBestPos(TA* ta) {
 		}
 		else if ((r = dynamic_cast<Route*>(ta))) {
 
-			std::cout << "hi4" << std::endl;
 			while (curr != nullptr) {
 				//We got two points to check
 				int shift1 = mTtMatrix[temp->depPointId][r->edges[0].id] + r->visitDuration + mTtMatrix[r->edges[1].id][curr->arrPointId] - mTtMatrix[temp->depPointId][curr->arrPointId];
@@ -103,8 +112,6 @@ std::tuple<int, double, int, int> OP::getBestPos(TA* ta) {
 						std::get<3>(res) = tempDepPointId;
 					}
 				}
-
-				std::cout << "hi5" << std::endl;
 
 				pos++;
 				curr = curr->next;
@@ -165,7 +172,9 @@ bool OP::updateTimes(int startIndex, bool smart) {
 	curr->maxShift = curr->timeWindow.closeTime - curr->depTime;
 	curr = curr->prev;
 	while (curr != nullptr) {
-		curr->maxShift = curr->next->maxShift;
+		if (curr->next != nullptr) {
+			curr->maxShift = curr->next->maxShift;
+		}
 		curr = curr->prev;
 	}
 
@@ -242,7 +251,6 @@ bool OP::compareByProfit(const TA a, const TA b) {
 }
 
 int OP::LocalSearch() {
-	std::cout << "Local search step" << std::endl;
 	double minShift;
 	int pos, bestPos;
 	double maxRation = DBL_MIN, ratio;
@@ -254,8 +262,8 @@ int OP::LocalSearch() {
 	std::vector<TA*> UnvisitedA, UnvisitedB;
 
 	while(curr != nullptr){
-		int leftDuration = meanPoint - curr->timeWindow.openTime;
-        int rightDuration = curr->timeWindow.closeTime - meanPoint;
+		double leftDuration = meanPoint - curr->timeWindow.openTime;
+        double rightDuration = curr->timeWindow.closeTime - meanPoint;
 
         if(leftDuration > rightDuration){
 			TA* temp = curr;
@@ -267,56 +275,64 @@ int OP::LocalSearch() {
 		curr = curr->next;
 	}
 
-	std::cout << "step 1" << std::endl; 
+	Walk t;
+	curr = mProcessSolution.mWalk.first();
+	int min_time_distance = DBL_MAX;
+	std::string ta_cut = mProcessSolution.mWalk.last()->id;
+	while (curr != nullptr) {
+		if (curr->next != nullptr) {
+			if (curr->depTime <= meanPoint && curr->next->depTime >= meanPoint) {
+				ta_cut = curr->next->id;
+				break;
+			}
+			else {
+				t.pushNew(curr);
+			}
+		}
+	}
 
-	OP subproblemA = OP(UnvisitedA, mTtMatrix, mDepot, mStartTime, meanPoint);
+	if (ta_cut == mProcessSolution.mWalk.last()->id) {
+		std::cout << "Getting whole walk for subproblemA" << std::endl;
+	}
 
-	subproblemA.mProcessSolution.print("mProcessSolution");
-
-	std::cout << "step 2" << std::endl;
-
+	OPTW subproblemA = OPTW(UnvisitedA, mTtMatrix, mDepot, mStartTime, meanPoint);
+	subproblemA.mProcessSolution.print("subproblemA mProcessSolution");
 	Walk walkA = subproblemA.Construct();
-
-	std::cout << "step 3" << std::endl;
-
-	walkA.print("WalkA before:");
-
-	std::cout << "length:" << walkA.getLength() << std::endl;
-
 	TA* lastNode = walkA.get(walkA.getLength() - 2);
 
-	std::cout << "lastNode:" << lastNode->id << std::endl; 
-
-	OP subproblemB = OP(UnvisitedB, mTtMatrix, lastNode, meanPoint, mEndTime);
-
+	OPTW subproblemB = OPTW(UnvisitedB, mTtMatrix, lastNode, meanPoint, mEndTime);
 	Walk walkB = subproblemB.Construct();
-
-	walkB.print("WalkB before:");
 
 	plog::init(plog::debug, "Hello.txt"); 
 	PLOGD << "Hello log!"; // short macro
+
+	walkA.print("walkA");
+	walkB.print("walkB");
 
 	walkA.removeLast();
 	walkB.removeFirst();
 	walkB.removeLast();
 
-	// walkA.print("WalkA after:");
-	// walkB.print("WalkB after:");
-
 	Walk walkC = walkA + walkB;
 	walkC.push(mDepot);
-	// walkC.print("WalkC:");
 
-	subproblemA.mProcessSolution.mUnvisited.print("subproblemA.mProcessSolution.mUnvisited:");
-	subproblemB.mProcessSolution.mUnvisited.print("subproblemB.mProcessSolution.mUnvisited:");
+	//subproblemA.mProcessSolution.mUnvisited.print("subproblemA.mProcessSolution.mUnvisited:");
+	//subproblemB.mProcessSolution.mUnvisited.print("subproblemB.mProcessSolution.mUnvisited:");
 	ListTA UnvisitedC = subproblemA.mProcessSolution.mUnvisited + subproblemB.mProcessSolution.mUnvisited;
-	// UnvisitedC.print("Unvisited C:");
+
+	subproblemA.mProcessSolution.print("subproblemA");
+	subproblemB.mProcessSolution.print("subproblemB");
 
 	mProcessSolution.mUnvisited = UnvisitedC;
 	mProcessSolution.mWalk = walkC;
 	mProcessSolution.mScore = mProcessSolution.mWalk.collectProfit();
 
-	mProcessSolution.print("mProcessSolution:");
+	std::cout << mProcessSolution.mWalk.getLength() << std::endl;
+	std::cout << mProcessSolution.mUnvisited.getLength() << std::endl;
+
+	mProcessSolution.print("mProcessSolution");
+
+	return mProcessSolution.mScore;
 	
 	// curr = walkA.first();
 	// Walk walkC;
@@ -328,7 +344,7 @@ int OP::LocalSearch() {
 
 
 
-	raise(SIGINT);
+	//raise(SIGINT);
 
     // std::vector<std::string> A, B;
 
@@ -350,22 +366,19 @@ int OP::LocalSearch() {
     // }
 
 	//Step 2: Construct two routes
-	return 0;
 
 }
 
 Walk OP::Construct(){
 	double minShift;
-	int pos, bestPos;
+	int pos, bestPos = DEFAULT_POS;
 	double maxRatio = DBL_MIN, ratio;
 	std::string nodeId;
 	TA* nodeToInsert = nullptr;
 	TA* curr;
 
-	int bestArrPointId, bestDepPointId;
-	int arrPointId, depPointId;
-
-	std::cout << "yo1" << std::endl;
+	int bestArrPointId = DEFAULT_POINT_ID, bestDepPointId = DEFAULT_POINT_ID;
+	int arrPointId = DEFAULT_POINT_ID, depPointId = DEFAULT_POINT_ID;
 
 	while (true)
 	{
@@ -377,10 +390,7 @@ Walk OP::Construct(){
 		while (curr != nullptr) {
 			minShift = DBL_MAX;
 
-			std::cout << "ya1" << std::endl;
 			std::tie(pos, minShift, arrPointId, depPointId) = getBestPos(curr);
-
-			std::cout << "ya2" << std::endl;
 
 			if (pos == -1) { //insertion is not feasible
 				curr = curr->next;
@@ -401,13 +411,9 @@ Walk OP::Construct(){
 			curr = curr->next;
 		}
 
-		std::cout << "yo2" << std::endl;
-
 		if (nodeId == DEFAULT_TA_ID) {
 			break;
 		}
-
-		std::cout << "yo3" << std::endl;
 		
 		nodeToInsert = mProcessSolution.mUnvisited.grabUsingID(nodeId);
 		if(nodeToInsert != nullptr){
@@ -417,83 +423,22 @@ Walk OP::Construct(){
 			std::cerr << "Didn't find node " << nodeId << std::endl;
 			std::exit(1);
 		}
-
-		std::cout << "yo4" << std::endl;
 	}
 	return mProcessSolution.mWalk;
-}
-
-Walk OP::Construct(ListTA unvisited, double startTime, double endTime){
-	Walk walk;
-	double minShift;
-	int pos, bestPos;
-	double maxRatio = DBL_MIN, ratio;
-	std::string nodeId;
-	TA* nodeToInsert = nullptr;
-	TA* curr;
-
-	int bestArrPointId, bestDepPointId;
-	int arrPointId, depPointId;
-
-	while (true)
-	{
-		maxRatio = DBL_MIN;
-		nodeId = DEFAULT_TA_ID;
-		curr = unvisited.first();
-
-		while (curr != nullptr) {
-			minShift = DBL_MAX;
-			std::tie(pos, minShift, arrPointId, depPointId) = getBestPos(curr);
-
-			if (pos == -1) { //insertion is not feasible
-				curr = curr->next;
-				continue;
-			}
-
-			ratio = pow(curr->profit, 2) / minShift;	//Ratioi = (Si)^2/Shifti
-
-			if (maxRatio < ratio) //check each ratio
-			{
-				maxRatio = ratio;
-				nodeId = curr->id;
-				bestPos = pos;
-				bestArrPointId = arrPointId;
-				bestDepPointId = depPointId;
-			}
-
-			curr = curr->next;
-		}
-
-		//if we have reached a point where there is no node which can be inserted, then we stop the search
-		if (nodeId == DEFAULT_TA_ID) {
-			break;
-		}
-		
-		nodeToInsert = unvisited.grabUsingID(nodeId);
-		if(nodeToInsert != nullptr){
-			walk.insertAt(nodeToInsert, bestPos, bestArrPointId, bestDepPointId, mTtMatrix); //add it to route
-			updateTimes(bestPos, true);
-		} else {
-			std::cerr << "Didn't find node " << nodeId << std::endl;
-			std::exit(1);
-		}
-	}
-
-	return walk;
 }
 
 int OP::Insert() {
 	std::cout << "Insert step" << std::endl;
 	double minShift;
-	int pos, bestPos;
+	int pos, bestPos = DEFAULT_POS;
 	double maxRatio = DBL_MIN, ratio;
 	std::string nodeId;
 	//List<TA> unvisited = sol.mUnvisited.copy();
 	TA* nodeToInsert = nullptr;
 	TA* curr;
 
-	int bestArrPointId, bestDepPointId;
-	int arrPointId, depPointId;
+	int bestArrPointId = DEFAULT_POINT_ID, bestDepPointId = DEFAULT_POINT_ID;
+	int arrPointId = DEFAULT_POINT_ID, depPointId = DEFAULT_POINT_ID;
 
 	std::cout << "Walk: " << std::endl;
 	mProcessSolution.mWalk.print();
@@ -588,9 +533,9 @@ Solution OP::solve() {
 
 	while (timesNotImproved < MAX_TIMES_NOT_IMPROVED) {
 
-		LocalSearch();
+		int score = LocalSearch();
 
-		int score = Insert();
+		//int score = Insert();
 
 		if (score > bestScore) {
 			bestScore = score;
@@ -616,7 +561,11 @@ Solution OP::solve() {
 			R = 1;
 		}
 
+		mProcessSolution.print("mProcessSolution before shake");
+
 		Shake(S, R, numOfPois);
+
+		mProcessSolution.print("mProcessSolution after shake");
 		S += R;
 		R += 1;
 		
@@ -710,7 +659,6 @@ bool TOPTW::validate() {
 
 std::tuple<int, double, int, int> OPTW::getBestPos(TA* ta)
 {
-	std::cout << "yyoooo" << std::endl;
 	double minShift = DBL_MAX;
 	int length = mProcessSolution.mWalk.getLength();
 	double arrTime, waitDuration, startOfVisitTime, startOfVisitTime1, startOfVisitTime2, depTime, depTime1, depTime2, shift;
@@ -888,7 +836,12 @@ bool OPTW::updateTimes(int startIndex, bool smart) {
 	curr->maxShift = curr->timeWindow.closeTime - curr->depTime;
 	curr = curr->prev;
 	while (curr != nullptr) {
-		curr->maxShift = std::min(curr->timeWindow.closeTime - curr->depTime, curr->next->waitDuration + curr->next->maxShift);
+		if (curr->next != nullptr) {
+			curr->maxShift = std::min(curr->timeWindow.closeTime - curr->depTime, curr->next->waitDuration + curr->next->maxShift);
+		}
+		else {
+			curr->maxShift = curr->timeWindow.closeTime - curr->depTime;
+		}
 		curr = curr->prev;
 	}
 
@@ -922,7 +875,12 @@ bool TOPTW::updateTimes(int startIndex, bool smart) {
 	curr->maxShift = curr->timeWindow.closeTime - curr->depTime;
 	curr = curr->prev;
 	while (curr != nullptr) {
-		curr->maxShift = std::min(curr->timeWindow.closeTime - curr->depTime, curr->next->waitDuration + curr->next->maxShift);
+		if (curr->next != nullptr) {
+			curr->maxShift = std::min(curr->timeWindow.closeTime - curr->depTime, curr->next->waitDuration + curr->next->maxShift);
+		}
+		else {
+			curr->maxShift = curr->timeWindow.closeTime - curr->depTime;
+		}
 		curr = curr->prev;
 	}
 

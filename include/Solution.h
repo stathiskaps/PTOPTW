@@ -41,6 +41,14 @@ public:
 		mWalk.last()->timeWindow.closeTime = closeTime;
 		mWalk.last()->maxShift = closeTime - openTime;
 	};
+	Solution(TA* depot, Walk walk, ListTA unvisited, double openTime, double closeTime) {
+		mScore = 0;
+		mOpenTime = openTime;
+		mCloseTime = closeTime;
+		mUnvisited = unvisited;
+		mWalk = walk;
+	};
+
 	~Solution() {};
 	void SetScore(int score) { mScore = score; }
 	int GetScore() { return mScore; }
@@ -72,12 +80,15 @@ public:
 	}
 
 	void print(std::string msg) {
+		std::cout << "||======================================================================||" << std::endl;
 		std::cout << msg << std::endl;
+		std::cout << "----------------------------------------------------------------------" << std::endl;
 		mUnvisited.print("Unvisited:");
 		mWalk.print("Route:");
 		std::cout << "Score: " << mScore << std::endl;
 		std::cout << "OpenTime:" << mOpenTime << std::endl;
 		std::cout << "CloseTime:" << mCloseTime << std::endl;
+		std::cout << "||======================================================================||" << std::endl;
 	}
 
 	TA* toTA() {

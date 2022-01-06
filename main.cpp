@@ -38,7 +38,7 @@ double GetEuclideanDistance2(int x1, int y1, int x2, int y2)	//returns euclidean
 
 std::tuple<std::vector<std::vector<double>>, double> calcTravelTimesMatrix2(std::vector<Point>& points)
 {
-	int pointsSize = points.size();
+	size_t pointsSize = points.size();
 	std::vector<std::vector<double>> ttMatrix;
 	double totalTravelTime = 0;
 	double meanTravelTime;

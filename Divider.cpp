@@ -193,7 +193,7 @@ std::vector<Cluster> Divider::intervals(std::vector<TA*> attractions) {
 			//get active nodes of interval
 			std::vector < std::string > activeNodes = getActiveNodes(timeEdges, std::get<0>(bestInterval), std::get<1>(bestInterval));
 
-			uint16_t activeNodesSize = activeNodes.size();
+			size_t activeNodesSize = activeNodes.size();
 			if (activeNodesSize == 0) {
 				std::cout << "No active nodes found" << std::endl;
 				break;

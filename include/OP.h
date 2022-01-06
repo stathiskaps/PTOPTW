@@ -25,7 +25,6 @@ private:
 	int Insert();
 	int LocalSearch();
 	Walk Construct();
-	Walk Construct(ListTA, double, double);
 	void Shake(int, int, int);
 	void SaveSolution(Solution); 
 	void SendSolution(Solution);
@@ -38,6 +37,7 @@ protected:
 public:
 	OP();
 	OP(std::vector<TA*>, std::vector<std::vector<double>>, TA*, double, double);
+	OP(std::vector<TA*>, Walk, std::vector<std::vector<double>>, TA*, double, double);
 	~OP();
 	Solution solve();
 	virtual bool validate();
