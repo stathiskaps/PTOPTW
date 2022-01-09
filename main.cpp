@@ -43,13 +43,21 @@ std::tuple<std::vector<std::vector<double>>, double> calcTravelTimesMatrix2(std:
 	double totalTravelTime = 0;
 	double meanTravelTime;
 	double val;
+	std::cout << "\t";
+	for (int i = 0; i < pointsSize; ++i) {
+		std::cout << i << "\t";
+	}
+	std::cout << std::endl;
 	for (int i = 0; i < pointsSize; ++i) {
 		std::vector<double> vec;
+		std::cout << i << ":\t";
 		for (int j = 0; j < pointsSize; j++) {
 			val = GetEuclideanDistance2(points.at(i).pos.lat, points.at(i).pos.lon, points.at(j).pos.lat, points.at(j).pos.lon);
 			vec.push_back(val);
+			std::cout << val << "\t";
 			totalTravelTime += val;
 		}
+		std::cout << std::endl;
 		ttMatrix.push_back(vec);
 	}
 

@@ -26,7 +26,8 @@ private:
 	int LocalSearch();
 	Walk Construct();
 	void Shake(int, int, int);
-	void SaveSolution(Solution); 
+	void SaveSolution(Solution);
+	void print(std::string);
 	void SendSolution(Solution);
 	static bool compareByProfit(const TA a, const TA b);
 protected:
@@ -37,7 +38,7 @@ protected:
 public:
 	OP();
 	OP(std::vector<TA*>, std::vector<std::vector<double>>, TA*, double, double);
-	OP(std::vector<TA*>, Walk, std::vector<std::vector<double>>, TA*, double, double);
+	OP(std::vector<TA*>, Walk, std::vector<std::vector<double>>, double, double);
 	~OP();
 	Solution solve();
 	virtual bool validate();

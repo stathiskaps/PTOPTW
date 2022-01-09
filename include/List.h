@@ -1,17 +1,14 @@
-﻿#include <iostream>
+﻿#pragma once
+
+#include <iostream>
 #include <algorithm>
 #include <tuple>
 #include <limits>
 #include <cfloat>
 #include "Definitions.h"
 
-#ifndef LIST_H
-#define LIST_H
-
 enum class touristAttractionType {none, sight, route};
 enum class sightCategory {none, depot, museum, agora};
-
-
 
 struct Position {
 	double lat, lon;
@@ -151,6 +148,15 @@ typedef struct TouristAttraction {
 		return new TouristAttraction(*this);
 	};
 
+	void reset() {
+		visitDuration = 0;
+		arrTime = .0;
+		waitDuration = .0;
+		startOfVisitTime = .0;
+		depTime = .0;
+		shift = .0;
+		maxShift = .0;
+	}
 	
 
 	virtual ~TouristAttraction() {} //virtual destructor to ensure our subclasses are correctly deallocated
@@ -666,6 +672,25 @@ public:
 		return length;
 	}
 
+	std::tuple<List<T>, List<T>> splitAt(int index) {
+		T* curr = head;
+		std::tuple<List<T>, List<T>> parts;
+		int pos = 0;
+		while (curr != nullptr) {
+			if (pos >= index) {
+				std::get<0>(parts).pushNew(curr);
+			}
+			else {
+				std::get<1>(parts).pushNew(curr);
+			}
+			
+			pos++;
+			curr = curr->next;
+		}
+
+		return;
+	}
+
 	void setLength() {
 		this->length = this->getLength();
 	}
@@ -717,23 +742,15 @@ public:
 		tail = curr;
 	}
 
-	//void pushNew(TA* ref) {
-	//	Sight* s = nullptr;
-	//	Route* r = nullptr;
-
-	//	if (head == nullptr) {
-	//		if ((s = dynamic_cast<Sight*>(ref))) {
-	//			return;
-	//		}
-	//		else if ((r = dynamic_cast<Route*>(ref))) {
-	//			return;
-	//		}
-	//	}
-	//	else {
-	//		return;
-	//	}
-	//	
-	//}
+	void printMin(std::string msg) {
+		std::cout << msg << std::endl;
+		TA* curr = head;
+		while (curr != nullptr) {
+			std::cout << curr->id << "\t";
+			curr = curr->next;
+		}
+		std::cout << std::endl;
+	}
 
 	//insert ta n right before index
 	void insertAt(TA* n, int index, int arrPointId, int depPointId, std::vector<std::vector<double>> ttMatrix) {
@@ -801,6 +818,36 @@ public:
 			copy.pushNew(curr);
 			curr = curr->next;
 		}
+		return copy;
+	}
+
+	TouristAttractionList copyPart(const int startIndex, const int endIndex) {
+		if (startIndex > endIndex) {
+			std::cerr << "Invalid arguments" << std::endl;
+			std::exit(1);
+		}
+		TouristAttractionList copy;
+		TA* curr = head;
+		bool reachedEndIndex = false;
+		int pos = 0;
+		while (curr != nullptr) {
+			if (pos >= startIndex) {
+				copy.pushNew(curr);
+
+				if (pos == endIndex) {
+					reachedEndIndex = true;
+					break;
+				}
+			}
+
+			pos++;
+			curr = curr->next;
+		}
+
+		if (!reachedEndIndex) {
+			std::cout << "Didn't found the end index so returned copied until the end of the list" << std::endl;
+		}
+
 		return copy;
 	}
 
@@ -953,6 +1000,21 @@ public:
 		}
 	}
 
+	std::tuple<TouristAttractionList, TouristAttractionList> splitOnDepTime(double depTime) {
+		TA* curr = head;
+		std::tuple<TouristAttractionList, TouristAttractionList> lists;
+		while (curr != nullptr) {
+			if (curr->depTime <= depTime) {
+				std::get<0>(lists).pushNew(curr);
+			}
+			else {
+				std::get<1>(lists).pushNew(curr);
+			}
+			curr = curr->next;
+		}
+		return lists;
+	}
+
 
 	double getDuration() {
 		if (head == nullptr) {
@@ -970,11 +1032,41 @@ public:
 		}
 		return totalProfit;
 	}
+
+	bool isValid(bool check_window, double Tmax, std::vector<std::vector<double>>& ttMatrix ) {
+		TA* curr = head;
+		if (curr == nullptr) {
+			std::cout << "List is empty" << std::endl;
+			return false;
+		}
+		while (curr != nullptr) {
+			if (curr->startOfVisitTime != curr->arrTime + curr->waitDuration) {
+				std::cout << "[" << curr->id << "] StartOfVisitTime(" << curr->startOfVisitTime << ") != arrTime(" << curr->arrTime << ")" << std::endl;
+				return false;
+			}
+
+			if (curr->depTime != curr->startOfVisitTime + curr->visitDuration) {
+				std::cout << "[" << curr->id << "] depTime(" << curr->depTime << ") != startOfVisitTime(" << curr->startOfVisitTime << ") + visitDuration(" << curr->visitDuration << ")" << std::endl;
+				return false;
+			}
+
+			if (check_window && curr->depTime > curr->timeWindow.closeTime) {
+				std::cout << "[" << curr->id << "] depTime(" << curr->depTime << ") > closeTime(" << curr->timeWindow.closeTime << ")" << std::endl;
+				return false;
+			}
+
+			if (curr->next != nullptr) {
+				if (curr->next->arrTime != curr->depTime + ttMatrix[curr->depPointId][curr->next->arrPointId]) {
+					std::cout << "[" << curr->id << "] next->arrTime(" << curr->next->arrTime << ") != depTime(" << curr->depTime << ") + timeTravel[" << curr->depPointId << "][" << curr->next->arrPointId << "](" << ttMatrix[curr->depPointId][curr->next->arrPointId] << ")" << std::endl;
+					return false;
+				}
+			}
+
+			curr = curr->next;
+		}
+
+		return true;
+	}
 } ListTA; 
 
 using Walk = ListTA;
-
-
-
-
-#endif

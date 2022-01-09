@@ -41,7 +41,7 @@ public:
 		mWalk.last()->timeWindow.closeTime = closeTime;
 		mWalk.last()->maxShift = closeTime - openTime;
 	};
-	Solution(TA* depot, Walk walk, ListTA unvisited, double openTime, double closeTime) {
+	Solution(Walk walk, ListTA unvisited, double openTime, double closeTime) {
 		mScore = 0;
 		mOpenTime = openTime;
 		mCloseTime = closeTime;
