@@ -44,91 +44,96 @@ struct TimeWindow {
 	double closeTime;
 };
 
+struct Activity {
+	int addedInBucket = 0;
+	int addedInWalk = 0;
+};
+
 typedef struct TouristAttraction {
-	std::string id;
+	const std::string id;
 	Point point;
 	TimeWindow timeWindow;
-	touristAttractionType type;
-	sightCategory category;
-	double visitDuration, arrTime, waitDuration, startOfVisitTime, depTime, shift, maxShift;
-	int profit, route, cluster;
+	const touristAttractionType type;
+	const sightCategory category;
+	const double visitDuration = 0;
+	const int profit;
+	double arrTime, waitDuration, startOfVisitTime, depTime, shift, maxShift;
+	int route, cluster;
 	double minDist;  // default infinite dist to nearest cluster
 	int arrPointId, depPointId;
 	TouristAttraction* next;
 	TouristAttraction* prev;
+	std::vector<Activity> buckets;
 
 	//default constructor
-	TouristAttraction() {
-		id = DEFAULT_TA_ID;
-		point = Point();
-		visitDuration = .0;
-		profit = 0;
-		timeWindow.openTime = .0;
-		timeWindow.closeTime = .0;
-		arrTime = .0;
-		waitDuration = .0;
-		startOfVisitTime = .0;
-		depTime = .0;
-		shift = .0;
-		maxShift = .0;
-		route = -1;
-		cluster = -1;
-		minDist = DBL_MAX;
-		arrPointId = DEFAULT_POINT_ID;
-		depPointId = DEFAULT_POINT_ID;
-		type = touristAttractionType::sight;
-		category = sightCategory::none;
-		next = nullptr;
-		prev = nullptr;
+	TouristAttraction()
+		: id(DEFAULT_TA_ID), 
+		point(Point()), 
+		visitDuration(.0), 
+		profit(0), 
+		timeWindow(TimeWindow{.0, .0}), 
+		arrTime(.0),
+		waitDuration(.0), 
+		startOfVisitTime(.0), 
+		depTime(.0), 
+		shift(.0), 
+		maxShift(.0), 
+		route(-1), 
+		cluster(-1), 
+		minDist(DBL_MAX),
+		arrPointId(DEFAULT_POINT_ID), 
+		depPointId(DEFAULT_POINT_ID), 
+		type(touristAttractionType::sight), 
+		category(sightCategory::none),
+		next(nullptr), prev(nullptr)
+	{
 	}
 
-	//dummy constructor
-	TouristAttraction(Point p) {
-		id = DEFAULT_DEPOT_ID;
-		point = p;
-		visitDuration = .0;
-		profit = 0;
-		timeWindow.openTime = .0;
-		timeWindow.closeTime = .0;
-		arrTime = .0;
-		waitDuration = .0;
-		startOfVisitTime = .0;
-		depTime = .0;
-		shift = .0;
-		maxShift = .0;
-		route = -1;
-		cluster = -1;
-		minDist = DBL_MAX;
-		arrPointId = p.id;
-		depPointId = p.id;
-		type = touristAttractionType::sight;
-		category = sightCategory::none;
-		next = nullptr;
-		prev = nullptr;
+	//default constructor
+	TouristAttraction(Point p)
+		: id(DEFAULT_TA_ID),
+		point(p),
+		visitDuration(.0),
+		profit(0),
+		timeWindow(TimeWindow{ .0, .0 }),
+		arrTime(.0),
+		waitDuration(.0),
+		startOfVisitTime(.0),
+		depTime(.0),
+		shift(.0),
+		maxShift(.0),
+		route(-1),
+		cluster(-1),
+		minDist(DBL_MAX),
+		arrPointId(DEFAULT_POINT_ID),
+		depPointId(DEFAULT_POINT_ID),
+		type(touristAttractionType::sight),
+		category(sightCategory::none),
+		next(nullptr), prev(nullptr)
+	{
 	}
 
-	TouristAttraction(std::string pId, Point p, double pVisitDuration, int pProfit, double pOpenTime, double pCloseTime){
-		id = pId;
-		point = p;
-		visitDuration = pVisitDuration;
-		profit = pProfit;
-		timeWindow.openTime = pOpenTime;
-		timeWindow.closeTime = pCloseTime;
-		arrTime = 0;
-		waitDuration = 0;
-		startOfVisitTime = 0;
-		depTime = 0;
-		shift = 0;
-		maxShift = 0;
-		route = -1;
-		cluster = -1;
-		minDist = DBL_MAX;
-		arrPointId = p.id;
-		depPointId = p.id;
-		type = touristAttractionType::sight;
-		category = sightCategory::none;
-		next = nullptr;
-		prev = nullptr;
+	TouristAttraction(std::string pId, Point p, double pVisitDuration, int pProfit, double pOpenTime, double pCloseTime)
+		: id(pId),
+		point(p),
+		visitDuration(pVisitDuration),
+		profit(pProfit),
+		timeWindow(TimeWindow{ pOpenTime, pCloseTime }),
+		arrTime(.0),
+		waitDuration(.0),
+		startOfVisitTime(.0),
+		depTime(.0),
+		shift(.0),
+		maxShift(.0),
+		route(-1),
+		cluster(-1),
+		minDist(DBL_MAX),
+		arrPointId(DEFAULT_POINT_ID),
+		depPointId(DEFAULT_POINT_ID),
+		type(touristAttractionType::sight),
+		category(sightCategory::none),
+		next(nullptr), prev(nullptr)
+	{
 	}
 
 	double euclidean_distance(TouristAttraction ta) { 
@@ -149,7 +154,6 @@ typedef struct TouristAttraction {
 	};
 
 	void reset() {
-		visitDuration = 0;
 		arrTime = .0;
 		waitDuration = .0;
 		startOfVisitTime = .0;
@@ -210,29 +214,10 @@ struct Sight : TA {
 struct Route : TA {
 
 	Point edges[2];
-	Route(std::string pId, Point p, Point p1, Point p2, double pVisitDuration, int pProfit, double pOpenTime, double pCloseTime) {
-		id = pId;
-		point = p;
-		edges[0] = p1;
-		edges[1] = p2;
-		visitDuration = pVisitDuration;
-		profit = pProfit;
-		timeWindow.openTime = pOpenTime;
-		timeWindow.closeTime = pCloseTime;
-		arrTime = 0;
-		waitDuration = 0;
-		startOfVisitTime = 0;
-		depTime = 0;
-		shift = 0;
-		maxShift = 0;
-		route = -1;
-		cluster = -1;
-		minDist = DBL_MAX;
-		arrPointId = DEFAULT_POINT_ID;
-		depPointId = DEFAULT_POINT_ID;
-		type = touristAttractionType::route;
-		category = sightCategory::none;
-	}
+
+	Route(std::string pId, Point p, Point p1, Point p2, double pVisitDuration, int pProfit, double pOpenTime, double pCloseTime) :
+		TouristAttraction(pId, p, pVisitDuration, pProfit, pOpenTime, pCloseTime), edges{p1, p2}
+	{}
 
 	void print() override {
 		std::cout << "id: " << id
