@@ -44,9 +44,9 @@ struct TimeWindow {
 	double closeTime;
 };
 
-struct Activity {
-	int addedInBucket = 0;
-	int addedInWalk = 0;
+struct BucketActivity {
+	int inBucket = 0;
+	int inWalk = 0;
 };
 
 typedef struct TouristAttraction {
@@ -63,27 +63,28 @@ typedef struct TouristAttraction {
 	int arrPointId, depPointId;
 	TouristAttraction* next;
 	TouristAttraction* prev;
-	std::vector<Activity> buckets;
+	BucketActivity bucketActivities[2];
+
 
 	//default constructor
 	TouristAttraction()
-		: id(DEFAULT_TA_ID), 
-		point(Point()), 
-		visitDuration(.0), 
-		profit(0), 
-		timeWindow(TimeWindow{.0, .0}), 
+		: id(DEFAULT_TA_ID),
+		point(Point()),
+		visitDuration(.0),
+		profit(0),
+		timeWindow(TimeWindow{ .0, .0 }),
 		arrTime(.0),
-		waitDuration(.0), 
-		startOfVisitTime(.0), 
-		depTime(.0), 
-		shift(.0), 
-		maxShift(.0), 
-		route(-1), 
-		cluster(-1), 
+		waitDuration(.0),
+		startOfVisitTime(.0),
+		depTime(.0),
+		shift(.0),
+		maxShift(.0),
+		route(-1),
+		cluster(-1),
 		minDist(DBL_MAX),
-		arrPointId(DEFAULT_POINT_ID), 
-		depPointId(DEFAULT_POINT_ID), 
-		type(touristAttractionType::sight), 
+		arrPointId(DEFAULT_POINT_ID),
+		depPointId(DEFAULT_POINT_ID),
+		type(touristAttractionType::sight),
 		category(sightCategory::none),
 		next(nullptr), prev(nullptr)
 	{
@@ -163,7 +164,7 @@ typedef struct TouristAttraction {
 	}
 	
 
-	virtual ~TouristAttraction() {} //virtual destructor to ensure our subclasses are correctly deallocated
+	virtual ~TouristAttraction() {} //virtual destructor to ensure our subclasses are correctly dealocated
 } TA;
 
 struct Sight : TA {

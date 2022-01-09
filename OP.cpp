@@ -298,8 +298,6 @@ int OP::LocalSearch() {
 		
 		OPTW subproblemB = OPTW(UnvisitedB, temp, mTtMatrix, meanPoint, mEndTime);
 
-		std::cout << "CONSTRUCTING SOLUTION for subproblem B" << std::endl;
-
 		//HERE after the construct, walkB remains with the startings node, i don't think it should. The time space betweeen the two nodes is too small
 		Walk walkB = subproblemB.Construct();
 
@@ -325,10 +323,7 @@ int OP::LocalSearch() {
 		TA* last = subproblemA.mProcessSolution.mWalk.last();
 		last->timeWindow.closeTime = meanPoint;
 		last->maxShift = last->timeWindow.closeTime - last->timeWindow.openTime;
-		subproblemA.mProcessSolution.mUnvisited.print("subproblemA.mProcessSolution.mUnvisited");
-		subproblemA.mProcessSolution.mWalk.print("subproblemA.mProcessSolution.mWalk");
 		Walk walkA = subproblemA.Construct();
-		walkA.print("walkA");
 
 		OPTW subproblemB = OPTW(UnvisitedB, wb, mTtMatrix, meanPoint, mEndTime);
 		Walk walkB = subproblemB.Construct();
