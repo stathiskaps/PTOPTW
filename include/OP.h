@@ -23,7 +23,7 @@ private:
 	virtual bool updateTimes(int, bool);
 	Walk convertVecToList(std::vector<TA*>);
 	int Insert();
-	int LocalSearch();
+	int LocalSearch(double);
 	Walk Construct();
 	void Shake(int, int, int);
 	void SaveSolution(Solution);

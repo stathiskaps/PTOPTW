@@ -253,23 +253,17 @@ bool OP::compareByProfit(const TA a, const TA b) {
     return a.profit < b.profit;
 }
 
-int OP::LocalSearch() {
+int OP::LocalSearch(double avgPoint) {
 	double minShift;
 	int pos, bestPos;
 	double maxRation = DBL_MIN, ratio;
 	TA* curr = mProcessSolution.mUnvisited.first();
 
-	mProcessSolution.print("mProcessSolution before local search");
-
-	//Step 1: Divide unvisited to two lists
-	auto [minPoint, meanPoint, maxPoint]  = calcTimeEventCut(mProcessSolution.mUnvisited);
-	meanPoint = 300;
-
 	std::vector<TA*> UnvisitedA, UnvisitedB;
 
 	while(curr != nullptr){
-		double leftDuration = meanPoint - curr->timeWindow.openTime;
-        double rightDuration = curr->timeWindow.closeTime - meanPoint;
+		double leftDuration = avgPoint - curr->timeWindow.openTime;
+        double rightDuration = curr->timeWindow.closeTime - avgPoint;
 
         if(leftDuration > rightDuration){
 			TA* temp = curr;
@@ -284,19 +278,18 @@ int OP::LocalSearch() {
 	size_t walkLength = mProcessSolution.mWalk.getLength();
 
 	if (walkLength == 2) {
-		OPTW subproblemA = OPTW(UnvisitedA, mTtMatrix, mDepot, mStartTime, meanPoint);
-		subproblemA.mProcessSolution.mUnvisited.printMin("subProblemA mprocessSolution mUnvisited");
+		OPTW subproblemA = OPTW(UnvisitedA, mTtMatrix, mDepot, mStartTime, avgPoint);
 		Walk walkA = subproblemA.Construct();
 		TA* lastNode = walkA.get(walkA.getLength() - 2);
 		Walk temp = walkA.copyPart(walkA.getLength() - 2, walkA.getLength() - 1);
 		temp.last()->reset();
-		temp.last()->timeWindow.openTime = meanPoint;
+		temp.last()->timeWindow.openTime = avgPoint;
 		temp.last()->timeWindow.closeTime = mEndTime;
-		temp.last()->maxShift = mEndTime - meanPoint;
+		temp.last()->maxShift = mEndTime - avgPoint;
 		/*temp.first()->reset();*/
 
 		
-		OPTW subproblemB = OPTW(UnvisitedB, temp, mTtMatrix, meanPoint, mEndTime);
+		OPTW subproblemB = OPTW(UnvisitedB, temp, mTtMatrix, avgPoint, mEndTime);
 
 		//HERE after the construct, walkB remains with the startings node, i don't think it should. The time space betweeen the two nodes is too small
 		Walk walkB = subproblemB.Construct();
@@ -309,27 +302,22 @@ int OP::LocalSearch() {
 		mProcessSolution.mWalk = walkA + walkB;
 		mProcessSolution.mScore = mProcessSolution.mWalk.collectProfit();
 
-		mProcessSolution.print("mProcessSolution");
 	}
 	else if (walkLength > 2) {
 		
 		curr = mProcessSolution.mWalk.first();
-		auto [wa, wb] = mProcessSolution.mWalk.splitOnDepTime(meanPoint);
+		auto [wa, wb] = mProcessSolution.mWalk.splitOnDepTime(avgPoint);
 
-		wa.print("wa:");
-		wb.print("wb:");
-
-		OPTW subproblemA = OPTW(UnvisitedA, wa, mTtMatrix, mStartTime, meanPoint);
+		OPTW subproblemA = OPTW(UnvisitedA, wa, mTtMatrix, mStartTime, avgPoint);
 		TA* last = subproblemA.mProcessSolution.mWalk.last();
-		last->timeWindow.closeTime = meanPoint;
+		last->timeWindow.closeTime = avgPoint;
 		last->maxShift = last->timeWindow.closeTime - last->timeWindow.openTime;
 		Walk walkA = subproblemA.Construct();
 
-		OPTW subproblemB = OPTW(UnvisitedB, wb, mTtMatrix, meanPoint, mEndTime);
+		OPTW subproblemB = OPTW(UnvisitedB, wb, mTtMatrix, avgPoint, mEndTime);
 		Walk walkB = subproblemB.Construct();
-		walkB.print("walkB");
 
-		walkB.removeFirst();
+		//walkB.removeFirst();
 		mProcessSolution.mWalk = walkA + walkB;
 		mProcessSolution.mUnvisited = subproblemA.mProcessSolution.mUnvisited + subproblemB.mProcessSolution.mUnvisited;
 		mProcessSolution.mScore = mProcessSolution.mWalk.collectProfit();
@@ -340,8 +328,6 @@ int OP::LocalSearch() {
 		std::exit(1);
 	}
 
-	mProcessSolution.print("mProcessSolution after local search");
-
 	if (!mProcessSolution.mWalk.isValid(true, mEndTime, mTtMatrix)) {
 		std::cout << "Process Solution Walk is not valid" << std::endl;
 		updateTimes(0, true);
@@ -349,8 +335,6 @@ int OP::LocalSearch() {
 			std::cout << "Process Solution Walk is still not valid LAWL" << std::endl;
 		}
 	}
-
-	
 
 	return mProcessSolution.mScore;
 
@@ -415,7 +399,6 @@ Walk OP::Construct(){
 }
 
 int OP::Insert() {
-	std::cout << "Insert step" << std::endl;
 	double minShift;
 	int pos, bestPos = DEFAULT_POS;
 	double maxRatio = DBL_MIN, ratio;
@@ -427,24 +410,12 @@ int OP::Insert() {
 	int bestArrPointId = DEFAULT_POINT_ID, bestDepPointId = DEFAULT_POINT_ID;
 	int arrPointId = DEFAULT_POINT_ID, depPointId = DEFAULT_POINT_ID;
 
-	std::cout << "Walk: " << std::endl;
-	mProcessSolution.mWalk.print();
-
-	std::cout << std::endl;
-	std::cout << std::endl;
-	std::cout << std::endl;
-
-	std::cout << "Unvisited: " << std::endl;
-	mProcessSolution.mUnvisited.print();
-
 	while (true)
 	{
 		maxRatio = DBL_MIN;
 		nodeId = DEFAULT_TA_ID;
 		curr = mProcessSolution.mUnvisited.first();
 		//numOfUnvisitedNodes = ProcessSolution.UnvisitedPOIs.GetNumOfNodes();
-
-		std::cout << "Length of unvisited before process: " << mProcessSolution.mUnvisited.getLength() << std::endl;
 
 		while (curr != nullptr) {
 			minShift = DBL_MAX;
@@ -518,9 +489,11 @@ Solution OP::solve() {
 	TaskManager* taskManager = TaskManager::GetInstance();
 	int bestScore = INT_MIN;
 
+	auto [minPoint, avgPoint, maxPoint] = calcTimeEventCut(mProcessSolution.mUnvisited);
+
 	while (timesNotImproved < MAX_TIMES_NOT_IMPROVED) {
 
-		int score = LocalSearch();
+		int score = LocalSearch(avgPoint);
 
 		//int score = Insert();
 
@@ -548,11 +521,8 @@ Solution OP::solve() {
 			R = 1;
 		}
 
-		mProcessSolution.print("mProcessSolution before shake");
-
 		Shake(S, R, numOfPois);
 
-		mProcessSolution.print("mProcessSolution after shake");
 		S += R;
 		R += 1;
 		
@@ -744,7 +714,6 @@ std::tuple<int, double, int, int> OPTW::getBestPos(TA* ta)
 
 std::tuple<int, double, int, int> TOPTW::getBestPos(TA* ta) // explicitly name what type to specialize
 {
-	std::cout << "hiko" << std::endl;
 	double minShift = DBL_MAX;
 	int length = mProcessSolution.mWalk.getLength();
 	double arrTime, waitDuration, startOfVisitTime, depTime, shift;

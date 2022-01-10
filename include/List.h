@@ -89,10 +89,9 @@ typedef struct TouristAttraction {
 		next(nullptr), prev(nullptr)
 	{
 	}
-
-	//default constructor
+	
 	TouristAttraction(Point p)
-		: id(DEFAULT_TA_ID),
+		: id(DEFAULT_DEPOT_ID),
 		point(p),
 		visitDuration(.0),
 		profit(0),
@@ -106,8 +105,8 @@ typedef struct TouristAttraction {
 		route(-1),
 		cluster(-1),
 		minDist(DBL_MAX),
-		arrPointId(DEFAULT_POINT_ID),
-		depPointId(DEFAULT_POINT_ID),
+		arrPointId(p.id),
+		depPointId(p.id),
 		type(touristAttractionType::sight),
 		category(sightCategory::none),
 		next(nullptr), prev(nullptr)
@@ -129,8 +128,8 @@ typedef struct TouristAttraction {
 		route(-1),
 		cluster(-1),
 		minDist(DBL_MAX),
-		arrPointId(DEFAULT_POINT_ID),
-		depPointId(DEFAULT_POINT_ID),
+		arrPointId(p.id),
+		depPointId(p.id),
 		type(touristAttractionType::sight),
 		category(sightCategory::none),
 		next(nullptr), prev(nullptr)
@@ -674,7 +673,7 @@ public:
 			curr = curr->next;
 		}
 
-		return;
+		return parts;
 	}
 
 	void setLength() {
@@ -932,8 +931,6 @@ public:
 
 		while(curr != nullptr){
 			if(pos == ei){
-
-				std::cout << "Will grab part from " << temp->id << " to " << curr->id << " ( " << si << " " << ei << " of total route length " <<  this->getLength() << " ) " << std::endl;
 
 				if (temp->prev != nullptr) {
 					temp->prev->next = curr->next;
