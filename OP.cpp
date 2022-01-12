@@ -308,17 +308,34 @@ int OP::LocalSearch(double avgPoint) {
 		curr = mProcessSolution.mWalk.first();
 		auto [wa, wb] = mProcessSolution.mWalk.splitOnDepTime(avgPoint);
 
-		OPTW subproblemA = OPTW(UnvisitedA, wa, mTtMatrix, mStartTime, avgPoint);
-		TA* last = subproblemA.mProcessSolution.mWalk.last();
-		last->timeWindow.closeTime = avgPoint;
-		last->maxShift = last->timeWindow.closeTime - last->timeWindow.openTime;
-		Walk walkA = subproblemA.Construct();
+		size_t wa_length = wa.getLength(), wb_length = wb.getLength();
 
+		Walk walkA, walkB;
+
+		OPTW subproblemA = OPTW(UnvisitedA, wa, mTtMatrix, mStartTime, avgPoint);
 		OPTW subproblemB = OPTW(UnvisitedB, wb, mTtMatrix, avgPoint, mEndTime);
-		Walk walkB = subproblemB.Construct();
+
+		if (wa_length == 1) {
+			walkA = wa;
+		}
+		else if (wa_length > 1) {
+			TA* last = subproblemA.mProcessSolution.mWalk.last();
+			last->timeWindow.closeTime = avgPoint;
+			last->maxShift = last->timeWindow.closeTime - last->timeWindow.openTime;
+			walkA = subproblemA.Construct();
+		}
+
+		if (wb_length == 1) {
+			walkB = wb;
+		}
+		else if (wb_length > 1) {
+			//subproblemB.mProcessSolution.mWalk.first()->arrTime = walkA.last()->depTime + mTtMatrix[walkA.last()->depPointId][subproblemB.mProcessSolution.mWalk.first()->arrPointId];
+			walkB = subproblemB.Construct();
+		}
 
 		//walkB.removeFirst();
 		mProcessSolution.mWalk = walkA + walkB;
+		updateTimes(1, true);
 		mProcessSolution.mUnvisited = subproblemA.mProcessSolution.mUnvisited + subproblemB.mProcessSolution.mUnvisited;
 		mProcessSolution.mScore = mProcessSolution.mWalk.collectProfit();
 
@@ -333,6 +350,7 @@ int OP::LocalSearch(double avgPoint) {
 		updateTimes(0, true);
 		if (!mProcessSolution.mWalk.isValid(true, mEndTime, mTtMatrix)) {
 			std::cout << "Process Solution Walk is still not valid LAWL" << std::endl;
+			std::exit(1);
 		}
 	}
 
@@ -484,6 +502,7 @@ void OP::SaveSolution(Solution sol) {
 
 Solution OP::solve() {
 
+	int counter = 0;
 	int S = 1, R = 1;
 	int timesNotImproved = 0;
 	TaskManager* taskManager = TaskManager::GetInstance();
@@ -492,6 +511,8 @@ Solution OP::solve() {
 	auto [minPoint, avgPoint, maxPoint] = calcTimeEventCut(mProcessSolution.mUnvisited);
 
 	while (timesNotImproved < MAX_TIMES_NOT_IMPROVED) {
+		counter++;
+		std::cout << "this is revision: " << counter << std::endl;
 
 		int score = LocalSearch(avgPoint);
 
