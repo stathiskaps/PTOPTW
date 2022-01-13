@@ -15,7 +15,7 @@ set(HEADER_FILES "${INCLUDE_DIRECTORY}/Controller.h" "${INCLUDE_DIRECTORY}/Defin
 include_directories(${INCLUDE_DIRECTORY})
 
 # Add source to this project's executable.
-add_executable (AMTOPTW_algorithm "main.cpp" "Controller.cpp" "Definitions.cpp" "Divide.cpp" "Divider.cpp" "OP.cpp" "Processor.cpp" "TaskManager.cpp" "Unifier.cpp" ${HEADER_FILES})
+add_executable (AMTOPTW_algorithm "main.cpp" "Controller.cpp" "Definitions.cpp" "Divide.cpp" "Divider.cpp" "OP.cpp" "Processor.cpp" "TaskManager.cpp" "Unifier.cpp" ${HEADER_FILES} "ILS.cpp")
 
 #target_include_directories(AMTOPTW_algorithm PRIVATE ${INCLUDE_DIRECTORY})
 

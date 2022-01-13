@@ -10,6 +10,9 @@ class Solution {
 	friend class OPTW;
 	friend class TOPTW;
 	friend struct Cluster;
+	friend class ILS;
+	friend class ILS_OPTW;
+	friend class ILS_TOPTW;
 
 	ListTA mUnvisited;
 	Walk mWalk;

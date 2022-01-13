@@ -47,6 +47,7 @@ struct TimeWindow {
 struct BucketActivity {
 	int inBucket = 0;
 	int inWalk = 0;
+	double duration = 0;
 };
 
 typedef struct TouristAttraction {

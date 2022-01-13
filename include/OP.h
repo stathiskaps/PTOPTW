@@ -18,12 +18,15 @@
 //This OP is used to solve the TOP, so no time windows, no multiple routes
 class OP {
 private:
-	std::tuple<double, double, double> calcTimeEventCut(const ListTA&);
+	std::tuple<double, double, double> calcTimeEventCut();
 	virtual std::tuple<int, double, int, int> getBestPos(TA*);
 	virtual bool updateTimes(int, bool);
 	Walk convertVecToList(std::vector<TA*>);
 	int Insert();
+	int Insert(TA*);
 	int LocalSearch(double);
+	void Local(double);
+	void setBucketActivityDurations();
 	Walk Construct();
 	void Shake(int, int, int);
 	void SaveSolution(Solution);

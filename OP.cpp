@@ -192,11 +192,11 @@ void OP::print(std::string msg) {
 	std::cout << "=======================================================" << std::endl;
 }
 
-std::tuple<double, double, double> OP::calcTimeEventCut(const ListTA& attractions){
+std::tuple<double, double, double> OP::calcTimeEventCut(){
     double dist;
     double min = DBL_MAX;
     double timePoint = -1;
-	TA* curr = attractions.first();
+	TA* curr = mProcessSolution.mUnvisited.first();
 
 	std::vector<double> timeWindowEvents;
 
@@ -212,7 +212,7 @@ std::tuple<double, double, double> OP::calcTimeEventCut(const ListTA& attraction
 
 	double average = reduce(timeWindowEvents.begin(), timeWindowEvents.end()) / timeWindowEvents.size();
 
-	curr = attractions.first();
+	curr = mProcessSolution.mUnvisited.first();
 	while(curr != nullptr){
  		dist = abs(curr->timeWindow.openTime - average);
         if(dist < min){
@@ -228,6 +228,53 @@ std::tuple<double, double, double> OP::calcTimeEventCut(const ListTA& attraction
 	}
 
     return {timeWindowEvents.front(), timePoint, timeWindowEvents.back()};
+}
+
+void OP::setBucketActivityDurations() {
+	auto [minEvent, avgEvent, maxEvent] = calcTimeEventCut();
+
+	TA* curr = mProcessSolution.mWalk.first();
+	while (curr != nullptr) {
+		curr->bucketActivities[0].duration = avgEvent - curr->timeWindow.openTime;
+		curr->bucketActivities[1].duration = curr->timeWindow.closeTime - avgEvent;
+		curr = curr->next;
+	}
+
+}
+
+
+void OP::Local(double avgEvent) {
+
+	TA* curr = mProcessSolution.mUnvisited.first();
+	TA* temp;
+	
+	size_t walk_length = mProcessSolution.mWalk.getLength();
+	if (walk_length == 2) {
+		ListTA UnvisitedA, UnvisitedB;
+		
+		while (curr != nullptr) {
+			temp = curr;
+			curr = curr->next;
+			if (curr->bucketActivities[0].duration >= curr->bucketActivities[1].duration) {
+				UnvisitedA.push(temp);
+			}
+			else {
+				UnvisitedB.push(temp);
+			}
+			
+		}
+
+
+
+	}
+	else if (walk_length > 2) {
+
+	}
+	else {
+		std::cerr << "Invalid walk length" << std::endl;
+		std::exit(1);
+	}
+
 }
 
 //appends vector2 after vector1 (vector1 + vector2)
@@ -508,7 +555,9 @@ Solution OP::solve() {
 	TaskManager* taskManager = TaskManager::GetInstance();
 	int bestScore = INT_MIN;
 
-	auto [minPoint, avgPoint, maxPoint] = calcTimeEventCut(mProcessSolution.mUnvisited);
+	setBucketActivityDurations();
+
+	auto [minPoint, avgPoint, maxPoint] = calcTimeEventCut();
 
 	while (timesNotImproved < MAX_TIMES_NOT_IMPROVED) {
 		counter++;
