@@ -29,14 +29,17 @@ Solution ILS::LocalSearch(Solution solution, double avgPoint, std::vector<std::v
 	TA* temp;
 
 	ListTA unvisitedA, unvisitedB;
+	int unvisitedACount = 0, unvisitedBCount = 0;
 	while (curr != nullptr) {
 		temp = curr;
 		curr = curr->next;
 		if (temp->bucketActivities[0].duration >= temp->bucketActivities[1].duration) {
 			unvisitedA.pushNew(temp);
+			unvisitedACount++;
 		}
 		else {
 			unvisitedB.pushNew(temp);
+			unvisitedBCount;
 		}
 	}
 
@@ -68,32 +71,36 @@ Solution ILS::LocalSearch(Solution solution, double avgPoint, std::vector<std::v
 
 		size_t wa_length = wa.getLength(), wb_length = wb.getLength();
 
-		Walk walkA, walkB;
+		Solution solA, solB;
 
-		Solution solA = Solution(wa, unvisitedA, solution.mWalk.first()->timeWindow.openTime, avgPoint);
-		Solution solB = Solution(wb, unvisitedB, avgPoint, solution.mWalk.first()->timeWindow.closeTime);
-
-		if (wa_length == 1) {
-			walkA = wa;
+		if (wa_length <= 1 || unvisitedACount == 0) {
+			solA = Solution(wa, unvisitedA);
 		}
-		else if (wa_length > 1) {
-			TA* last = solA.mWalk.last();
-			last->timeWindow.closeTime = avgPoint;
-			last->maxShift = last->timeWindow.closeTime - last->timeWindow.openTime;
+		else {
+			wa.last()->timeWindow.closeTime = avgPoint;
+			wa.last()->maxShift = avgPoint - wa.last()->depTime;
+			//we changed the maxshift of the last node, we need to change maxShift of previous nodes as well
+			updateMaxShifts(wa, ttMatrix);
+			
+			solA = Solution(wa, unvisitedA);
 			solA = construct(solA, ttMatrix);
 		}
 
-		if (wb_length == 1) {
-			walkB = wb;
+		if (wb_length <= 1 || unvisitedBCount == 0) {
+			solB = Solution(wb, unvisitedB);
 		}
-		else if (wb_length > 1) {
-			//subproblemB.mProcessSolution.mWalk.first()->arrTime = walkA.last()->depTime + mTtMatrix[walkA.last()->depPointId][subproblemB.mProcessSolution.mWalk.first()->arrPointId];
+		else {
+			solB = Solution(wb, unvisitedB);
 			solB = construct(solB, ttMatrix);
 		}
 
 		//walkB.removeFirst();
+		
 		solution.mWalk = solA.mWalk + solB.mWalk;
 		solution.mUnvisited = solA.mUnvisited + solB.mUnvisited;
+
+		//because we may added a TA to walkA, some departure times may moved forward, which affects time of walkB
+		solution = updateTimes(solution, 1, true, ttMatrix);
 		solution.mScore = solution.mWalk.collectProfit();
 	}
 	else {
@@ -103,7 +110,7 @@ Solution ILS::LocalSearch(Solution solution, double avgPoint, std::vector<std::v
 
 	auto [valid, error] = validate(solution.mWalk, ttMatrix);
 	if (!valid) {
-		std::cerr << error << std::endl;
+		std::cout << error << std::endl;
 		std::exit(1);
 	}
 
@@ -400,13 +407,24 @@ Solution ILS::updateTimes(Solution solution, int startIndex, bool smart, std::ve
 	curr->maxShift = curr->timeWindow.closeTime - curr->depTime;
 	curr = curr->prev;
 	while (curr != nullptr) {
-		if (curr->next != nullptr) {
-			curr->maxShift = curr->next->maxShift;
-		}
+		curr->maxShift = curr->next->maxShift;
 		curr = curr->prev;
 	}
 
 	return solution;
+}
+
+Walk ILS::updateMaxShifts(Walk walk, std::vector<std::vector<double>> ttMatrix) {
+	TA* curr = walk.last();
+
+	curr->maxShift = curr->timeWindow.closeTime - curr->depTime;
+	curr = curr->prev;
+	while (curr != nullptr) {
+		curr->maxShift = curr->next->maxShift;
+		curr = curr->prev;
+	}
+
+	return walk;
 }
 
 std::tuple<bool, std::string> ILS::validate(ListTA& walk, std::vector<std::vector<double>> ttMatrix) {
@@ -578,6 +596,19 @@ Solution ILS_OPTW::updateTimes(Solution solution, int startIndex, bool smart, st
 	return solution;
 }
 
+Walk ILS_OPTW::updateMaxShifts(Walk walk, std::vector<std::vector<double>> ttMatrix) {
+	TA* curr = walk.last();
+
+	curr->maxShift = curr->timeWindow.closeTime - curr->depTime;
+	curr = curr->prev;
+	while (curr != nullptr) {
+		curr->maxShift = std::min(curr->timeWindow.closeTime - curr->depTime, curr->next->waitDuration + curr->next->maxShift);
+		curr = curr->prev;
+	}
+
+	return walk;
+}
+
 std::tuple<bool, std::string> ILS_OPTW::validate(ListTA& walk, std::vector<std::vector<double>> ttMatrix) {
 	std::cout << "Validating route:\t"; walk.print();
 	std::string error = "";
@@ -707,6 +738,19 @@ Solution ILS_TOPTW::updateTimes(Solution solution, int startIndex, bool smart, s
 	}
 
 	return solution;
+}
+
+Walk ILS_TOPTW::updateMaxShifts(Walk walk, std::vector<std::vector<double>> ttMatrix) {
+	TA* curr = walk.last();
+
+	curr->maxShift = curr->timeWindow.closeTime - curr->depTime;
+	curr = curr->prev;
+	while (curr != nullptr) {
+		curr->maxShift = std::min(curr->timeWindow.closeTime - curr->depTime, curr->next->waitDuration + curr->next->maxShift);
+		curr = curr->prev;
+	}
+
+	return walk;
 }
 
 std::tuple<bool, std::string> ILS_TOPTW::validate(ListTA& walk, std::vector<std::vector<double>> ttMatrix) {

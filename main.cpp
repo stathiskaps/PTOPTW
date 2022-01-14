@@ -169,7 +169,7 @@ void init(std::string filename, int numRoutes) {
 	ILS_OPTW ilsoptw = ILS_OPTW();
 
 	ListTA attractions = ListTA(touristAttractions);
-	ilsoptw.Solve(attractions, depot, depot, ttMatrix);
+	Solution solution = ilsoptw.Solve(attractions, depot, depot, ttMatrix);
 
 	OPTW optw(touristAttractions, ttMatrix, depot, OPEN_DAY_TIME, CLOSE_DAY_TIME);
 	Solution sol = optw.solve();

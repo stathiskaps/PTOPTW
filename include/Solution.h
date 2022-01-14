@@ -42,7 +42,7 @@ public:
 		mWalk.first()->startOfVisitTime = openTime;
 		mWalk.first()->depTime = openTime;
 		mWalk.last()->timeWindow.closeTime = closeTime;
-		mWalk.last()->maxShift = closeTime - openTime;
+		mWalk.last()->maxShift = closeTime - mWalk.last()->depTime;
 	};
 	Solution(Walk walk, ListTA unvisited, double openTime, double closeTime) {
 		mScore = 0;
@@ -55,7 +55,7 @@ public:
 		mWalk.first()->startOfVisitTime = openTime;
 		mWalk.first()->depTime = openTime;
 		mWalk.last()->timeWindow.closeTime = closeTime;
-		mWalk.last()->maxShift = closeTime - openTime;
+		mWalk.last()->maxShift = closeTime - mWalk.last()->depTime;
 	};
 
 	Solution(Walk walk, ListTA unvisited) {
