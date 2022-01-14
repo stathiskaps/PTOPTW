@@ -7,9 +7,6 @@
 #include "json.hpp"
 #include "Solution.h"
 #include "TaskManager.h"
-#include <fmt/ranges.h>
-#include <plog/Log.h> // Step1: include the headers
-#include "plog/Initializers/RollingFileInitializer.h"
 
 #ifndef OP_H
 #define OP_H
@@ -21,9 +18,7 @@ private:
 	std::tuple<double, double, double> calcTimeEventCut();
 	virtual std::tuple<int, double, int, int> getBestPos(TA*);
 	virtual bool updateTimes(int, bool);
-	Walk convertVecToList(std::vector<TA*>);
 	int Insert();
-	int Insert(TA*);
 	int LocalSearch(double);
 	void Local(double);
 	void setBucketActivityDurations();

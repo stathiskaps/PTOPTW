@@ -1,34 +1,109 @@
 #include "ILS.h"
 
-Solution ILS::LocalSearch(Solution solution, double avgPoint) {
+ILS::ILS() {}
+
+ILS::~ILS() {}
+
+//appends list2 after list1 (list1 + list2)
+ListTA operator+(ListTA & l1, ListTA & l2) {
+	ListTA l3;
+
+	TA* curr = l1.first();
+	while (curr != nullptr) {
+		l3.pushNew(curr);
+		curr = curr->next;
+	}
+
+	curr = l2.first();
+	while (curr != nullptr) {
+		l3.pushNew(curr);
+		curr = curr->next;
+	}
+
+	return l3;
+}
+
+Solution ILS::LocalSearch(Solution solution, double avgPoint, std::vector<std::vector<double>> ttMatrix) {
 
 	TA* curr = solution.mUnvisited.first();
 	TA* temp;
 
+	ListTA unvisitedA, unvisitedB;
+	while (curr != nullptr) {
+		temp = curr;
+		curr = curr->next;
+		if (temp->bucketActivities[0].duration >= temp->bucketActivities[1].duration) {
+			unvisitedA.pushNew(temp);
+		}
+		else {
+			unvisitedB.pushNew(temp);
+		}
+	}
+
 	size_t walk_length = solution.mWalk.getLength();
 	if (walk_length == 2) {
-		ListTA UnvisitedA, UnvisitedB;
+		
+		//construct depends completely on first node's departure time and on last node's close time
+		Walk walkA = solution.mWalk.copy();
+		Solution solA = Solution(walkA, unvisitedA, solution.mWalk.first()->timeWindow.openTime, avgPoint);
+		solA = construct(solA, ttMatrix);
 
-		while (curr != nullptr) {
-			temp = curr;
-			curr = curr->next;
-			if (curr->bucketActivities[0].duration >= curr->bucketActivities[1].duration) {
-				UnvisitedA.push(temp);
-			}
-			else {
-				UnvisitedB.push(temp);
-			}
+		//get last two elements
+		Walk walkB = solA.mWalk.copyPart(-2, -1);
+		Solution solB = Solution(walkB, unvisitedB, walkB.first()->depTime, solution.mWalk.last()->timeWindow.closeTime);
+		//Solution solB = Solution(walkB, unvisitedB, avgPoint, solution.mWalk.last()->timeWindow.closeTime);
+		solB = construct(solB, ttMatrix);
 
-		}
+		solA.mWalk.removeLast();
+		solB.mWalk.removeFirst();
+		//walkB.removeLast();
 
-
-
+		solution.mUnvisited = solA.mUnvisited + solB.mUnvisited;
+		solution.mWalk = solA.mWalk + solB.mWalk;
+		solution.mScore = solution.mWalk.collectProfit();
 	}
 	else if (walk_length > 2) {
+		curr = solution.mWalk.first();
+		auto [wa, wb] = solution.mWalk.splitOnDepTime(avgPoint);
 
+		size_t wa_length = wa.getLength(), wb_length = wb.getLength();
+
+		Walk walkA, walkB;
+
+		Solution solA = Solution(wa, unvisitedA, solution.mWalk.first()->timeWindow.openTime, avgPoint);
+		Solution solB = Solution(wb, unvisitedB, avgPoint, solution.mWalk.first()->timeWindow.closeTime);
+
+		if (wa_length == 1) {
+			walkA = wa;
+		}
+		else if (wa_length > 1) {
+			TA* last = solA.mWalk.last();
+			last->timeWindow.closeTime = avgPoint;
+			last->maxShift = last->timeWindow.closeTime - last->timeWindow.openTime;
+			solA = construct(solA, ttMatrix);
+		}
+
+		if (wb_length == 1) {
+			walkB = wb;
+		}
+		else if (wb_length > 1) {
+			//subproblemB.mProcessSolution.mWalk.first()->arrTime = walkA.last()->depTime + mTtMatrix[walkA.last()->depPointId][subproblemB.mProcessSolution.mWalk.first()->arrPointId];
+			solB = construct(solB, ttMatrix);
+		}
+
+		//walkB.removeFirst();
+		solution.mWalk = solA.mWalk + solB.mWalk;
+		solution.mUnvisited = solA.mUnvisited + solB.mUnvisited;
+		solution.mScore = solution.mWalk.collectProfit();
 	}
 	else {
 		std::cerr << "Invalid walk length" << std::endl;
+		std::exit(1);
+	}
+
+	auto [valid, error] = validate(solution.mWalk, ttMatrix);
+	if (!valid) {
+		std::cerr << error << std::endl;
 		std::exit(1);
 	}
 
@@ -38,7 +113,7 @@ Solution ILS::LocalSearch(Solution solution, double avgPoint) {
 
 Solution ILS::Shake(Solution solution, int S, int R, int numOfPois, std::vector<std::vector<double>> ttMatrix) {
 	if (numOfPois == 0) {
-		return;
+		return solution;
 	}
 	else if (numOfPois > 0) {
 		List<TA> nodes = solution.mWalk.grabPart(S, std::min(S + R - 1, numOfPois + 1));
@@ -49,6 +124,7 @@ Solution ILS::Shake(Solution solution, int S, int R, int numOfPois, std::vector<
 		std::cerr << "Route has invalid length" << std::endl;
 		exit(1);
 	}
+	return solution;
 }
 
 std::tuple<double, double, double> ILS::calcTimeEventCut(ListTA& unvisited) {
@@ -90,8 +166,7 @@ std::tuple<double, double, double> ILS::calcTimeEventCut(ListTA& unvisited) {
 }
 
 
-ListTA ILS::setBucketActivityDurations(ListTA unvisited) {
-	auto [minEvent, avgEvent, maxEvent] = calcTimeEventCut(unvisited);
+ListTA ILS::setBucketActivityDurations(ListTA& unvisited, double avgEvent) {
 
 	TA* curr = unvisited.first();
 	while (curr != nullptr) {
@@ -107,8 +182,8 @@ ListTA ILS::setBucketActivityDurations(ListTA unvisited) {
 Solution ILS::Solve(ListTA& unvisited, TA* start, TA* end, std::vector<std::vector<double>> ttMatrix) {
 
 	Walk walk;
-	walk.push(start);
-	walk.push(end);
+	walk.pushNew(start);
+	walk.pushNew(end);
 
 	Solution processSolution = Solution(walk, unvisited, start->timeWindow.openTime, end->timeWindow.closeTime);
 	Solution bestSolution = Solution();
@@ -116,22 +191,17 @@ Solution ILS::Solve(ListTA& unvisited, TA* start, TA* end, std::vector<std::vect
 	int counter = 0;
 	int S = 1, R = 1;
 	int timesNotImproved = 0;
-	TaskManager* taskManager = TaskManager::GetInstance();
 	int bestScore = INT_MIN;
 
-	processSolution = setBucketActivityDurations(processSolution.mUnvisited);
-
-	auto [minEvent, avgEvent, maxEvent] = calcTimeEventCut(walk);
+	auto [minEvent, avgEvent, maxEvent] = calcTimeEventCut(processSolution.mUnvisited);
+	processSolution.mUnvisited = setBucketActivityDurations(processSolution.mUnvisited, avgEvent);
 
 	while (timesNotImproved < MAX_TIMES_NOT_IMPROVED) {
 		counter++;
 		std::cout << "this is revision: " << counter << std::endl;
 
-		processSolution = LocalSearch(processSolution, avgEvent);
-
-		int score = walk.collectProfit();
-
-		//int score = Insert();
+		processSolution = LocalSearch(processSolution, avgEvent, ttMatrix);
+		int score = processSolution.GetScore();
 
 		if (score > bestScore) {
 			bestScore = score;
@@ -172,11 +242,11 @@ Solution ILS::Solve(ListTA& unvisited, TA* start, TA* end, std::vector<std::vect
 }
 
 
-int ILS::Insert(ListTA& walk, ListTA& unvisited, std::vector<std::vector<double>> ttMatrix) {
+//construct depends completely on first node's departure time and on last node's close time
+Solution ILS::construct(Solution sol, std::vector<std::vector<double>> ttMatrix) {
 	double minShift;
 	int pos, bestPos = DEFAULT_POS;
 	double maxRatio = DBL_MIN, ratio;
-	std::string nodeId;
 	TA* nodeToInsert = nullptr;
 	TA* curr;
 
@@ -185,16 +255,18 @@ int ILS::Insert(ListTA& walk, ListTA& unvisited, std::vector<std::vector<double>
 
 	while (true) {
 		maxRatio = DBL_MIN;
-		nodeId = DEFAULT_TA_ID;
-		curr = unvisited.first();
+		nodeToInsert = nullptr;
+		curr = sol.mUnvisited.first();
 		//numOfUnvisitedNodes = ProcessSolution.UnvisitedPOIs.GetNumOfNodes();
 
 		while (curr != nullptr) {
 			minShift = DBL_MAX;
-			std::tie(pos, minShift, arrPointId, depPointId) = getBestPos(curr, walk, ttMatrix);
+			std::cout << "examine if node " << curr->id << " can be inserted." << std::endl;
+			std::tie(pos, minShift, arrPointId, depPointId) = getBestPos(curr, sol.mWalk, ttMatrix);
 
 			if (pos == -1) { //insertion is not feasible
 				curr = curr->next;
+				std::cout << "insertion is not feasible" << std::endl;
 				continue;
 			}
 
@@ -214,21 +286,20 @@ int ILS::Insert(ListTA& walk, ListTA& unvisited, std::vector<std::vector<double>
 
 		//if we have reached a point where there is no node which can be inserted, then we stop the search
 		if (nodeToInsert == nullptr) {
+			std::cout << "no more unvisited nodes can be inserted" << std::endl;
 			break;
 		}
 
-		if (nodeToInsert != nullptr) {
-			walk.insertAt(nodeToInsert, bestPos, bestArrPointId, bestDepPointId, ttMatrix); //add it to route
-			updateTimes(walk, bestPos, true, ttMatrix);
-		}
-		else {
-			std::cerr << "Didn't find node " << nodeId << std::endl;
-			std::exit(1);
-		}
+		std::cout << "Will insert node " << nodeToInsert->id << std::endl;
+
+		nodeToInsert = sol.mUnvisited.grab(nodeToInsert);
+		sol.mWalk.insertAt(nodeToInsert, bestPos, bestArrPointId, bestDepPointId, ttMatrix); //add it to route
+		sol = updateTimes(sol, bestPos, true, ttMatrix);
 	}
+	return sol;
 }
 
-std::tuple<int, double, int, int> ILS::getBestPos(TA* ta, ListTA& walk, std::vector<std::vector<double>> ttMatrix) {
+std::tuple<int, double, int, int> ILS::getBestPos(TA* ta, ListTA walk, std::vector<std::vector<double>> ttMatrix) {
 	double minShift = DBL_MAX;
 	int length = walk.getLength();
 	double shift;
@@ -347,8 +418,8 @@ std::tuple<bool, std::string> ILS::validate(ListTA& walk, std::vector<std::vecto
 		return { false, "List is empty" };
 	}
 	while (curr != nullptr) {
-		if (curr->startOfVisitTime != curr->arrTime) {
-			error = "StartOfVisitTime(" + std::to_string(curr->startOfVisitTime) + ") != arrTime(" + std::to_string(curr->arrTime) + ")";
+		if (curr->startOfVisitTime != curr->arrTime + curr->waitDuration) {
+			error = "StartOfVisitTime(" + std::to_string(curr->startOfVisitTime) + ") != arrTime(" + std::to_string(curr->arrTime) + ")" + " + waitDuration(" + std::to_string(curr->waitDuration) + ")";
 			valid = false;
 			break;
 		}
@@ -371,7 +442,7 @@ std::tuple<bool, std::string> ILS::validate(ListTA& walk, std::vector<std::vecto
 	return {valid, error};
 }
 
-std::tuple<int, double, int, int> ILS_OPTW::getBestPos(TA* ta, ListTA& walk, std::vector<std::vector<double>> ttMatrix) {
+std::tuple<int, double, int, int> ILS_OPTW::getBestPos(TA* ta, ListTA walk, std::vector<std::vector<double>> ttMatrix) {
 	double minShift = DBL_MAX;
 	int length = walk.getLength();
 	double arrTime, waitDuration, startOfVisitTime, startOfVisitTime1, startOfVisitTime2, depTime, depTime1, depTime2, shift;
@@ -473,9 +544,9 @@ Solution ILS_OPTW::updateTimes(Solution solution, int startIndex, bool smart, st
 	//update times first
 	TA* curr = solution.mWalk.get(startIndex);
 
-	if (curr == solution.mWalk.first()) {
-		return solution;
-	}
+	//if (curr == solution.mWalk.last()) {
+	//	return solution;
+	//}
 	while (curr != nullptr) {
 
 		curr->arrTime = curr->prev->depTime + ttMatrix[curr->prev->depPointId][curr->arrPointId];
@@ -516,8 +587,8 @@ std::tuple<bool, std::string> ILS_OPTW::validate(ListTA& walk, std::vector<std::
 		return { false, "List is empty" };
 	}
 	while (curr != nullptr) {
-		if (curr->startOfVisitTime != curr->arrTime) {
-			error = "StartOfVisitTime(" + std::to_string(curr->startOfVisitTime) + ") != arrTime(" + std::to_string(curr->arrTime) + ")";
+		if (curr->startOfVisitTime != curr->arrTime + curr->waitDuration) {
+			error = "StartOfVisitTime(" + std::to_string(curr->startOfVisitTime) + ") != arrTime(" + std::to_string(curr->arrTime) + ")" + " + waitDuration(" + std::to_string(curr->waitDuration) + ")";
 			valid = false;
 			break;
 		}
@@ -546,7 +617,7 @@ std::tuple<bool, std::string> ILS_OPTW::validate(ListTA& walk, std::vector<std::
 	return { valid, error };
 }
 
-std::tuple<int, double, int, int> ILS_TOPTW::getBestPos(TA* ta, ListTA& walk, std::vector<std::vector<double>> ttMatrix) {
+std::tuple<int, double, int, int> ILS_TOPTW::getBestPos(TA* ta, ListTA walk, std::vector<std::vector<double>> ttMatrix) {
 	double minShift = DBL_MAX;
 	int length = walk.getLength();
 	double arrTime, waitDuration, startOfVisitTime, depTime, shift;
@@ -647,8 +718,8 @@ std::tuple<bool, std::string> ILS_TOPTW::validate(ListTA& walk, std::vector<std:
 		return { false, "List is empty" };
 	}
 	while (curr != nullptr) {
-		if (curr->startOfVisitTime != curr->arrTime) {
-			error = "StartOfVisitTime(" + std::to_string(curr->startOfVisitTime) + ") != arrTime(" + std::to_string(curr->arrTime) + ")";
+		if (curr->startOfVisitTime != curr->arrTime + curr->waitDuration) {
+			error = "StartOfVisitTime(" + std::to_string(curr->startOfVisitTime) + ") != arrTime(" + std::to_string(curr->arrTime) + ")" + " + waitDuration(" + std::to_string(curr->waitDuration) + ")";
 			valid = false;
 			break;
 		}
@@ -676,3 +747,4 @@ std::tuple<bool, std::string> ILS_TOPTW::validate(ListTA& walk, std::vector<std:
 	}
 	return { valid, error };
 }
+

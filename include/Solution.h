@@ -50,7 +50,22 @@ public:
 		mCloseTime = closeTime;
 		mUnvisited = unvisited;
 		mWalk = walk;
+
+		mWalk.first()->arrTime = openTime;
+		mWalk.first()->startOfVisitTime = openTime;
+		mWalk.first()->depTime = openTime;
+		mWalk.last()->timeWindow.closeTime = closeTime;
+		mWalk.last()->maxShift = closeTime - openTime;
 	};
+
+	Solution(Walk walk, ListTA unvisited) {
+		mScore = 0;
+		mOpenTime = 0;
+		mCloseTime = 0;
+		mUnvisited = unvisited;
+		mWalk = walk;
+	}
+
 
 	~Solution() {};
 	void SetScore(int score) { mScore = score; }

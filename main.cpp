@@ -11,6 +11,7 @@
 #include "Controller.h"
 #include "Definitions.h"
 #include "Divide.h"
+#include "ILS.h"
 
 int S::ta_id;
 
@@ -164,6 +165,11 @@ void init(std::string filename, int numRoutes) {
 
 	TA* depot = touristAttractions.at(0);
 	touristAttractions.erase(touristAttractions.begin());
+
+	ILS_OPTW ilsoptw = ILS_OPTW();
+
+	ListTA attractions = ListTA(touristAttractions);
+	ilsoptw.Solve(attractions, depot, depot, ttMatrix);
 
 	OPTW optw(touristAttractions, ttMatrix, depot, OPEN_DAY_TIME, CLOSE_DAY_TIME);
 	Solution sol = optw.solve();

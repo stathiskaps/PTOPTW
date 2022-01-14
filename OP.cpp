@@ -8,7 +8,7 @@ OP::OP() {
 
 //Constructor uses the received unvisited TAs, it doesn't create new ones
 OP::OP(std::vector<TA*> unvisitedVec, std::vector<std::vector<double>> ttMatrix, TA* depot, double startTime, double endTime) {
-	ListTA unvisited = convertVecToList(unvisitedVec);
+	ListTA unvisited = ListTA(unvisitedVec);
 	//mDepot = (unvisited.grabUsingPos(0));	//remove first node from unvisited and store it as depot
 	mTtMatrix = ttMatrix;
 	mDepot = depot;
@@ -18,7 +18,7 @@ OP::OP(std::vector<TA*> unvisitedVec, std::vector<std::vector<double>> ttMatrix,
 }
 
 OP::OP(std::vector<TA*> unvisitedVec, Walk walk, std::vector<std::vector<double>> ttMatrix, double startTime, double endTime) {
-	ListTA unvisited = convertVecToList(unvisitedVec);
+	ListTA unvisited = ListTA(unvisitedVec);
 	//mDepot = (unvisited.grabUsingPos(0));	//remove first node from unvisited and store it as depot
 	mTtMatrix = ttMatrix;
 	mStartTime = startTime;
@@ -28,16 +28,6 @@ OP::OP(std::vector<TA*> unvisitedVec, Walk walk, std::vector<std::vector<double>
 
 OP::~OP() {
 
-}
-
-Walk OP::convertVecToList(std::vector<TA*> v) {
-	
-	Walk list;
-
-	for (auto& i : v) {
-		list.push(i);
-	}
-	return list;
 }
 
 std::tuple<int, double, int, int> OP::getBestPos(TA* ta) {
@@ -277,24 +267,24 @@ void OP::Local(double avgEvent) {
 
 }
 
-//appends vector2 after vector1 (vector1 + vector2)
-ListTA operator+(ListTA& l1, ListTA& l2) {
-	ListTA l3;
-
-	TA* curr = l1.first();
-	while(curr != nullptr){
-		l3.pushNew(curr);
-		curr = curr->next;
-	}
-
-	curr = l2.first();
-	while(curr != nullptr){
-		l3.pushNew(curr);
-		curr = curr->next;
-	}
-
-	return l3;
-}
+////appends list2 after list1 (list1 + vector2)
+//ListTA operator+(ListTA& l1, ListTA& l2) {
+//	ListTA l3;
+//
+//	TA* curr = l1.first();
+//	while(curr != nullptr){
+//		l3.pushNew(curr);
+//		curr = curr->next;
+//	}
+//
+//	curr = l2.first();
+//	while(curr != nullptr){
+//		l3.pushNew(curr);
+//		curr = curr->next;
+//	}
+//
+//	return l3;
+//}
 
 bool OP::compareByProfit(const TA a, const TA b) {
     return a.profit < b.profit;
@@ -345,8 +335,8 @@ int OP::LocalSearch(double avgPoint) {
 		walkB.removeFirst();
 		//walkB.removeLast();
 
-		mProcessSolution.mUnvisited = subproblemA.mProcessSolution.mUnvisited + subproblemB.mProcessSolution.mUnvisited;
-		mProcessSolution.mWalk = walkA + walkB;
+		//mProcessSolution.mUnvisited = subproblemA.mProcessSolution.mUnvisited + subproblemB.mProcessSolution.mUnvisited;
+		//mProcessSolution.mWalk = walkA + walkB;
 		mProcessSolution.mScore = mProcessSolution.mWalk.collectProfit();
 
 	}
@@ -381,9 +371,9 @@ int OP::LocalSearch(double avgPoint) {
 		}
 
 		//walkB.removeFirst();
-		mProcessSolution.mWalk = walkA + walkB;
+		//mProcessSolution.mWalk = walkA + walkB;
 		updateTimes(1, true);
-		mProcessSolution.mUnvisited = subproblemA.mProcessSolution.mUnvisited + subproblemB.mProcessSolution.mUnvisited;
+		//mProcessSolution.mUnvisited = subproblemA.mProcessSolution.mUnvisited + subproblemB.mProcessSolution.mUnvisited;
 		mProcessSolution.mScore = mProcessSolution.mWalk.collectProfit();
 
 	}

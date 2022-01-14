@@ -465,6 +465,26 @@ public:
 		return nullptr;
 	}
 
+	//i am not sure if I should do that. It saves some times by not searching for an id, but what if the n isn't inside the current list?
+	T* grab(T* n) {
+		if (n == head) {
+			head = n->next;
+		}
+
+		if (n == tail) {
+			tail = tail->next;
+		}
+
+		if (n->prev != nullptr) {
+			n->prev->next = n->next;
+		}
+
+		if (n->next != nullptr) {
+			n->next->prev = n->prev;
+		}
+		return n;
+	}
+
 	T* grabUsingID(std::string id) {
 		T* curr = head;
 		T* temp;
@@ -645,7 +665,7 @@ public:
 
 	int getLength() {
 		int length = 0;
-		if (head != nullptr)
+		if (head != NULL)
 		{
 			T* curr = head;
 			while (curr != nullptr)
@@ -658,16 +678,19 @@ public:
 		return length;
 	}
 
-	std::tuple<List<T>, List<T>> splitAt(int index) {
+	List<T>* splitAtIndex(int index) {
+		if (index < 0) {
+			index = getLength() - index;
+		}
 		T* curr = head;
 		std::tuple<List<T>, List<T>> parts;
 		int pos = 0;
 		while (curr != nullptr) {
 			if (pos >= index) {
-				std::get<0>(parts).pushNew(curr);
+				std::get<1>(parts).pushNew(curr);
 			}
 			else {
-				std::get<1>(parts).pushNew(curr);
+				std::get<0>(parts).pushNew(curr);
 			}
 			
 			pos++;
@@ -726,6 +749,12 @@ public:
 			curr = curr->next;
 		}
 		tail = curr;
+	}
+
+	TouristAttractionList(std::vector<TA*> v) {
+		for (auto& i : v) {
+			this->push(i);
+		}
 	}
 
 	void printMin(std::string msg) {
@@ -807,15 +836,29 @@ public:
 		return copy;
 	}
 
-	TouristAttractionList copyPart(const int startIndex, const int endIndex) {
-		if (startIndex > endIndex) {
-			std::cerr << "Invalid arguments" << std::endl;
-			std::exit(1);
-		}
+	TouristAttractionList copyPart(int startIndex, int endIndex) {
+
 		TouristAttractionList copy;
 		TA* curr = head;
 		bool reachedEndIndex = false;
 		int pos = 0;
+
+		if (startIndex < 0 || endIndex < 0) {
+			size_t length = getLength();
+			if (startIndex < 0) {
+				startIndex += length;
+			}
+
+			if (endIndex < 0) {
+				endIndex += length;
+			}
+		}
+
+		if (startIndex > endIndex) {
+			std::cerr << "Invalid startIndex or endIndex" << std::endl;
+			std::exit(1);
+		}
+
 		while (curr != nullptr) {
 			if (pos >= startIndex) {
 				copy.pushNew(curr);
@@ -984,6 +1027,30 @@ public:
 		}
 	}
 
+	std::tuple<TouristAttractionList, TouristAttractionList> splitAtIndex(int index) {
+		TA* curr = head;
+		std::tuple<TouristAttractionList, TouristAttractionList> lists;
+		int pos = 0;
+
+		if (index < 0) {
+			index = getLength() - index;
+		}
+
+		while (curr != nullptr) {
+			if (pos >= index) {
+				std::get<1>(lists).pushNew(curr);
+			}
+			else {
+				std::get<0>(lists).pushNew(curr);
+			}
+
+			pos++;
+			curr = curr->next;
+		}
+
+		return lists;
+	}
+
 	std::tuple<TouristAttractionList, TouristAttractionList> splitOnDepTime(double depTime) {
 		TA* curr = head;
 		std::tuple<TouristAttractionList, TouristAttractionList> lists;
@@ -998,7 +1065,6 @@ public:
 		}
 		return lists;
 	}
-
 
 	double getDuration() {
 		if (head == nullptr) {
@@ -1054,3 +1120,4 @@ public:
 } ListTA; 
 
 using Walk = ListTA;
+
