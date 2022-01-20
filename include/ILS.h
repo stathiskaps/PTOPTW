@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <vector>
+#include <map>
 #include "OP.h"
 #include "List.h"
 #include "Solution.h"

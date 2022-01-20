@@ -12,11 +12,16 @@
 //#define DEFAULT_ID -1
 //#define DEPOT_ID  -2
 
+#define DEFAULT_CENTROID_ID "c"
 #define DEFAULT_TA_ID "ta"
 #define DEFAULT_DEPOT_ID "depot"
 #define DEFAULT_POINT_ID -1
 #define DEFAULT_CLUSTER_ID -2
 #define DEFAULT_POS -1
+
+#define NOISE -1
+#define LEAF -2
+#define UNDEFINED -3
 
 
 #define MAX_MINUTES 1440

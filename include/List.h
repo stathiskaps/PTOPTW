@@ -32,6 +32,11 @@ struct Point {
 		id = DEFAULT_POINT_ID;
 	}
 
+	Point(int pId, Position pPos) {
+		id = pId;
+		pos = pPos;
+	}
+
 	Point(int pId, double pLat, double pLon) {
 		id = pId;
 		pos = Position(pLat, pLon);
@@ -42,6 +47,10 @@ struct Point {
 struct TimeWindow {
 	double openTime;
 	double closeTime;
+
+	double length() {
+		return closeTime - openTime;
+	}
 };
 
 struct BucketActivity {
@@ -81,10 +90,33 @@ typedef struct TouristAttraction {
 		shift(.0),
 		maxShift(.0),
 		route(-1),
-		cluster(-1),
+		cluster(UNDEFINED),
 		minDist(DBL_MAX),
 		arrPointId(DEFAULT_POINT_ID),
 		depPointId(DEFAULT_POINT_ID),
+		type(touristAttractionType::sight),
+		category(sightCategory::none),
+		next(nullptr), prev(nullptr)
+	{
+	}
+
+	TouristAttraction(std::string pId, Point p)
+		: id(pId),
+		point(p),
+		visitDuration(.0),
+		profit(0),
+		timeWindow(TimeWindow{ .0, .0 }),
+		arrTime(.0),
+		waitDuration(.0),
+		startOfVisitTime(.0),
+		depTime(.0),
+		shift(.0),
+		maxShift(.0),
+		route(-1),
+		cluster(UNDEFINED),
+		minDist(DBL_MAX),
+		arrPointId(p.id),
+		depPointId(p.id),
 		type(touristAttractionType::sight),
 		category(sightCategory::none),
 		next(nullptr), prev(nullptr)
@@ -104,7 +136,7 @@ typedef struct TouristAttraction {
 		shift(.0),
 		maxShift(.0),
 		route(-1),
-		cluster(-1),
+		cluster(UNDEFINED),
 		minDist(DBL_MAX),
 		arrPointId(p.id),
 		depPointId(p.id),
@@ -127,7 +159,7 @@ typedef struct TouristAttraction {
 		shift(.0),
 		maxShift(.0),
 		route(-1),
-		cluster(-1),
+		cluster(UNDEFINED),
 		minDist(DBL_MAX),
 		arrPointId(p.id),
 		depPointId(p.id),
@@ -351,13 +383,15 @@ public:
 	}
 
 	T* second() const {
-		if (head->next != nullptr) {
-			return head->next;
-		}
+		return head->next;
 	}
 
 	T* last() const {
 		return tail;
+	}
+
+	T* prelast() const{
+		return tail->prev;
 	}
 
 	void print() {
@@ -593,6 +627,8 @@ public:
 	
 	}
 	
+
+	//TODO: We need to make sure that ptr node is disconnected from any other lists
 	void push(T* ptr) {
 		if (head == nullptr) {
 			// The list is empty
@@ -749,6 +785,11 @@ public:
 			curr = curr->next;
 		}
 		tail = curr;
+	}
+
+	TouristAttractionList(TA* start, TA* end) {
+		push(start);
+		push(end);
 	}
 
 	TouristAttractionList(std::vector<TA*> v) {
@@ -996,6 +1037,38 @@ public:
 			}
 		}
 		return *this;
+	}
+
+	Point getCentroid() {
+		TA* curr = head;
+		Position pos;
+		int length = 0;
+		while (curr != nullptr) {
+			pos.lat += curr->point.pos.lat;
+			pos.lon += curr->point.pos.lon;
+			length++;
+			curr = curr->next;
+		}
+
+		pos.lat /= length;
+		pos.lon /= length;
+
+		return Point{ DEFAULT_POINT_ID, pos };
+	}
+
+	Point getWeightedCentroid() {
+		int totalProfit = collectProfit();
+		TA* curr = head;
+		Position pos;
+		double profitRatio;
+		while (curr != nullptr) {
+			profitRatio = curr->profit / (double)totalProfit;
+			pos.lat += curr->point.pos.lat * profitRatio;
+			pos.lon += curr->point.pos.lon * profitRatio;
+			curr = curr->next;
+		}
+
+		return Point{ DEFAULT_POINT_ID, pos };
 	}
 
 	void removeNodesWithId(std::string id) {

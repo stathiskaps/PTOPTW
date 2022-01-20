@@ -1,8 +1,6 @@
+#pragma once
 #include <stdexcept>
 #include "List.h"
-
-#ifndef SOLUTION_H
-#define SOLUTION_H
 
 class Solution {
 	friend class OP;
@@ -142,4 +140,4 @@ public:
 
 };
 
-#endif
+using Problem = Solution;

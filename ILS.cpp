@@ -23,6 +23,94 @@ ListTA operator+(ListTA & l1, ListTA & l2) {
 	return l3;
 }
 
+struct {
+
+};
+
+bool areNeighbors(TA* ta1, TA* ta2, double maxtime, std::vector<std::vector<double>> ttMatrix) {
+	bool neighbors = true;
+	//two nodes are neighbors if satisfy the following requirements
+	//1st requirement: travel time between them is less than n
+	if (ttMatrix[ta1->point.id][ta2->point.id] > maxtime) {
+		neighbors = false;
+	}
+
+	//2nd requirement: they have at least m shared minutes in their time windows 
+	//TimeWindow common_time_window = TimeWindow{ std::max(p->timeWindow.openTime, q->timeWindow.openTime), std::min(p->timeWindow.closeTime, q->timeWindow.closeTime) };
+	//if (common_time_window.length() < m) {
+	//	neighbors = false;
+	//}
+	
+	// [3,9] [5,7] [6, 8]
+	// [2,4] [7,9]
+	// [2,6] [4,8] [4, 6]
+
+	return neighbors;
+}
+
+std::vector<TA*> rangeQuery(TA* Q, ListTA nodes, double radius, std::vector<std::vector<double>> ttMatrix) {
+	TA* curr = nodes.first();
+	std::vector<TA*> neighbors;
+
+	while (curr != nullptr) {
+		if (areNeighbors(curr, Q, radius, ttMatrix)) {
+			neighbors.push_back(curr);
+		}
+		curr = curr->next;
+	}
+	return neighbors;
+}
+
+void dbScan(ListTA list, std::vector<std::vector<double>> ttMatrix) {
+	
+	TA* curr = list.first();
+	std::map<std::string, int> labels;
+	const int radius = 30;
+	const int minPoints = 4;
+	
+	int C = 0;
+	while (curr != nullptr) {
+		if (curr->cluster != UNDEFINED) {
+			continue;
+		}
+		std::vector<TA*> neighbors = rangeQuery(curr, list, radius, ttMatrix);
+		if (neighbors.size() < minPoints) {
+			curr->cluster = NOISE;
+			continue;
+		}
+		C++;
+		curr->cluster = C;
+		size_t erased = std::erase_if(neighbors, [curr](TA* t) {return t->id != curr->id; });
+		if (erased != 1) {
+			std::cerr << "Didn't find node " << curr->id << " to remove it from neighbors" << std::endl;
+			std::exit(1);
+		}
+
+		std::vector<TA*> seedSet = neighbors;
+
+		for (auto& n : neighbors) {
+			if (n->cluster == NOISE) {
+				n->cluster = LEAF;
+			}
+
+			if (n->cluster != UNDEFINED) {
+				continue;
+			}
+
+			n->cluster = C;
+			std::vector<TA*> nb = rangeQuery(n, list, radius, ttMatrix);
+			if (nb.size() > minPoints) {
+				neighbors.insert(neighbors.end(), nb.begin(), nb.end());
+			}
+		}
+
+		curr = curr->next;
+	}
+	
+}
+
+
+
 Solution ILS::LocalSearch(Solution solution, double avgPoint, std::vector<std::vector<double>> ttMatrix) {
 
 	TA* curr = solution.mUnvisited.first();
@@ -45,17 +133,46 @@ Solution ILS::LocalSearch(Solution solution, double avgPoint, std::vector<std::v
 
 	size_t walk_length = solution.mWalk.getLength();
 	if (walk_length == 2) {
-		
+
 		//construct depends completely on first node's departure time and on last node's close time
-		Walk walkA = solution.mWalk.copy();
-		Solution solA = Solution(walkA, unvisitedA, solution.mWalk.first()->timeWindow.openTime, avgPoint);
+		Point cb = unvisitedB.getWeightedCentroid();
+
+		TA* ta = solution.mWalk.first()->clone();
+		ta->point = cb;
+
+		Walk walkA = Walk(solution.mWalk.first()->clone(), ta);
+		
+		Solution solA = Problem(walkA, unvisitedA, solution.mWalk.first()->timeWindow.openTime, avgPoint);
 		solA = construct(solA, ttMatrix);
 
 		//get last two elements
 		Walk walkB = solA.mWalk.copyPart(-2, -1);
-		Solution solB = Solution(walkB, unvisitedB, walkB.first()->depTime, solution.mWalk.last()->timeWindow.closeTime);
+		Solution solB = Solution(walkB, unvisitedB, avgPoint, solution.mWalk.last()->timeWindow.closeTime);
 		//Solution solB = Solution(walkB, unvisitedB, avgPoint, solution.mWalk.last()->timeWindow.closeTime);
 		solB = construct(solB, ttMatrix);
+
+		double refPointA = solA.mWalk.last()->depTime;
+		double refPointB = solB.mWalk.second()->arrTime;
+
+		Walk walkC = solB.mWalk.copyPart(0, 1);
+		ListTA remainingUnvisited = solA.mUnvisited + solB.mUnvisited;
+		TA* curr = remainingUnvisited.first();
+
+		ListTA unvisitedC;
+		double extraTime = solB.mWalk.first()->depTime - solA.mWalk.prelast()->depTime;
+		TA* temp1 = solA.mWalk.prelast();
+		TA* temp2 = solB.mWalk.second();
+		//scan unvisited nodes
+		while (curr != nullptr) {
+			if (ttMatrix[temp1->point.id][curr->point.id] + ttMatrix[curr->point.id][temp2->point.id] < ttMatrix[temp1->point.id][temp2->point.id] + extraTime) {
+				unvisitedC.pushNew(curr);
+			}
+			curr = curr->next;
+		}
+
+		//the solution here is not correct
+		Solution solC = Solution(walkC, unvisitedC, solA.mWalk.last()->depTime, solB.mWalk.second()->arrTime);
+
 
 		solA.mWalk.removeLast();
 		solB.mWalk.removeFirst();
@@ -64,6 +181,8 @@ Solution ILS::LocalSearch(Solution solution, double avgPoint, std::vector<std::v
 		solution.mUnvisited = solA.mUnvisited + solB.mUnvisited;
 		solution.mWalk = solA.mWalk + solB.mWalk;
 		solution.mScore = solution.mWalk.collectProfit();
+
+		delete(ta);
 	}
 	else if (walk_length > 2) {
 		curr = solution.mWalk.first();
@@ -202,6 +321,9 @@ Solution ILS::Solve(ListTA& unvisited, TA* start, TA* end, std::vector<std::vect
 
 	auto [minEvent, avgEvent, maxEvent] = calcTimeEventCut(processSolution.mUnvisited);
 	processSolution.mUnvisited = setBucketActivityDurations(processSolution.mUnvisited, avgEvent);
+
+
+	dbScan(processSolution.mUnvisited, ttMatrix);
 
 	while (timesNotImproved < MAX_TIMES_NOT_IMPROVED) {
 		counter++;
