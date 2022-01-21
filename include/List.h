@@ -808,6 +808,15 @@ public:
 		std::cout << std::endl;
 	}
 
+	template<typename Lambda>
+	void foreach(Lambda func) { // or Lambda&&, which is usually better
+		TA* curr = head;
+		while (curr != nullptr) {
+			func(curr);
+			curr = curr->next;
+		}
+	}
+
 	//insert ta n right before index
 	void insertAt(TA* n, int index, int arrPointId, int depPointId, std::vector<std::vector<double>> ttMatrix) {
 

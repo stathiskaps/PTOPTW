@@ -19,8 +19,8 @@
 #define DEFAULT_CLUSTER_ID -2
 #define DEFAULT_POS -1
 
-#define NOISE -1
-#define LEAF -2
+#define LEAF -1
+#define NOISE -2
 #define UNDEFINED -3
 
 

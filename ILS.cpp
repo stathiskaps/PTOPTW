@@ -61,48 +61,62 @@ std::vector<TA*> rangeQuery(TA* Q, ListTA nodes, double radius, std::vector<std:
 	return neighbors;
 }
 
+bool compareById(const TA* a, const TA* b)
+{
+	return a->id < b->id;
+}
+
+bool sameId(const TA* a, const TA* b)
+{
+	return a->id == b->id;
+}
+
 void dbScan(ListTA list, std::vector<std::vector<double>> ttMatrix) {
 	
 	TA* curr = list.first();
-	std::map<std::string, int> labels;
-	const int radius = 30;
-	const int minPoints = 4;
+	const int radius = 10;
+	const int minPoints = 3;
 	
 	int C = 0;
 	while (curr != nullptr) {
 		if (curr->cluster != UNDEFINED) {
+			curr = curr->next;
 			continue;
 		}
 		std::vector<TA*> neighbors = rangeQuery(curr, list, radius, ttMatrix);
 		if (neighbors.size() < minPoints) {
 			curr->cluster = NOISE;
+			curr = curr->next;
 			continue;
 		}
 		C++;
 		curr->cluster = C;
-		size_t erased = std::erase_if(neighbors, [curr](TA* t) {return t->id != curr->id; });
+		size_t old_size = neighbors.size();
+		size_t erased = std::erase_if(neighbors, [curr](TA* t) {return t->id == curr->id; });
 		if (erased != 1) {
-			std::cerr << "Didn't find node " << curr->id << " to remove it from neighbors" << std::endl;
-			std::exit(1);
+			throw std::out_of_range("node wasn't found to erase");
 		}
 
-		std::vector<TA*> seedSet = neighbors;
-
-		for (auto& n : neighbors) {
-			if (n->cluster == NOISE) {
-				n->cluster = LEAF;
+		size_t neighborsSize = neighbors.size();
+		for (size_t i = 0; i < neighborsSize; ++i) {
+			if (neighbors[i]->cluster == NOISE) {
+				neighbors[i]->cluster = LEAF;
 			}
 
-			if (n->cluster != UNDEFINED) {
+			if (neighbors[i]->cluster != UNDEFINED) {
 				continue;
 			}
 
-			n->cluster = C;
-			std::vector<TA*> nb = rangeQuery(n, list, radius, ttMatrix);
-			if (nb.size() > minPoints) {
+			neighbors[i]->cluster = C;
+			std::vector<TA*> nb = rangeQuery(neighbors[i], list, radius, ttMatrix);
+			if (nb.size() >= minPoints) {
 				neighbors.insert(neighbors.end(), nb.begin(), nb.end());
+				/*std::sort(neighbors.begin(), neighbors.end(), compareById);
+				neighbors.erase(unique(neighbors.begin(), neighbors.end(), sameId), neighbors.end());*/
+				neighborsSize += nb.size();
 			}
 		}
+
 
 		curr = curr->next;
 	}
@@ -324,6 +338,8 @@ Solution ILS::Solve(ListTA& unvisited, TA* start, TA* end, std::vector<std::vect
 
 
 	dbScan(processSolution.mUnvisited, ttMatrix);
+
+	processSolution.mUnvisited.foreach([](TA* ta) {std::cout << "id: " << ta->id << ", cluster: " << ta->cluster << std::endl; });
 
 	while (timesNotImproved < MAX_TIMES_NOT_IMPROVED) {
 		counter++;
