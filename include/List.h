@@ -5,6 +5,8 @@
 #include <tuple>
 #include <limits>
 #include <cfloat>
+#include <type_traits> // enable_if, conjuction
+#include <cstdarg>
 #include "Definitions.h"
 
 enum class touristAttractionType {none, sight, route};
@@ -42,6 +44,15 @@ struct Point {
 		pos = Position(pLat, pLon);
 	}
 	~Point() {}
+
+	double euclidean_distance(Point p) {
+		double dist;
+		double nearest;
+		dist = pow(p.pos.lat - pos.lat, 2) + pow(p.pos.lon - pos.lon, 2);
+		dist = sqrt(dist);
+		nearest = (double)roundf(dist * 100) / 100;
+		return nearest;
+	}
 };
 
 struct TimeWindow {
@@ -156,6 +167,30 @@ typedef struct TouristAttraction {
 		waitDuration(.0),
 		startOfVisitTime(.0),
 		depTime(.0),
+		shift(.0),
+		maxShift(.0),
+		route(-1),
+		cluster(UNDEFINED),
+		minDist(DBL_MAX),
+		arrPointId(p.id),
+		depPointId(p.id),
+		type(touristAttractionType::sight),
+		category(sightCategory::none),
+		next(nullptr), prev(nullptr)
+	{
+	}
+
+	//constructor for depots
+	TouristAttraction(Point p, double pDepTime, double pOpenTime, double pCloseTime)
+		: id(DEFAULT_DEPOT_ID),
+		point(p),
+		visitDuration(0),
+		profit(0),
+		timeWindow(TimeWindow{ pOpenTime, pCloseTime }),
+		arrTime(.0),
+		waitDuration(.0),
+		startOfVisitTime(.0),
+		depTime(pDepTime),
 		shift(.0),
 		maxShift(.0),
 		route(-1),
@@ -335,7 +370,6 @@ struct Candidate {
 	int bestArrPointId;
 	int bestDepPointId;
 };
-
 
 template<class T>
 class List {
@@ -662,9 +696,6 @@ public:
 		}
 	}
 
-	bool isEmpty() {
-		return head == nullptr;
-	}
 
 	///* Function to delete the entire linked list */
 	//void del()
@@ -905,8 +936,7 @@ public:
 		}
 
 		if (startIndex > endIndex) {
-			std::cerr << "Invalid startIndex or endIndex" << std::endl;
-			std::exit(1);
+			throw std::invalid_argument("invalid arguments in copyPart");
 		}
 
 		while (curr != nullptr) {
@@ -996,15 +1026,43 @@ public:
 		return *this;
 	}
 
+	TouristAttractionList grabIntermediateNodes() {
+		
+		if (head == nullptr || tail == nullptr || head->next == tail) {
+			return TouristAttractionList();
+		}
+
+		TA* first = head->next;
+		TA* last = tail->prev;
+
+		first->prev = nullptr;
+		last->next = nullptr;
+
+		head->next = tail;
+		tail->prev = head;
+
+		return ListTA(first, last);
+	}
+
 	//grabPart grabs a part of the list
 	// si = start index
 	// ei = end index 
-	TouristAttractionList grabPart(int si, int ei)
+	TouristAttractionList grabPart(int startIndex, int endIndex)
 	{
 
-		if(si > ei) {
-			std::cerr << "Invalid arguments" << std::endl;
-			exit(1);
+		if (startIndex < 0 || endIndex < 0) {
+			size_t length = getLength();
+			if (startIndex < 0) {
+				startIndex += length;
+			}
+
+			if (endIndex < 0) {
+				endIndex += length;
+			}
+		}
+
+		if (startIndex > endIndex) {
+			throw std::invalid_argument("invalid arguments in copyPart");
 		}
 
 		TA* curr = head;
@@ -1012,7 +1070,7 @@ public:
 		int pos = 0;
 
 		while (curr != nullptr) {
-			if (pos == si) {
+			if (pos == startIndex) {
 				temp = curr; //temp points to the first node that gets deleted
 				break;
 			}
@@ -1024,7 +1082,7 @@ public:
 		}
 
 		while(curr != nullptr){
-			if(pos == ei){
+			if(pos == endIndex){
 
 				if (temp->prev != nullptr) {
 					temp->prev->next = curr->next;
@@ -1125,7 +1183,7 @@ public:
 			else {
 				std::get<0>(lists).pushNew(curr);
 			}
-
+			
 			pos++;
 			curr = curr->next;
 		}

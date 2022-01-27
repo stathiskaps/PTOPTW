@@ -151,11 +151,6 @@ void init(std::string filename, int numRoutes) {
 		
 	}
 
-	//double meanShift = std::get<1>(tuple) + calcMeanVisitTime(touristAttractions);
-
-	// Divide divide(touristAttractions);
-	// divide.exec();
-
 	// raise(SIGINT);
 
 
@@ -166,10 +161,10 @@ void init(std::string filename, int numRoutes) {
 	TA* depot = touristAttractions.at(0);
 	touristAttractions.erase(touristAttractions.begin());
 
-	ILS_OPTW ilsoptw = ILS_OPTW();
+	ILS_OPTW ilsoptw = ILS_OPTW(points);
 
 	ListTA attractions = ListTA(touristAttractions);
-	Solution solution = ilsoptw.Solve(attractions, depot, depot, ttMatrix);
+	Solution solution = ilsoptw.Solve(touristAttractions, depot, depot, ttMatrix, numRoutes);
 
 	OPTW optw(touristAttractions, ttMatrix, depot, OPEN_DAY_TIME, CLOSE_DAY_TIME);
 	Solution sol = optw.solve();

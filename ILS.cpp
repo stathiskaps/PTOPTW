@@ -2,6 +2,8 @@
 
 ILS::ILS() {}
 
+ILS::ILS(std::vector<Point> points) : mPoints(points) {}
+
 ILS::~ILS() {}
 
 //appends list2 after list1 (list1 + list2)
@@ -48,7 +50,24 @@ bool areNeighbors(TA* ta1, TA* ta2, double maxtime, std::vector<std::vector<doub
 	return neighbors;
 }
 
-std::vector<TA*> rangeQuery(TA* Q, ListTA nodes, double radius, std::vector<std::vector<double>> ttMatrix) {
+std::tuple<bool, TimeWindow> commonTimeWindow(std::vector<TA*> nodes) {
+	double maxOpenTime = DBL_MIN;
+	double minCloseTime = DBL_MAX;
+	for (auto& n : nodes) {
+		if (n->timeWindow.openTime > maxOpenTime) {
+			maxOpenTime = n->timeWindow.openTime;
+		}
+		if (n->timeWindow.closeTime < minCloseTime) {
+			minCloseTime = n->timeWindow.closeTime;
+		}
+	}
+	if (maxOpenTime == DBL_MIN || minCloseTime == DBL_MAX || minCloseTime-maxOpenTime <= 0) {
+		return { false, TimeWindow{0, 0} };
+	}
+	return { true, TimeWindow{ maxOpenTime, minCloseTime } };
+}
+
+std::vector<TA*> rangeQuery(TA* Q, ListTA nodes, double radius, double minCommonTimeWindow, std::vector<std::vector<double>> ttMatrix) {
 	TA* curr = nodes.first();
 	std::vector<TA*> neighbors;
 
@@ -58,6 +77,11 @@ std::vector<TA*> rangeQuery(TA* Q, ListTA nodes, double radius, std::vector<std:
 		}
 		curr = curr->next;
 	}
+
+	//auto [common, window] = commonTimeWindow(neighbors);
+	//if (!common) {
+	//	neighbors.clear();
+	//}
 	return neighbors;
 }
 
@@ -75,6 +99,7 @@ void dbScan(ListTA list, std::vector<std::vector<double>> ttMatrix) {
 	
 	TA* curr = list.first();
 	const int radius = 10;
+	const int common_minutes = 200;
 	const int minPoints = 3;
 	
 	int C = 0;
@@ -83,7 +108,7 @@ void dbScan(ListTA list, std::vector<std::vector<double>> ttMatrix) {
 			curr = curr->next;
 			continue;
 		}
-		std::vector<TA*> neighbors = rangeQuery(curr, list, radius, ttMatrix);
+		std::vector<TA*> neighbors = rangeQuery(curr, list, radius, common_minutes, ttMatrix);
 		if (neighbors.size() < minPoints) {
 			curr->cluster = NOISE;
 			curr = curr->next;
@@ -108,7 +133,7 @@ void dbScan(ListTA list, std::vector<std::vector<double>> ttMatrix) {
 			}
 
 			neighbors[i]->cluster = C;
-			std::vector<TA*> nb = rangeQuery(neighbors[i], list, radius, ttMatrix);
+			std::vector<TA*> nb = rangeQuery(neighbors[i], list, radius, common_minutes, ttMatrix);
 			if (nb.size() >= minPoints) {
 				neighbors.insert(neighbors.end(), nb.begin(), nb.end());
 				/*std::sort(neighbors.begin(), neighbors.end(), compareById);
@@ -123,12 +148,49 @@ void dbScan(ListTA list, std::vector<std::vector<double>> ttMatrix) {
 	
 }
 
+void printTimes(std::string label, std::vector<std::vector<double>> ttMatrix) {
+	size_t pointsSize = ttMatrix.size();
+	std::cout << label << std::endl;
+	std::cout << "\t";
+	for (int i = 0; i < pointsSize; ++i) {
+		std::cout << i << "\t";
+	}
+	std::cout << std::endl;
+	for (size_t i = 0; i < pointsSize; ++i) {
+		std::cout << i << ":\t";
+		for (size_t j = 0; j < pointsSize; ++j) {
+			std::cout << ttMatrix[i][j] << "\t";
+		}
+		std::cout << std::endl;
+	}
+}
+
+
+std::vector<std::vector<double>> ILS::calcNewTravelTimes(Point p, std::vector<std::vector<double>> ttMatrix) {
+	size_t pointsSize = mPoints.size();
+	std::vector<double> vec;
+
+	for (size_t i = 0; i < pointsSize; ++i) {
+		double dist = mPoints[i].euclidean_distance(p);
+		ttMatrix[i].push_back(dist);
+		vec.push_back(dist);
+	}
+	vec.push_back(0);
+
+	ttMatrix.push_back(vec);
+	printTimes("New times", ttMatrix);
+	return ttMatrix;
+}
+
+
+
 
 
 Solution ILS::LocalSearch(Solution solution, double avgPoint, std::vector<std::vector<double>> ttMatrix) {
 
 	TA* curr = solution.mUnvisited.first();
 	TA* temp;
+	TA* depot = solution.mWalk.first();
 
 	ListTA unvisitedA, unvisitedB;
 	int unvisitedACount = 0, unvisitedBCount = 0;
@@ -148,44 +210,20 @@ Solution ILS::LocalSearch(Solution solution, double avgPoint, std::vector<std::v
 	size_t walk_length = solution.mWalk.getLength();
 	if (walk_length == 2) {
 
-		//construct depends completely on first node's departure time and on last node's close time
 		Point cb = unvisitedB.getWeightedCentroid();
+		cb.id = ttMatrix.size();
+		ttMatrix = calcNewTravelTimes(cb, ttMatrix);
 
-		TA* ta = solution.mWalk.first()->clone();
-		ta->point = cb;
-
-		Walk walkA = Walk(solution.mWalk.first()->clone(), ta);
-		
-		Solution solA = Problem(walkA, unvisitedA, solution.mWalk.first()->timeWindow.openTime, avgPoint);
+		//construct depends completely on first node's departure time and on last node's close time
+		TA* temp = new TA(cb);
+		Solution solA = Solution(depot, temp, unvisitedA, depot->timeWindow.openTime, avgPoint);
+		delete(temp);
 		solA = construct(solA, ttMatrix);
 
 		//get last two elements
 		Walk walkB = solA.mWalk.copyPart(-2, -1);
-		Solution solB = Solution(walkB, unvisitedB, avgPoint, solution.mWalk.last()->timeWindow.closeTime);
-		//Solution solB = Solution(walkB, unvisitedB, avgPoint, solution.mWalk.last()->timeWindow.closeTime);
+		Solution solB = Solution(walkB.prelast(), depot, unvisitedB, avgPoint, solution.mWalk.last()->timeWindow.closeTime);
 		solB = construct(solB, ttMatrix);
-
-		double refPointA = solA.mWalk.last()->depTime;
-		double refPointB = solB.mWalk.second()->arrTime;
-
-		Walk walkC = solB.mWalk.copyPart(0, 1);
-		ListTA remainingUnvisited = solA.mUnvisited + solB.mUnvisited;
-		TA* curr = remainingUnvisited.first();
-
-		ListTA unvisitedC;
-		double extraTime = solB.mWalk.first()->depTime - solA.mWalk.prelast()->depTime;
-		TA* temp1 = solA.mWalk.prelast();
-		TA* temp2 = solB.mWalk.second();
-		//scan unvisited nodes
-		while (curr != nullptr) {
-			if (ttMatrix[temp1->point.id][curr->point.id] + ttMatrix[curr->point.id][temp2->point.id] < ttMatrix[temp1->point.id][temp2->point.id] + extraTime) {
-				unvisitedC.pushNew(curr);
-			}
-			curr = curr->next;
-		}
-
-		//the solution here is not correct
-		Solution solC = Solution(walkC, unvisitedC, solA.mWalk.last()->depTime, solB.mWalk.second()->arrTime);
 
 
 		solA.mWalk.removeLast();
@@ -194,9 +232,7 @@ Solution ILS::LocalSearch(Solution solution, double avgPoint, std::vector<std::v
 
 		solution.mUnvisited = solA.mUnvisited + solB.mUnvisited;
 		solution.mWalk = solA.mWalk + solB.mWalk;
-		solution.mScore = solution.mWalk.collectProfit();
 
-		delete(ta);
 	}
 	else if (walk_length > 2) {
 		curr = solution.mWalk.first();
@@ -234,7 +270,6 @@ Solution ILS::LocalSearch(Solution solution, double avgPoint, std::vector<std::v
 
 		//because we may added a TA to walkA, some departure times may moved forward, which affects time of walkB
 		solution = updateTimes(solution, 1, true, ttMatrix);
-		solution.mScore = solution.mWalk.collectProfit();
 	}
 	else {
 		std::cerr << "Invalid walk length" << std::endl;
@@ -318,8 +353,55 @@ ListTA ILS::setBucketActivityDurations(ListTA& unvisited, double avgEvent) {
 
 }
 
+bool compareTimeWindowCenter(const TA* left, const TA* right) {
+	return (left->timeWindow.openTime + left->timeWindow.closeTime) / 2 < (right->timeWindow.openTime + right->timeWindow.closeTime) / 2;
+}
 
-Solution ILS::Solve(ListTA& unvisited, TA* start, TA* end, std::vector<std::vector<double>> ttMatrix) {
+std::vector<std::vector<TA*>> ILS::getBuckets(std::vector<TA*> nodes, int m) {
+	
+	std::vector<std::vector<TA*>> buckets;
+	int offset = 0, remainder = nodes.size() % m, bucketSize = nodes.size() / m;
+
+	std::sort(nodes.begin(), nodes.end(), &compareTimeWindowCenter);
+
+	for (int i = 0; i < m; ++i) {
+		std::vector<TA*> slice(nodes.begin() + offset, nodes.begin() + offset + bucketSize + remainder);
+		offset += bucketSize + remainder;
+		if (remainder > 0) {
+			remainder--;
+		}
+		buckets.push_back(slice);
+	}
+
+	return buckets;
+}
+
+std::vector<double> ILS::getTimeCuts(std::vector<std::vector<TA*>> buckets) {
+	std::vector<double> cuts;
+
+	size_t bucketsSize = buckets.size();
+	for (int i = 0; i < bucketsSize - 1; ++i) {
+		double average = (buckets[i].back()->timeWindow.openTime + 
+			buckets[i].back()->timeWindow.closeTime + 
+			buckets[i + 1].front()->timeWindow.openTime + 
+			buckets[i + 1].front()->timeWindow.closeTime) / 4;
+		cuts.push_back(average);
+	}
+	return cuts;
+}
+
+
+
+
+Solution ILS::Solve(std::vector<TA*> nodes, TA* start, TA* end, std::vector<std::vector<double>> ttMatrix, int num) {
+	ListTA unvisited = ListTA(nodes);
+	
+	//initialize num different buckets, in which we will run the problems. We want to swap nodes inside these buckets
+	auto buckets = getBuckets(nodes, num);
+	auto cuts = getTimeCuts(buckets);
+
+
+
 
 	Walk walk;
 	walk.pushNew(start);
@@ -340,19 +422,26 @@ Solution ILS::Solve(ListTA& unvisited, TA* start, TA* end, std::vector<std::vect
 	dbScan(processSolution.mUnvisited, ttMatrix);
 
 	processSolution.mUnvisited.foreach([](TA* ta) {std::cout << "id: " << ta->id << ", cluster: " << ta->cluster << std::endl; });
+	//TA* temp = processSolution.mUnvisited.first();
+	//std::vector<TA*> tempVec;
+	//while (temp != nullptr) {
+	//	if (temp->cluster == 2) {
+	//		temp->print();
+	//	}
+	//	temp = temp->next;
+	//}
 
 	while (timesNotImproved < MAX_TIMES_NOT_IMPROVED) {
 		counter++;
 		std::cout << "this is revision: " << counter << std::endl;
 
 		processSolution = LocalSearch(processSolution, avgEvent, ttMatrix);
-		int score = processSolution.GetScore();
+		int score = processSolution.getScore();
 
 		if (score > bestScore) {
 			bestScore = score;
 			bestSolution.reset();
 			bestSolution.copy(processSolution);
-			bestSolution.SetScore(score);
 			R = 1;
 			timesNotImproved = 0;
 

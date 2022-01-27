@@ -10,6 +10,8 @@
 
 class ILS{
 private:
+	std::vector<Point> mPoints;
+
 	virtual std::tuple<int, double, int, int> getBestPos(TA*, ListTA, std::vector<std::vector<double>>);
 	virtual Solution updateTimes(Solution solution, int startIndex, bool smart, std::vector<std::vector<double>> ttMatrix);
 	Solution LocalSearch(Solution solution, double avgPoint, std::vector<std::vector<double>>);
@@ -18,11 +20,15 @@ private:
 	virtual Walk updateMaxShifts(Walk, std::vector<std::vector<double>>);
 	ListTA setBucketActivityDurations(ListTA&, double);
 	Solution construct(Solution, std::vector<std::vector<double>>);
+	std::vector<std::vector<double>> calcNewTravelTimes(Point, std::vector<std::vector<double>>);
+	std::vector<std::vector<TA*>> getBuckets(std::vector<TA*>, int);
+	std::vector<double> getTimeCuts(std::vector<std::vector<TA*>>);
 public:
     ILS();
+	ILS(std::vector<Point>);
     ~ILS();
 	virtual std::tuple<bool, std::string> validate(ListTA&, std::vector<std::vector<double>>);
-	Solution Solve(ListTA&, TA*, TA*, std::vector<std::vector<double>>);
+	Solution Solve(std::vector<TA*>, TA*, TA*, std::vector<std::vector<double>>, int);
 	
 
 };

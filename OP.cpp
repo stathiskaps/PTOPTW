@@ -337,7 +337,6 @@ int OP::LocalSearch(double avgPoint) {
 
 		//mProcessSolution.mUnvisited = subproblemA.mProcessSolution.mUnvisited + subproblemB.mProcessSolution.mUnvisited;
 		//mProcessSolution.mWalk = walkA + walkB;
-		mProcessSolution.mScore = mProcessSolution.mWalk.collectProfit();
 
 	}
 	else if (walkLength > 2) {
@@ -374,7 +373,6 @@ int OP::LocalSearch(double avgPoint) {
 		//mProcessSolution.mWalk = walkA + walkB;
 		updateTimes(1, true);
 		//mProcessSolution.mUnvisited = subproblemA.mProcessSolution.mUnvisited + subproblemB.mProcessSolution.mUnvisited;
-		mProcessSolution.mScore = mProcessSolution.mWalk.collectProfit();
 
 	}
 	else {
@@ -391,7 +389,7 @@ int OP::LocalSearch(double avgPoint) {
 		}
 	}
 
-	return mProcessSolution.mScore;
+	return mProcessSolution.getScore();
 
 }
 
@@ -534,7 +532,6 @@ void OP::Shake(int S, int R, int numOfPois) {
 void OP::SaveSolution(Solution sol) {
 	mBestSolution.mUnvisited = sol.mUnvisited.copy();
 	mBestSolution.mWalk = sol.mWalk.copy();
-	mBestSolution.mScore = sol.mScore;
 }
 
 Solution OP::solve() {
@@ -561,7 +558,6 @@ Solution OP::solve() {
 			bestScore = score;
 			mBestSolution.reset();
 			mBestSolution.copy(mProcessSolution);
-			mBestSolution.SetScore(score);
 			R = 1;
 			timesNotImproved = 0;
 

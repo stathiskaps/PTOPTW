@@ -14,24 +14,14 @@ class Solution {
 
 	ListTA mUnvisited;
 	Walk mWalk;
-	int mScore, mOpenTime, mCloseTime;
 
 public:
 	Solution(ListTA unvisited) {
 		mUnvisited = unvisited;
-		mScore = 0;
-		mOpenTime = 0;
-		mCloseTime = 0;
 	};
 	Solution(){
-		mScore = 0;
-		mOpenTime = 0;
-		mCloseTime = 0;
 	};
 	Solution(TA* depot, ListTA unvisited, double openTime, double closeTime) {
-		mScore = 0;
-		mOpenTime = openTime;
-		mCloseTime = closeTime;
 		mUnvisited = unvisited;
 		mWalk.pushNew(depot);
 		mWalk.pushNew(depot);
@@ -43,9 +33,6 @@ public:
 		mWalk.last()->maxShift = closeTime - mWalk.last()->depTime;
 	};
 	Solution(Walk walk, ListTA unvisited, double openTime, double closeTime) {
-		mScore = 0;
-		mOpenTime = openTime;
-		mCloseTime = closeTime;
 		mUnvisited = unvisited;
 		mWalk = walk;
 
@@ -57,42 +44,61 @@ public:
 	};
 
 	Solution(Walk walk, ListTA unvisited) {
-		mScore = 0;
-		mOpenTime = 0;
-		mCloseTime = 0;
 		mUnvisited = unvisited;
 		mWalk = walk;
 	}
 
+	Solution(Point p, double startTime, double endTime) {
+		if (startTime > endTime) {
+			throw std::invalid_argument("arguments are invalid");
+		}
+		TA* depot = new TA(p);
+		depot->depTime = startTime;
+		depot->timeWindow = TimeWindow{ startTime, endTime };
+		mWalk.push(depot);
+		depot = new TA(p);
+		depot->timeWindow = TimeWindow{ startTime, endTime };
+		depot->maxShift = endTime - startTime;
+	}
+
+	Solution(TA* start, TA* end, ListTA unvisited, double startTime, double endTime) {
+		TA* startDepot = start->clone();
+		TA* endDepot = end->clone();
+
+		startDepot->depTime = startTime;
+		startDepot->timeWindow = TimeWindow{ startTime, endTime };
+		
+		endDepot->timeWindow = TimeWindow{ startTime, endTime };
+		endDepot->maxShift = endTime - startTime;
+
+		mWalk.push(startDepot);
+		mWalk.push(endDepot);
+
+		mUnvisited = unvisited;
+	}
+
 
 	~Solution() {};
-	void SetScore(int score) { mScore = score; }
-	int GetScore() { return mScore; }
 	void SetRoute(Walk route) { mWalk = route; }
 	Walk GetRoute() { return mWalk; }
 	
 	void copy(Solution sol) {
 		this->mUnvisited = sol.mUnvisited.copy();
 		this->mWalk = sol.mWalk.copy();
-		this->mScore = sol.mScore;
-		this->mOpenTime = sol.mOpenTime;
-		this->mCloseTime = sol.mCloseTime;
 	}
 
 	void reset() {
 		this->mUnvisited.empty();
 		this->mWalk.empty();
-		this->mScore = 0;
-		this->mOpenTime = 0;
-		this->mCloseTime = 0;
 	}
 
 	void print() {
 		std::cout << "Unvisited:\t"; mUnvisited.print();
 		std::cout << "Route:\t" ; mWalk.print();
-		std::cout << "Score: " << mScore << std::endl;
-		std::cout << "OpenTime:" << mOpenTime << std::endl;
-		std::cout << "CloseTime:" << mCloseTime << std::endl;
+	}
+
+	int getScore() {
+		return mWalk.collectProfit();
 	}
 
 	void print(std::string msg) {
@@ -101,9 +107,6 @@ public:
 		std::cout << "----------------------------------------------------------------------" << std::endl;
 		mUnvisited.print("Unvisited:");
 		mWalk.print("Route:");
-		std::cout << "Score: " << mScore << std::endl;
-		std::cout << "OpenTime:" << mOpenTime << std::endl;
-		std::cout << "CloseTime:" << mCloseTime << std::endl;
 		std::cout << "||======================================================================||" << std::endl;
 	}
 
@@ -118,9 +121,9 @@ public:
 				id::generate(),
 				nodes.front().point,
 				duration,
-				mScore,
-				mOpenTime,
-				mCloseTime
+				getScore(),
+				mWalk.first()->depTime,
+				mWalk.last()->timeWindow.closeTime
 			);
 		}
 
@@ -130,9 +133,9 @@ public:
 			nodes.front().point,
 			nodes.back().point,
 			duration,
-			mScore,
-			mOpenTime,
-			mCloseTime);
+			getScore(),
+			mWalk.first()->depTime,
+			mWalk.last()->timeWindow.closeTime);
 		
 	}
 
