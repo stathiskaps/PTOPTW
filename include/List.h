@@ -376,6 +376,14 @@ template<class T>
 class List {
 private:
 	void disconnect(T* curr){
+		if (head == curr) {
+			head = curr->next;
+		}
+
+		if (tail == curr) {
+			tail = curr->prev;
+		}
+
 		if(curr->next != nullptr){
 			curr->next->prev = curr->prev;
 		}
@@ -427,6 +435,10 @@ public:
 
 	T* prelast() const{
 		return tail->prev;
+	}
+
+	bool isEmpty() {
+		return getLength() == 0;
 	}
 
 	void print() {
@@ -583,18 +595,34 @@ public:
 		return nullptr;
 	}
 
-	void removeFirst(){
-		T* curr = head;
-		head = curr->next;
-		disconnect(curr);
-		delete(curr);
+	void trimLeft(int n){
+		TA* curr = head, temp;
+		int index = 0;
+		
+		while (curr != nullptr) {
+			if (++index > n) {
+				break;
+			}
+			temp = curr;
+			curr = curr->next;
+			disconnect(temp);
+			delete(temp);
+		}
 	}
 
-	void removeLast(){
-		T* curr = tail;
-		tail = curr->prev;
-		disconnect(curr);
-		delete(curr);
+	void trimRight(int n) {
+		TA* curr = tail, temp;
+		int index = 0;
+
+		while (curr != nullptr) {
+			if (++index > n) {
+				break;
+			}
+			temp = curr;
+			curr = curr->prev;
+			disconnect(temp);
+			delete(temp);
+		}
 	}
 
 	//maybe i could improve this function
@@ -717,7 +745,7 @@ public:
 
 	int getLength() {
 		int length = 0;
-		if (head != NULL)
+		if (head != nullptr)
 		{
 			T* curr = head;
 			while (curr != nullptr)

@@ -167,103 +167,173 @@ void printTimes(std::string label, std::vector<std::vector<double>> ttMatrix) {
 
 
 
-Solution ILS::LocalSearch(Solution solution, double avgPoint, OP& op) {
+void ILS::LocalSearch(std::vector<Solution>& solutions, std::vector<double> cuts, OP& op) {
 
-	TA* curr = solution.mUnvisited.first();
-	TA* temp;
-	TA* depot = solution.mWalk.first();
+	size_t solutionsSize = solutions.size();
 
-	ListTA unvisitedA, unvisitedB;
-	int unvisitedACount = 0, unvisitedBCount = 0;
-	while (curr != nullptr) {
-		temp = curr;
-		curr = curr->next;
-		if (temp->bucketActivities[0].duration >= temp->bucketActivities[1].duration) {
-			unvisitedA.pushClone(temp);
-			unvisitedACount++;
+	for (int i = 0; i < solutionsSize; ++i) {
+
+		Walk walk;
+		double startTime = 0, endTime = cuts[i];
+
+		if (i == 0) {
+			startTime = op.mStartDepot->timeWindow.openTime;
 		}
 		else {
-			unvisitedB.pushClone(temp);
-			unvisitedBCount;
+			startTime = cuts[i - 1];
 		}
-	}
 
-	size_t walk_length = solution.mWalk.getLength();
-	if (walk_length == 2) {
+		if (solutions[i].mWalk.isEmpty()) {
+			TA* startDepot;
+			if (i == 0) {
+				startDepot = op.mStartDepot->clone();
+			}
+			else {
+				startDepot = solutions[i - 1].mWalk.prelast()->clone();
+			}
 
-		Point cb = unvisitedB.getWeightedCentroid();
-		cb.id = op.mTravelTimes.size();
-		op.AddPointToGraph(cb);
+			TA* endDepot;
+			if (i == solutionsSize - 1) {
+				endDepot = op.mEndDepot->clone();
+			}
+			else {
+				Point cb;
+				if (solutions[i + 1].mWalk.getLength() <= 2) {
+					cb = solutions[i + 1].mUnvisited.getWeightedCentroid();
+				}
+				else {
+					cb = solutions[i + 1].mWalk.getWeightedCentroid();
+				}
+				endDepot = new TA(cb); //TODO: delete endDepot
+			}
 
-		//construct depends completely on first node's departure time and on last node's close time
-		TA* temp = new TA(cb);
-		Solution solA = Solution(depot, temp, unvisitedA, depot->timeWindow.openTime, avgPoint);
-		delete(temp);
-		solA = construct(solA, op.mTravelTimes);
-
-		//get last two elements
-		Walk walkB = solA.mWalk.copyPart(-2, -1);
-		Solution solB = Solution(walkB.prelast(), depot, unvisitedB, avgPoint, solution.mWalk.last()->timeWindow.closeTime);
-		solB = construct(solB, op.mTravelTimes);
-
-
-		solA.mWalk.removeLast();
-		solB.mWalk.removeFirst();
-		//walkB.removeLast();
-
-		solution.mUnvisited = solA.mUnvisited + solB.mUnvisited;
-		solution.mWalk = solA.mWalk + solB.mWalk;
-
-	}
-	else if (walk_length > 2) {
-		curr = solution.mWalk.first();
-		auto [wa, wb] = solution.mWalk.splitOnDepTime(avgPoint);
-
-		size_t wa_length = wa.getLength(), wb_length = wb.getLength();
-
-		Solution solA, solB;
-
-		if (wa_length <= 1 || unvisitedACount == 0) {
-			solA = Solution(wa, unvisitedA);
+			walk = Walk(startDepot, endDepot);
 		}
 		else {
-			wa.last()->timeWindow.closeTime = avgPoint;
-			wa.last()->maxShift = avgPoint - wa.last()->depTime;
-			//we changed the maxshift of the last node, we need to change maxShift of previous nodes as well
-			updateMaxShifts(wa, op.mTravelTimes);
+			TA* endDepot;
+			if (i == solutionsSize - 1) {
+				endDepot = op.mEndDepot->clone();
+			}
+			else {
+				Point cb;
+				if (solutions[i + 1].mWalk.getLength() <= 2) {
+					cb = solutions[i + 1].mUnvisited.getWeightedCentroid();
+				}
+				else {
+					cb = solutions[i + 1].mWalk.getWeightedCentroid();
+				}
+				endDepot = new TA(cb); //TODO: delete endDepot
+
+				walk = solutions[i].mWalk;
+				walk.push(endDepot);
+			}
 			
-			solA = Solution(wa, unvisitedA);
-			solA = construct(solA, op.mTravelTimes);
 		}
 
-		if (wb_length <= 1 || unvisitedBCount == 0) {
-			solB = Solution(wb, unvisitedB);
+		
+
+		Solution sol = Solution(solutions[i].mUnvisited, walk, startTime, endTime);
+
+		sol = construct(sol, op.mTravelTimes);
+
+
+		TA* curr = solutions[i].mUnvisited.first();
+		TA* temp;
+		TA* depot = solutions[i].mWalk.first();
+
+		ListTA unvisitedA, unvisitedB;
+		int unvisitedACount = 0, unvisitedBCount = 0;
+		while (curr != nullptr) {
+			temp = curr;
+			curr = curr->next;
+			if (temp->bucketActivities[0].duration >= temp->bucketActivities[1].duration) {
+				unvisitedA.pushClone(temp);
+				unvisitedACount++;
+			}
+			else {
+				unvisitedB.pushClone(temp);
+				unvisitedBCount;
+			}
+		}
+		size_t walk_length = solutions[i].mWalk.getLength();
+		if (walk_length == 2) {
+
+			Point cb = unvisitedB.getWeightedCentroid();
+			cb.id = op.mTravelTimes.size();
+			op.AddPointToGraph(cb);
+
+			//construct depends completely on first node's departure time and on last node's close time
+			TA* temp = new TA(cb);
+			Solution solA = Solution(depot, temp, unvisitedA, depot->timeWindow.openTime, cuts[i]);
+			delete(temp);
+			solA = construct(solA, op.mTravelTimes);
+
+			//get last two elements
+			Walk walkB = solA.mWalk.copyPart(-2, -1);
+			Solution solB = Solution(walkB.prelast(), depot, unvisitedB, cuts[i], solutions[i].mWalk.last()->timeWindow.closeTime);
+			solB = construct(solB, op.mTravelTimes);
+
+
+			solA.mWalk.trimRight(1);
+			solB.mWalk.trimLeft(1);
+			//walkB.removeLast();
+
+			solutions[i].mUnvisited = solA.mUnvisited + solB.mUnvisited;
+			solutions[i].mWalk = solA.mWalk + solB.mWalk;
+
+		}
+		else if (walk_length > 2) {
+			curr = solutions[i].mWalk.first();
+			auto [wa, wb] = solutions[i].mWalk.splitOnDepTime(cuts[i]);
+
+			size_t wa_length = wa.getLength(), wb_length = wb.getLength();
+
+			Solution solA, solB;
+
+			if (wa_length <= 1 || unvisitedACount == 0) {
+				solA = Solution(wa, unvisitedA);
+			}
+			else {
+				wa.last()->timeWindow.closeTime = cuts[i];
+				wa.last()->maxShift = cuts[i] - wa.last()->depTime;
+				//we changed the maxshift of the last node, we need to change maxShift of previous nodes as well
+				updateMaxShifts(wa, op.mTravelTimes);
+
+				solA = Solution(wa, unvisitedA);
+				solA = construct(solA, op.mTravelTimes);
+			}
+
+			if (wb_length <= 1 || unvisitedBCount == 0) {
+				solB = Solution(wb, unvisitedB);
+			}
+			else {
+				solB = Solution(wb, unvisitedB);
+				solB = construct(solB, op.mTravelTimes);
+			}
+
+			//walkB.removeFirst();
+
+			solutions[i].mWalk = solA.mWalk + solB.mWalk;
+			solutions[i].mUnvisited = solA.mUnvisited + solB.mUnvisited;
+
+			//because we may added a TA to walkA, some departure times may moved forward, which affects time of walkB
+			solutions[i] = updateTimes(solutions[i], 1, true, op.mTravelTimes);
 		}
 		else {
-			solB = Solution(wb, unvisitedB);
-			solB = construct(solB, op.mTravelTimes);
+			std::cerr << "Invalid walk length" << std::endl;
+			std::exit(1);
 		}
 
-		//walkB.removeFirst();
+		auto [valid, error] = validate(solutions[i].mWalk, op.mTravelTimes);
+		if (!valid) {
+			std::cout << error << std::endl;
+			std::exit(1);
+		}
+	}
+
+	for (auto& solution : solutions) {
 		
-		solution.mWalk = solA.mWalk + solB.mWalk;
-		solution.mUnvisited = solA.mUnvisited + solB.mUnvisited;
-
-		//because we may added a TA to walkA, some departure times may moved forward, which affects time of walkB
-		solution = updateTimes(solution, 1, true, op.mTravelTimes);
 	}
-	else {
-		std::cerr << "Invalid walk length" << std::endl;
-		std::exit(1);
-	}
-
-	auto [valid, error] = validate(solution.mWalk, op.mTravelTimes);
-	if (!valid) {
-		std::cout << error << std::endl;
-		std::exit(1);
-	}
-
-	return solution;
 
 }
 
@@ -381,11 +451,12 @@ Solution ILS::Solve(OP& op) {
 	//initialize num different buckets, in which we will run the problems. We want to swap nodes inside these buckets
 	auto bins = getBuckets(op.mAttractions, mBucketsNum);
 	auto cuts = getTimeCuts(bins);
+	cuts.push_back(op.mEndDepot->timeWindow.closeTime);
 
-	std::vector<Solution> solutions;
-
+	//intialize solutions
+	std::vector<Solution> processSolutions;
 	for (auto& bin : bins) {
-		Solution sol = Solution(bin);
+		processSolutions.push_back(Solution(bin));
 	}
 
 
@@ -422,7 +493,7 @@ Solution ILS::Solve(OP& op) {
 		counter++;
 		std::cout << "this is revision: " << counter << std::endl;
 
-		processSolution = LocalSearch(processSolution, avgEvent, op);
+		LocalSearch(processSolutions, cuts, op);
 		int score = processSolution.getScore();
 
 		if (score > bestScore) {

@@ -21,7 +21,7 @@ private:
 
 	virtual std::tuple<int, double, int, int> getBestPos(TA*, ListTA, std::vector<std::vector<double>>);
 	virtual Solution updateTimes(Solution solution, int startIndex, bool smart, std::vector<std::vector<double>> ttMatrix);
-	Solution LocalSearch(Solution solution, double avgPoint, OP&);
+	void LocalSearch(std::vector<Solution>&, std::vector<double>, OP&);
 	Solution Shake(Solution solution, int S, int R, int numOfPois, std::vector<std::vector<double>> ttMatrix);
 	std::tuple<double, double, double> calcTimeEventCut(ListTA&);
 	virtual Walk updateMaxShifts(Walk, std::vector<std::vector<double>>);

@@ -16,6 +16,7 @@ class Solution {
 public:
 	Solution(ListTA unvisited) {
 		mUnvisited = unvisited;
+		mWalk = Walk();
 	};
 	Solution(){
 	};
