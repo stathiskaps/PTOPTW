@@ -43,14 +43,14 @@ std::vector<Solution> Unifier::exec() {
 			}
 		}
 
-		OPTW optw(touristAttractions, m_ttMatrix, m_depot, OPEN_DAY_TIME, CLOSE_DAY_TIME);
+		/*OPTW optw(touristAttractions, m_ttMatrix, m_depot, OPEN_DAY_TIME, CLOSE_DAY_TIME);
 		Solution sol = optw.solve();
 		bool valid = optw.validate();
 		std::string msg = valid ? "yes" : "no";
 		std::cout << "valid solution? " << msg << std::endl;
 		sol.print();
 
-		solutions.push_back(sol);
+		solutions.push_back(sol);*/
 
 		//use ilstop to find a solution about these node-routes
 		//OPTW ilstop(routes, m_tMax, m_ttMatrix, m_depot, dSol);

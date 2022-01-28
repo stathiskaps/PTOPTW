@@ -2,7 +2,7 @@
 
 ILS::ILS() {}
 
-ILS::ILS(std::vector<Point> points) : mPoints(points) {}
+ILS::ILS(int bucketsNum) : mBucketsNum(bucketsNum) {}
 
 ILS::~ILS() {}
 
@@ -12,13 +12,13 @@ ListTA operator+(ListTA & l1, ListTA & l2) {
 
 	TA* curr = l1.first();
 	while (curr != nullptr) {
-		l3.pushNew(curr);
+		l3.pushClone(curr);
 		curr = curr->next;
 	}
 
 	curr = l2.first();
 	while (curr != nullptr) {
-		l3.pushNew(curr);
+		l3.pushClone(curr);
 		curr = curr->next;
 	}
 
@@ -166,27 +166,8 @@ void printTimes(std::string label, std::vector<std::vector<double>> ttMatrix) {
 }
 
 
-std::vector<std::vector<double>> ILS::calcNewTravelTimes(Point p, std::vector<std::vector<double>> ttMatrix) {
-	size_t pointsSize = mPoints.size();
-	std::vector<double> vec;
 
-	for (size_t i = 0; i < pointsSize; ++i) {
-		double dist = mPoints[i].euclidean_distance(p);
-		ttMatrix[i].push_back(dist);
-		vec.push_back(dist);
-	}
-	vec.push_back(0);
-
-	ttMatrix.push_back(vec);
-	printTimes("New times", ttMatrix);
-	return ttMatrix;
-}
-
-
-
-
-
-Solution ILS::LocalSearch(Solution solution, double avgPoint, std::vector<std::vector<double>> ttMatrix) {
+Solution ILS::LocalSearch(Solution solution, double avgPoint, OP& op) {
 
 	TA* curr = solution.mUnvisited.first();
 	TA* temp;
@@ -198,11 +179,11 @@ Solution ILS::LocalSearch(Solution solution, double avgPoint, std::vector<std::v
 		temp = curr;
 		curr = curr->next;
 		if (temp->bucketActivities[0].duration >= temp->bucketActivities[1].duration) {
-			unvisitedA.pushNew(temp);
+			unvisitedA.pushClone(temp);
 			unvisitedACount++;
 		}
 		else {
-			unvisitedB.pushNew(temp);
+			unvisitedB.pushClone(temp);
 			unvisitedBCount;
 		}
 	}
@@ -211,19 +192,19 @@ Solution ILS::LocalSearch(Solution solution, double avgPoint, std::vector<std::v
 	if (walk_length == 2) {
 
 		Point cb = unvisitedB.getWeightedCentroid();
-		cb.id = ttMatrix.size();
-		ttMatrix = calcNewTravelTimes(cb, ttMatrix);
+		cb.id = op.mTravelTimes.size();
+		op.AddPointToGraph(cb);
 
 		//construct depends completely on first node's departure time and on last node's close time
 		TA* temp = new TA(cb);
 		Solution solA = Solution(depot, temp, unvisitedA, depot->timeWindow.openTime, avgPoint);
 		delete(temp);
-		solA = construct(solA, ttMatrix);
+		solA = construct(solA, op.mTravelTimes);
 
 		//get last two elements
 		Walk walkB = solA.mWalk.copyPart(-2, -1);
 		Solution solB = Solution(walkB.prelast(), depot, unvisitedB, avgPoint, solution.mWalk.last()->timeWindow.closeTime);
-		solB = construct(solB, ttMatrix);
+		solB = construct(solB, op.mTravelTimes);
 
 
 		solA.mWalk.removeLast();
@@ -249,10 +230,10 @@ Solution ILS::LocalSearch(Solution solution, double avgPoint, std::vector<std::v
 			wa.last()->timeWindow.closeTime = avgPoint;
 			wa.last()->maxShift = avgPoint - wa.last()->depTime;
 			//we changed the maxshift of the last node, we need to change maxShift of previous nodes as well
-			updateMaxShifts(wa, ttMatrix);
+			updateMaxShifts(wa, op.mTravelTimes);
 			
 			solA = Solution(wa, unvisitedA);
-			solA = construct(solA, ttMatrix);
+			solA = construct(solA, op.mTravelTimes);
 		}
 
 		if (wb_length <= 1 || unvisitedBCount == 0) {
@@ -260,7 +241,7 @@ Solution ILS::LocalSearch(Solution solution, double avgPoint, std::vector<std::v
 		}
 		else {
 			solB = Solution(wb, unvisitedB);
-			solB = construct(solB, ttMatrix);
+			solB = construct(solB, op.mTravelTimes);
 		}
 
 		//walkB.removeFirst();
@@ -269,14 +250,14 @@ Solution ILS::LocalSearch(Solution solution, double avgPoint, std::vector<std::v
 		solution.mUnvisited = solA.mUnvisited + solB.mUnvisited;
 
 		//because we may added a TA to walkA, some departure times may moved forward, which affects time of walkB
-		solution = updateTimes(solution, 1, true, ttMatrix);
+		solution = updateTimes(solution, 1, true, op.mTravelTimes);
 	}
 	else {
 		std::cerr << "Invalid walk length" << std::endl;
 		std::exit(1);
 	}
 
-	auto [valid, error] = validate(solution.mWalk, ttMatrix);
+	auto [valid, error] = validate(solution.mWalk, op.mTravelTimes);
 	if (!valid) {
 		std::cout << error << std::endl;
 		std::exit(1);
@@ -393,21 +374,27 @@ std::vector<double> ILS::getTimeCuts(std::vector<std::vector<TA*>> buckets) {
 
 
 
-Solution ILS::Solve(std::vector<TA*> nodes, TA* start, TA* end, std::vector<std::vector<double>> ttMatrix, int num) {
-	ListTA unvisited = ListTA(nodes);
+Solution ILS::Solve(OP& op) {
+
+	ListTA unvisited = ListTA(op.mAttractions);
 	
 	//initialize num different buckets, in which we will run the problems. We want to swap nodes inside these buckets
-	auto buckets = getBuckets(nodes, num);
-	auto cuts = getTimeCuts(buckets);
+	auto bins = getBuckets(op.mAttractions, mBucketsNum);
+	auto cuts = getTimeCuts(bins);
 
+	std::vector<Solution> solutions;
+
+	for (auto& bin : bins) {
+		Solution sol = Solution(bin);
+	}
 
 
 
 	Walk walk;
-	walk.pushNew(start);
-	walk.pushNew(end);
+	walk.pushClone(op.mStartDepot);
+	walk.pushClone(op.mEndDepot);
 
-	Solution processSolution = Solution(walk, unvisited, start->timeWindow.openTime, end->timeWindow.closeTime);
+	Solution processSolution = Solution(walk, unvisited, op.mStartDepot->timeWindow.openTime, op.mEndDepot->timeWindow.closeTime);
 	Solution bestSolution = Solution();
 
 	int counter = 0;
@@ -419,7 +406,7 @@ Solution ILS::Solve(std::vector<TA*> nodes, TA* start, TA* end, std::vector<std:
 	processSolution.mUnvisited = setBucketActivityDurations(processSolution.mUnvisited, avgEvent);
 
 
-	dbScan(processSolution.mUnvisited, ttMatrix);
+	dbScan(processSolution.mUnvisited, op.mTravelTimes);
 
 	processSolution.mUnvisited.foreach([](TA* ta) {std::cout << "id: " << ta->id << ", cluster: " << ta->cluster << std::endl; });
 	//TA* temp = processSolution.mUnvisited.first();
@@ -435,7 +422,7 @@ Solution ILS::Solve(std::vector<TA*> nodes, TA* start, TA* end, std::vector<std:
 		counter++;
 		std::cout << "this is revision: " << counter << std::endl;
 
-		processSolution = LocalSearch(processSolution, avgEvent, ttMatrix);
+		processSolution = LocalSearch(processSolution, avgEvent, op);
 		int score = processSolution.getScore();
 
 		if (score > bestScore) {
@@ -461,7 +448,7 @@ Solution ILS::Solve(std::vector<TA*> nodes, TA* start, TA* end, std::vector<std:
 			R = 1;
 		}
 
-		processSolution = Shake(processSolution, S, R, numOfPois, ttMatrix);
+		processSolution = Shake(processSolution, S, R, numOfPois, op.mTravelTimes);
 
 		S += R;
 		R += 1;

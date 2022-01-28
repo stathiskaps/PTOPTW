@@ -10,8 +10,8 @@
 #include <cassert>
 #include "Controller.h"
 #include "Definitions.h"
-#include "Divide.h"
 #include "ILS.h"
+#include "OP.h"
 
 int S::ta_id;
 
@@ -27,45 +27,7 @@ std::vector<std::string> split(const std::string& line) {
 	return tokens;
 }
 
-double GetEuclideanDistance2(int x1, int y1, int x2, int y2)	//returns euclidean distance
-{
-	double eu_dist;
-	double nearest;
-	eu_dist = pow(x2 - x1, 2) + pow(y2 - y1, 2);
-	eu_dist = sqrt(eu_dist);
-	nearest = (double)roundf(eu_dist * 100) / 100;
-	return nearest;
-}
 
-std::tuple<std::vector<std::vector<double>>, double> calcTravelTimesMatrix2(std::vector<Point>& points)
-{
-	size_t pointsSize = points.size();
-	std::vector<std::vector<double>> ttMatrix;
-	double totalTravelTime = 0;
-	double meanTravelTime;
-	double val;
-	std::cout << "\t";
-	for (int i = 0; i < pointsSize; ++i) {
-		std::cout << i << "\t";
-	}
-	std::cout << std::endl;
-	for (int i = 0; i < pointsSize; ++i) {
-		std::vector<double> vec;
-		std::cout << i << ":\t";
-		for (int j = 0; j < pointsSize; j++) {
-			val = GetEuclideanDistance2(points.at(i).pos.lat, points.at(i).pos.lon, points.at(j).pos.lat, points.at(j).pos.lon);
-			vec.push_back(val);
-			std::cout << val << "\t";
-			totalTravelTime += val;
-		}
-		std::cout << std::endl;
-		ttMatrix.push_back(vec);
-	}
-
-	meanTravelTime = totalTravelTime / ((double)pointsSize * pointsSize);
-
-	return std::make_tuple(ttMatrix, meanTravelTime);
-}
 
 
 
@@ -155,23 +117,24 @@ void init(std::string filename, int numRoutes) {
 
 
 #if 1
-	std::tuple<std::vector<std::vector<double>>, double> tuple = calcTravelTimesMatrix2(points); //TODO: delete pointer
-	std::vector<std::vector<double>> ttMatrix = std::get<0>(tuple);
-
 	TA* depot = touristAttractions.at(0);
 	touristAttractions.erase(touristAttractions.begin());
 
-	ILS_OPTW ilsoptw = ILS_OPTW(points);
+	OP op = OP(touristAttractions, points, depot, depot);
+
+	
+
+	ILS_OPTW ilsoptw = ILS_OPTW(numRoutes);
 
 	ListTA attractions = ListTA(touristAttractions);
-	Solution solution = ilsoptw.Solve(touristAttractions, depot, depot, ttMatrix, numRoutes);
+	Solution solution = ilsoptw.Solve(op);
 
-	OPTW optw(touristAttractions, ttMatrix, depot, OPEN_DAY_TIME, CLOSE_DAY_TIME);
+	/*OPTW optw(touristAttractions, ttMatrix, depot, OPEN_DAY_TIME, CLOSE_DAY_TIME);
 	Solution sol = optw.solve();
 	bool valid = optw.validate();
 	std::string msg = valid ? "yes" : "no";
 	std::cout << "valid solution? " << msg << std::endl;
-	sol.print();
+	sol.print();*/
 #endif
 	
 #if 0

@@ -20,10 +20,10 @@ std::vector<std::vector<Solution>> Processor::exec() {
 		std::vector<Solution> dSolutions;
 		for (auto& tw_cluster : d_cluster) {
 			TA* cluster_depot = new TA(tw_cluster.centroid); //todo: delete pointer
-			OP op(tw_cluster.nodes, m_ttMatrix, cluster_depot, tw_cluster.openTime, tw_cluster.closeTime);
+			/*OP op(tw_cluster.nodes, m_ttMatrix, cluster_depot, tw_cluster.openTime, tw_cluster.closeTime);
 			Solution sol = op.solve();
 			dSolutions.push_back(sol);
-			delete(cluster_depot);
+			delete(cluster_depot);*/
 		}
 		allSolutions.push_back(dSolutions);
 	}

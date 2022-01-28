@@ -2,11 +2,9 @@
 #include <stdexcept>
 #include "List.h"
 
+
+
 class Solution {
-	friend class OP;
-	friend class ILSOP;
-	friend class OPTW;
-	friend class TOPTW;
 	friend struct Cluster;
 	friend class ILS;
 	friend class ILS_OPTW;
@@ -23,8 +21,8 @@ public:
 	};
 	Solution(TA* depot, ListTA unvisited, double openTime, double closeTime) {
 		mUnvisited = unvisited;
-		mWalk.pushNew(depot);
-		mWalk.pushNew(depot);
+		mWalk.pushClone(depot);
+		mWalk.pushClone(depot);
 
 		mWalk.first()->arrTime = openTime;
 		mWalk.first()->startOfVisitTime = openTime;
@@ -142,5 +140,3 @@ public:
 	
 
 };
-
-using Problem = Solution;

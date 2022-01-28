@@ -7,6 +7,7 @@
 #include <cfloat>
 #include <type_traits> // enable_if, conjuction
 #include <cstdarg>
+#include <list>
 #include "Definitions.h"
 
 enum class touristAttractionType {none, sight, route};
@@ -679,22 +680,6 @@ public:
 		}
 	}
 
-	void pushNew(T* ref) {
-		T* n = ref->clone();
-		//*n = *ref;
-		if (head == nullptr) {
-			// The list is empty
-			head = n;
-			head->next = nullptr;
-			head->prev = nullptr;
-			tail = head;
-		} else {
-			n->next = nullptr;
-			n->prev = tail;
-			tail->next = n;
-			tail = n;
-		}
-	}
 
 
 	///* Function to delete the entire linked list */
@@ -907,11 +892,35 @@ public:
 		return v;
 	}
 
+	void pushClone(TA* ref) {
+		TA* n = ref->clone();
+		//*n = *ref;
+		if (head == nullptr) {
+			// The list is empty
+			head = n;
+			head->next = nullptr;
+			head->prev = nullptr;
+			tail = head;
+		}
+		else {
+			n->next = nullptr;
+			n->prev = tail;
+			tail->next = n;
+			tail = n;
+		}
+	}
+
+	void pushClones(const std::list<TA*>& refs) {
+		for (auto& ref : refs) {
+			pushClone(ref);
+		}
+	}
+
 	TouristAttractionList copy() {
 		TouristAttractionList copy;
 		TA* curr = head;
 		while (curr != nullptr) {
-			copy.pushNew(curr);
+			copy.pushClone(curr);
 			curr = curr->next;
 		}
 		return copy;
@@ -941,7 +950,7 @@ public:
 
 		while (curr != nullptr) {
 			if (pos >= startIndex) {
-				copy.pushNew(curr);
+				copy.pushClone(curr);
 
 				if (pos == endIndex) {
 					reachedEndIndex = true;
@@ -1178,10 +1187,10 @@ public:
 
 		while (curr != nullptr) {
 			if (pos >= index) {
-				std::get<1>(lists).pushNew(curr);
+				std::get<1>(lists).pushClone(curr);
 			}
 			else {
-				std::get<0>(lists).pushNew(curr);
+				std::get<0>(lists).pushClone(curr);
 			}
 			
 			pos++;
@@ -1196,10 +1205,10 @@ public:
 		std::tuple<TouristAttractionList, TouristAttractionList> lists;
 		while (curr != nullptr) {
 			if (curr->depTime <= depTime) {
-				std::get<0>(lists).pushNew(curr);
+				std::get<0>(lists).pushClone(curr);
 			}
 			else {
-				std::get<1>(lists).pushNew(curr);
+				std::get<1>(lists).pushClone(curr);
 			}
 			curr = curr->next;
 		}

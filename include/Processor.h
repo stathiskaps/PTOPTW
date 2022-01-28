@@ -1,6 +1,6 @@
 #include <iostream>
 #include <vector>
-#include "OP.h"
+#include "Solution.h"
 
 #ifndef PROCESSOR_H
 #define PROCESSOR_H

@@ -1,64 +1,27 @@
+#pragma once
+
 #include <iostream>
 #include <vector>
-#include <tuple>
-#include <climits>
-#include <numeric>
-#include <signal.h>
-#include "json.hpp"
-#include "Solution.h"
-#include "TaskManager.h"
+#include "List.h"
 
-#ifndef OP_H
-#define OP_H
-
-//We can use OP to model a problem of Tourist Attractions or Clusters
-//This OP is used to solve the TOP, so no time windows, no multiple routes
 class OP {
+	friend class ILS;
+	friend class ILS_OPTW;
+	friend class ILS_TOPTW;
 private:
-	std::tuple<double, double, double> calcTimeEventCut();
-	virtual std::tuple<int, double, int, int> getBestPos(TA*);
-	virtual bool updateTimes(int, bool);
-	int Insert();
-	int LocalSearch(double);
-	void Local(double);
-	void setBucketActivityDurations();
-	Walk Construct();
-	void Shake(int, int, int);
-	void SaveSolution(Solution);
-	void print(std::string);
-	void SendSolution(Solution);
-	static bool compareByProfit(const TA a, const TA b);
-protected:
-	TA* mDepot;
-	Solution mProcessSolution, mBestSolution;
-	std::vector<std::vector<double>> mTtMatrix;
-	double mStartTime, mEndTime;
+	std::vector<TA*> mAttractions;
+	std::vector<Point> mPoints;
+	std::vector<std::vector<double>> mTravelTimes;
+	TA* mStartDepot;
+	TA* mEndDepot;
+
+	std::tuple<std::vector<std::vector<double>>, double> calcTravelTimesMatrix2(std::vector<Point>& points);
+	double GetEuclideanDistance2(int x1, int y1, int x2, int y2);	//returns euclidean distance
+
 public:
 	OP();
-	OP(std::vector<TA*>, std::vector<std::vector<double>>, TA*, double, double);
-	OP(std::vector<TA*>, Walk, std::vector<std::vector<double>>, double, double);
 	~OP();
-	Solution solve();
-	virtual bool validate();
+	OP(std::vector<TA*>, std::vector<Point>, TA*, TA*);
+	void AddPointToGraph(Point);
 
 };
-
-class OPTW : public OP {
-private:
-	std::tuple<int, double, int, int> getBestPos(TA*) override;
-	bool updateTimes(int, bool) override;
-public:
-	using OP::OP; //inherit constructor	
-	bool validate() override;
-};
-
-class TOPTW : public OP {
-private:
-	std::tuple<int, double, int, int> getBestPos(TA*) override;
-	bool updateTimes(int, bool) override;
-public:
-	using OP::OP; //inherit constructor
-	bool validate() override;
-};
-
-#endif

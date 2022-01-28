@@ -10,12 +10,12 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++2a")
 project ("AMTOPTW_algorithm")
 set(INCLUDE_DIRECTORY "${PROJECT_SOURCE_DIR}/include")
 
-set(HEADER_FILES "${INCLUDE_DIRECTORY}/Controller.h" "${INCLUDE_DIRECTORY}/Definitions.h" "${INCLUDE_DIRECTORY}/Divide.h" "${INCLUDE_DIRECTORY}/Divider.h" "${INCLUDE_DIRECTORY}/ILS.h" "${INCLUDE_DIRECTORY}/List.h" "${INCLUDE_DIRECTORY}/OP.h" "${INCLUDE_DIRECTORY}/Processor.h" "${INCLUDE_DIRECTORY}/Solution.h" "${INCLUDE_DIRECTORY}/TaskManager.h" "${INCLUDE_DIRECTORY}/Unifier.h")
+set(HEADER_FILES "${INCLUDE_DIRECTORY}/Controller.h" "${INCLUDE_DIRECTORY}/Definitions.h"  "${INCLUDE_DIRECTORY}/Divider.h" "${INCLUDE_DIRECTORY}/ILS.h" "${INCLUDE_DIRECTORY}/List.h"  "${INCLUDE_DIRECTORY}/Processor.h" "${INCLUDE_DIRECTORY}/Solution.h" "${INCLUDE_DIRECTORY}/TaskManager.h" "${INCLUDE_DIRECTORY}/Unifier.h")
 
 include_directories(${INCLUDE_DIRECTORY})
 
 # Add source to this project's executable.
-add_executable (AMTOPTW_algorithm "main.cpp" "Controller.cpp" "Definitions.cpp" "Divide.cpp" "Divider.cpp" "OP.cpp" "Processor.cpp" "TaskManager.cpp" "Unifier.cpp" ${HEADER_FILES} "ILS.cpp")
+add_executable (AMTOPTW_algorithm "main.cpp" "Controller.cpp" "Definitions.cpp"  "Divider.cpp"  "Processor.cpp" "TaskManager.cpp" "Unifier.cpp" ${HEADER_FILES} "ILS.cpp"  "include/OP.h" "OP.cpp")
 
 #target_include_directories(AMTOPTW_algorithm PRIVATE ${INCLUDE_DIRECTORY})
 

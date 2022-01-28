@@ -4,31 +4,37 @@
 #include <vector>
 #include <map>
 #include <stdexcept>
-#include "OP.h"
+#include <tuple>
+#include <climits>
+#include <numeric>
+#include <signal.h>
+#include <fmt/ranges.h>
+#include <plog/Log.h> // Step1: include the headers
+#include "plog/Initializers/RollingFileInitializer.h"
 #include "List.h"
 #include "Solution.h"
+#include "OP.h"
 
 class ILS{
 private:
-	std::vector<Point> mPoints;
+	int mBucketsNum;
 
 	virtual std::tuple<int, double, int, int> getBestPos(TA*, ListTA, std::vector<std::vector<double>>);
 	virtual Solution updateTimes(Solution solution, int startIndex, bool smart, std::vector<std::vector<double>> ttMatrix);
-	Solution LocalSearch(Solution solution, double avgPoint, std::vector<std::vector<double>>);
+	Solution LocalSearch(Solution solution, double avgPoint, OP&);
 	Solution Shake(Solution solution, int S, int R, int numOfPois, std::vector<std::vector<double>> ttMatrix);
 	std::tuple<double, double, double> calcTimeEventCut(ListTA&);
 	virtual Walk updateMaxShifts(Walk, std::vector<std::vector<double>>);
 	ListTA setBucketActivityDurations(ListTA&, double);
 	Solution construct(Solution, std::vector<std::vector<double>>);
-	std::vector<std::vector<double>> calcNewTravelTimes(Point, std::vector<std::vector<double>>);
 	std::vector<std::vector<TA*>> getBuckets(std::vector<TA*>, int);
 	std::vector<double> getTimeCuts(std::vector<std::vector<TA*>>);
 public:
     ILS();
-	ILS(std::vector<Point>);
+	ILS(int);
     ~ILS();
 	virtual std::tuple<bool, std::string> validate(ListTA&, std::vector<std::vector<double>>);
-	Solution Solve(std::vector<TA*>, TA*, TA*, std::vector<std::vector<double>>, int);
+	Solution Solve(OP&);
 	
 
 };
