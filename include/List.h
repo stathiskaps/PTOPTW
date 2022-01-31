@@ -365,6 +365,11 @@ struct Cluster {
 	}
 };
 
+struct ShakeParameters {
+	int S = 0;
+	int R = 1;
+};
+
 struct Candidate {
 	int id;
 	int bestPos;
@@ -596,7 +601,8 @@ public:
 	}
 
 	void trimLeft(int n){
-		TA* curr = head, temp;
+		T* curr = head;
+		T* temp;
 		int index = 0;
 		
 		while (curr != nullptr) {
@@ -611,7 +617,8 @@ public:
 	}
 
 	void trimRight(int n) {
-		TA* curr = tail, temp;
+		T* curr = tail;
+		T* temp;
 		int index = 0;
 
 		while (curr != nullptr) {
@@ -649,7 +656,7 @@ public:
 		}
 	}
 
-	void push(T node) {
+	void pushBack(T node) {
 		T* n = &node;
 		if (head == nullptr) {
 			// The list is empty
@@ -673,6 +680,38 @@ public:
 				tail->next = n;
 				tail = n;
 			}
+		}
+	}
+
+	void pushBack(T* ptr) {
+		if (head == nullptr) {
+			// The list is empty
+			head = ptr;
+			head->next = nullptr;
+			head->prev = nullptr;
+			tail = head;
+		}
+		else {
+			tail->next = ptr;
+			ptr->prev = tail;
+			ptr->next = nullptr;
+			tail = ptr;
+		}
+	}
+
+	void pushFront(T* ptr) {
+		if (head == nullptr) {
+			// The list is empty
+			head = ptr;
+			head->next = nullptr;
+			head->prev = nullptr;
+			tail = head;
+		}
+		else {
+			ptr->prev = nullptr;
+			ptr->next = head;
+			head->prev = ptr;
+			head = ptr;
 		}
 	}
 
@@ -832,13 +871,13 @@ public:
 	}
 
 	TouristAttractionList(TA* start, TA* end) {
-		push(start);
-		push(end);
+		pushBack(start);
+		pushBack(end);
 	}
 
 	TouristAttractionList(std::vector<TA*> v) {
 		for (auto& i : v) {
-			this->push(i);
+			this->pushBack(i);
 		}
 	}
 
@@ -1088,13 +1127,19 @@ public:
 	{
 
 		if (startIndex < 0 || endIndex < 0) {
-			size_t length = getLength();
+			int length = getLength();
 			if (startIndex < 0) {
 				startIndex += length;
 			}
 
 			if (endIndex < 0) {
 				endIndex += length;
+			}
+
+			if (endIndex > length - 1) {
+				//todo: make sure that this is fine
+				std::cout << "endIndex out of bounds so will grab until the end" << std::endl;
+				endIndex = length - 1;
 			}
 		}
 

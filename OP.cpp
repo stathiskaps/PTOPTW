@@ -54,8 +54,10 @@ std::tuple<std::vector<std::vector<double>>, double> OP::calcTravelTimesMatrix2(
 	return std::make_tuple(ttMatrix, meanTravelTime);
 }
 
-void OP::AddPointToGraph(Point p) {
+void OP::AddPointToGraph(Point& p) {
 	size_t pointsSize = mPoints.size();
+	p.id = pointsSize;
+	mPoints.push_back(p);
 	std::vector<double> vec;
 
 	for (size_t i = 0; i < pointsSize; ++i) {
@@ -66,4 +68,21 @@ void OP::AddPointToGraph(Point p) {
 	vec.push_back(0);
 
 	mTravelTimes.push_back(vec);
+}
+
+void OP::PrintTravelTimes(std::string label) {
+	size_t pointsSize = mTravelTimes.size();
+	std::cout << label << std::endl;
+	std::cout << "\t";
+	for (int i = 0; i < pointsSize; ++i) {
+		std::cout << i << "\t";
+	}
+	std::cout << std::endl;
+	for (size_t i = 0; i < pointsSize; ++i) {
+		std::cout << i << ":\t";
+		for (size_t j = 0; j < pointsSize; ++j) {
+			std::cout << mTravelTimes[i][j] << "\t";
+		}
+		std::cout << std::endl;
+	}
 }

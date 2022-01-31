@@ -22,6 +22,7 @@ public:
 	OP();
 	~OP();
 	OP(std::vector<TA*>, std::vector<Point>, TA*, TA*);
-	void AddPointToGraph(Point);
+	void AddPointToGraph(Point&);
+	void PrintTravelTimes(std::string);
 
 };

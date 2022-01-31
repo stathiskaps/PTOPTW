@@ -20,15 +20,17 @@ private:
 	int mBucketsNum;
 
 	virtual std::tuple<int, double, int, int> getBestPos(TA*, ListTA, std::vector<std::vector<double>>);
-	virtual Solution updateTimes(Solution solution, int startIndex, bool smart, std::vector<std::vector<double>> ttMatrix);
+	virtual void updateTimes(Solution&, int, bool, std::vector<std::vector<double>>&);
 	void LocalSearch(std::vector<Solution>&, std::vector<double>, OP&);
-	Solution Shake(Solution solution, int S, int R, int numOfPois, std::vector<std::vector<double>> ttMatrix);
+	void Shake(std::vector<Solution>&, std::vector<ShakeParameters>, std::vector<std::vector<double>>&);
 	std::tuple<double, double, double> calcTimeEventCut(ListTA&);
-	virtual Walk updateMaxShifts(Walk, std::vector<std::vector<double>>);
+	virtual void updateMaxShifts(Walk&, std::vector<std::vector<double>>&);
 	ListTA setBucketActivityDurations(ListTA&, double);
-	Solution construct(Solution, std::vector<std::vector<double>>);
+	void construct(Solution&, std::vector<std::vector<double>>&);
 	std::vector<std::vector<TA*>> getBuckets(std::vector<TA*>, int);
+	int collectScore(std::vector<Solution>);
 	std::vector<double> getTimeCuts(std::vector<std::vector<TA*>>);
+	std::tuple<int, int> getMinMaxLength(std::vector<Solution> solutions);
 public:
     ILS();
 	ILS(int);
@@ -42,8 +44,8 @@ public:
 class ILS_OPTW : public ILS {
 private:
 	std::tuple<int, double, int, int> getBestPos(TA*, ListTA, std::vector<std::vector<double>>) override;
-	Solution updateTimes(Solution, int, bool, std::vector<std::vector<double>>) override;
-	Walk updateMaxShifts(Walk, std::vector<std::vector<double>>) override;
+	void updateTimes(Solution&, int, bool, std::vector<std::vector<double>>&) override;
+	void updateMaxShifts(Walk&, std::vector<std::vector<double>>&) override;
 public:
 	using ILS::ILS; //inherit constructor
 	std::tuple<bool, std::string> validate(ListTA&, std::vector<std::vector<double>>) override;
@@ -52,8 +54,8 @@ public:
 class ILS_TOPTW : public ILS {
 private:
 	std::tuple<int, double, int, int> getBestPos(TA*, ListTA, std::vector<std::vector<double>>) override;
-	Solution updateTimes(Solution, int, bool, std::vector<std::vector<double>>) override;
-	Walk updateMaxShifts(Walk, std::vector<std::vector<double>>) override;
+	void updateTimes(Solution&, int, bool, std::vector<std::vector<double>>&) override;
+	void updateMaxShifts(Walk&, std::vector<std::vector<double>>&) override;
 public:
 	using ILS::ILS; //inherit constructor
 	std::tuple<bool, std::string> validate(ListTA&, std::vector<std::vector<double>>) override;

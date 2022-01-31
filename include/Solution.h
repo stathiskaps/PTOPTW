@@ -54,7 +54,7 @@ public:
 		TA* depot = new TA(p);
 		depot->depTime = startTime;
 		depot->timeWindow = TimeWindow{ startTime, endTime };
-		mWalk.push(depot);
+		mWalk.pushBack(depot);
 		depot = new TA(p);
 		depot->timeWindow = TimeWindow{ startTime, endTime };
 		depot->maxShift = endTime - startTime;
@@ -70,8 +70,8 @@ public:
 		endDepot->timeWindow = TimeWindow{ startTime, endTime };
 		endDepot->maxShift = endTime - startTime;
 
-		mWalk.push(startDepot);
-		mWalk.push(endDepot);
+		mWalk.pushBack(startDepot);
+		mWalk.pushBack(endDepot);
 
 		mUnvisited = unvisited;
 	}
