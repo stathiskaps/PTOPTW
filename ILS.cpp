@@ -184,6 +184,7 @@ void ILS::LocalSearch(std::vector<Solution>& solutions, std::vector<double> cuts
 
 		if (i == solutionsSize - 1) {
 			endDepot = op.mEndDepot->clone();
+			endDepot->maxShift = endDepot->timeWindow.closeTime - endDepot->depTime;
 			if (solutions[i].mWalk.last()->id != endDepot->id) {
 				solutions[i].mWalk.pushBack(endDepot);
 			}
@@ -203,9 +204,11 @@ void ILS::LocalSearch(std::vector<Solution>& solutions, std::vector<double> cuts
 			op.PrintTravelTimes("New travel times");
 			endDepot = new TA(cnext); //todo: delete endDepot
 			endDepot->timeWindow.closeTime = cuts[i];
-			endDepot->maxShift = endDepot->timeWindow.closeTime - endDepot->depTime;
+			//endDepot->maxShift = endDepot->timeWindow.closeTime - endDepot->depTime;
 			solutions[i].mWalk.pushBack(endDepot);
 		}
+
+		updateTimes(solutions[i], 0, false, op.mTravelTimes);
 
 
 		construct(solutions[i], op.mTravelTimes);
@@ -693,10 +696,12 @@ void ILS::updateTimes(Solution& solution, int startIndex, bool smart, std::vecto
 	//update times first
 	TA* curr = solution.mWalk.get(startIndex);
 
-	if (curr == solution.mWalk.first()) {
-		std::cerr << "i should think what happens here" << std::endl;
-		std::exit(1);
+	if (startIndex == 0) {
+		curr->startOfVisitTime = curr->arrTime + curr->waitDuration;
+		curr->depTime = curr->startOfVisitTime + curr->visitDuration;
+		curr = curr->next;
 	}
+
 	while (curr != nullptr) {
 		curr->arrTime = curr->prev->depTime + ttMatrix[curr->prev->depPointId][curr->arrPointId];
 		curr->startOfVisitTime = curr->arrTime;
@@ -856,11 +861,14 @@ void ILS_OPTW::updateTimes(Solution& solution, int startIndex, bool smart, std::
 	//update times first
 	TA* curr = solution.mWalk.get(startIndex);
 
-	//if (curr == solution.mWalk.last()) {
-	//	return solution;
-	//}
-	while (curr != nullptr) {
+	if (startIndex == 0) {
+		curr->waitDuration = std::max(0.0, curr->timeWindow.openTime - curr->arrTime);
+		curr->startOfVisitTime = curr->arrTime + curr->waitDuration;
+		curr->depTime = curr->startOfVisitTime + curr->visitDuration;
+		curr = curr->next;
+	}
 
+	while (curr != nullptr) {
 		curr->arrTime = curr->prev->depTime + ttMatrix[curr->prev->depPointId][curr->arrPointId];
 		curr->waitDuration = std::max(0.0, curr->timeWindow.openTime - curr->arrTime);
 		curr->startOfVisitTime = curr->arrTime + curr->waitDuration;
@@ -986,9 +994,13 @@ void ILS_TOPTW::updateTimes(Solution& solution, int startIndex, bool smart, std:
 	//update times first
 	TA* curr = solution.mWalk.get(startIndex);
 
-	if (curr == solution.mWalk.first()) {
-		return;
+	if (startIndex == 0) {
+		curr->waitDuration = std::max(0.0, curr->timeWindow.openTime - curr->arrTime);
+		curr->startOfVisitTime = curr->arrTime + curr->waitDuration;
+		curr->depTime = curr->startOfVisitTime + curr->visitDuration;
+		curr = curr->next;
 	}
+
 	while (curr != nullptr) {
 
 		curr->arrTime = curr->prev->depTime + ttMatrix[curr->prev->depPointId][curr->arrPointId];
