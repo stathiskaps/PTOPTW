@@ -1,5 +1,9 @@
 #include "Definitions.h"
 
+bool contains(std::list<std::string>& list, std::string val) {
+	return (std::find(list.begin(), list.end(), val) != list.end());
+}
+
 namespace id {
 	std::string generate()
 	{

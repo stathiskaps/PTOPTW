@@ -7,7 +7,6 @@
 #include <cfloat>
 #include <type_traits> // enable_if, conjuction
 #include <cstdarg>
-#include <list>
 #include "Definitions.h"
 
 enum class touristAttractionType {none, sight, route};
@@ -379,7 +378,7 @@ struct Candidate {
 
 template<class T>
 class List {
-private:
+protected:
 	void disconnect(T* curr){
 		if (head == curr) {
 			head = curr->next;
@@ -825,6 +824,8 @@ public:
 
 	void append(List<T> list)
 	{
+		if (list.isEmpty()) return;
+
 		if (head == nullptr) { // list is empty
 			head = list.head;
 			tail = list.tail;
@@ -857,7 +858,7 @@ typedef class TouristAttractionList :  public List<TA> {
 public:
 
 	TouristAttractionList() {
-
+		
 	}
 
 	TouristAttractionList(TA* start) {
@@ -1165,27 +1166,35 @@ public:
 
 		while(curr != nullptr){
 			if(pos == endIndex){
-
-				if (temp->prev != nullptr) {
-					temp->prev->next = curr->next;
-				}
-
-				if (curr->next != nullptr) {
-					curr->next->prev = temp->prev;
-				}
-
-				temp->prev = nullptr;
-				curr->next = nullptr;
-
-				TouristAttractionList part(temp);
-				return part;
-
+				break;
 			} else {
 				pos++;
 				curr = curr->next;
 			}
 		}
-		return *this;
+
+		if (temp == head) {
+			head = curr->next;
+		}
+
+		if (curr == tail) {
+			tail = temp->prev;
+		}
+
+		if (temp->prev != nullptr) {
+			temp->prev->next = curr->next;
+		}
+
+		if (curr->next != nullptr) {
+			curr->next->prev = temp->prev;
+		}
+
+		temp->prev = nullptr;
+		curr->next = nullptr;
+
+		TouristAttractionList part(temp);
+		return part;
+		//return *this;
 	}
 
 	Point getCentroid() {
@@ -1271,6 +1280,36 @@ public:
 		}
 
 		return lists;
+	}
+
+	void removeById(std::string pId) {
+		TA* curr = head, *temp;
+		while (curr != nullptr) {
+			if (curr->id == pId) {
+				temp = curr;
+				curr = curr->next;
+				disconnect(temp);
+				delete(temp);
+			}
+			else {
+				curr = curr->next;
+			}
+		}
+	}
+
+	void removeByIds(std::list<std::string> pIds) {
+		TA* curr = head, * temp;
+		while (curr != nullptr) {
+			if (contains(pIds, curr->id)) {
+				temp = curr;
+				curr = curr->next;
+				disconnect(temp);
+				delete(temp);
+			}
+			else {
+				curr = curr->next;
+			}
+		}
 	}
 
 	std::tuple<TouristAttractionList, TouristAttractionList> splitOnDepTime(double depTime) {

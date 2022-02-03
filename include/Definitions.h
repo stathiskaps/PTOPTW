@@ -2,6 +2,7 @@
 #include <sstream>
 #include <iostream>
 #include <ctime>
+#include <list>
 
 #define DEFAULT_GENERIC_CLUSTER_ID -10
 #define DEFAULT_DISTANCE_CLUSTER_ID -20
@@ -70,6 +71,8 @@ public:
 //	//	return ss.str();
 //	//}
 //}
+
+bool contains(std::list<std::string>&, std::string);
 
 #ifndef ID_H
 #define ID_H

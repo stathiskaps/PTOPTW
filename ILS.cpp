@@ -319,12 +319,13 @@ void ILS::LocalSearch(std::vector<Solution>& solutions, std::vector<double> cuts
 	}
 }
 
-void ILS::Shake(std::vector<Solution>& solutions, std::vector<ShakeParameters> params, std::vector<std::vector<double>>& travelTimes) {
+void ILS::Shake(std::vector<Solution>& solutions, std::vector<ShakeParameters> params, OP& op) {
 	size_t solutionsSize = solutions.size();
-	for (int i = 0; i < solutionsSize - 1; ++i) {
-		List<TA> nodes = solutions[i].mWalk.grabPart(params[i].S, params[i].S + params[i].R);
+	for (int i = 0; i < solutionsSize; ++i) {
+		ListTA nodes = solutions[i].mWalk.grabPart(params[i].S, params[i].S + params[i].R - 1);
+		nodes.removeByIds({ op.mStartDepot->id, op.mEndDepot->id });
 		solutions[i].mUnvisited.append(nodes);
-		updateTimes(solutions[i], 1, false, travelTimes);
+		updateTimes(solutions[i], 1, false, op.mTravelTimes);
 	}
 }
 
@@ -535,7 +536,7 @@ Solution ILS::Solve(OP& op) {
 			}
 		}
 
-		Shake(processSolutions, parameters, op.mTravelTimes);
+		Shake(processSolutions, parameters, op);
 
 		for (auto& params : parameters) {
 			params.S += params.S;
