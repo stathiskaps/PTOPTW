@@ -379,7 +379,13 @@ struct Candidate {
 template<class T>
 class List {
 protected:
-	void disconnect(T* curr){
+
+protected:
+	T* head;
+	T* tail;
+	int length;
+
+	void disconnect(T* curr) {
 		if (head == curr) {
 			head = curr->next;
 		}
@@ -388,20 +394,17 @@ protected:
 			tail = curr->prev;
 		}
 
-		if(curr->next != nullptr){
+		if (curr->next != nullptr) {
 			curr->next->prev = curr->prev;
 		}
-		if(curr->prev != nullptr){
+		if (curr->prev != nullptr) {
 			curr->prev->next = curr->next;
 		}
 		curr->next = nullptr;
 		curr->prev = nullptr;
 	}
 
-protected:
-	T* head;
-	T* tail;
-	int length;
+
 
 public:
 
@@ -552,44 +555,16 @@ public:
 
 	//i am not sure if I should do that. It saves some times by not searching for an id, but what if the n isn't inside the current list?
 	T* grab(T* n) {
-		if (n == head) {
-			head = n->next;
-		}
-
-		if (n == tail) {
-			tail = tail->next;
-		}
-
-		if (n->prev != nullptr) {
-			n->prev->next = n->next;
-		}
-
-		if (n->next != nullptr) {
-			n->next->prev = n->prev;
-		}
+		disconnect(n);
 		return n;
 	}
 
 	T* grabUsingID(std::string id) {
 		T* curr = head;
-		T* temp;
 		while (curr != nullptr) {
 			if (curr->id == id) {
-				temp = curr;
-				curr = curr->next;
-				if (temp == head) {
-					head = temp->next;
-				}
-				if (temp == tail) {
-					tail = temp->prev;
-				}
-				if (temp->prev != nullptr) {
-					temp->prev->next = temp->next;
-				}
-				if (temp->next != nullptr) {
-					temp->next->prev = temp->prev;
-				}
-				return temp;
+				disconnect(curr);
+				return curr;
 			}
 			else {
 				curr = curr->next;
@@ -771,10 +746,17 @@ public:
 
 	T* get(int index) {
 		T* curr = this->head;
-		for (int i = 0; i < index; ++i) {
-			curr = curr->next;
+		int pos = 0;
+		while (curr != nullptr) {
+			if (pos == index) {
+				return curr;
+			}
+			else {
+				pos++;
+				curr = curr->next;
+			}
 		}
-		return curr;
+		return nullptr;
 	}
 
 	T* operator[](int index) {
@@ -1126,7 +1108,6 @@ public:
 	// ei = end index 
 	TouristAttractionList grabPart(int startIndex, int endIndex)
 	{
-
 		if (startIndex < 0 || endIndex < 0) {
 			int length = getLength();
 			if (startIndex < 0) {
@@ -1137,19 +1118,24 @@ public:
 				endIndex += length;
 			}
 
-			if (endIndex > length - 1) {
-				//todo: make sure that this is fine
-				std::cout << "endIndex out of bounds so will grab until the end" << std::endl;
-				endIndex = length - 1;
-			}
+			//if (endIndex > length - 1) {
+			//	//todo: make sure that this is fine
+			//	std::cout << "endIndex out of bounds so will grab until the end" << std::endl;
+			//	endIndex = length - 1;
+			//}
 		}
 
+		//if (endIndex > length - 1) {
+		//	throw std::invalid_argument("endIndex out of bounds");
+		//}
+
 		if (startIndex > endIndex) {
-			throw std::invalid_argument("invalid arguments in copyPart");
+			std::cerr << "grabPart: invalid arguments" << std::endl;
+			std::exit(1);
 		}
 
 		TA* curr = head;
-		TA* temp;
+		TA* temp = nullptr;
 		int pos = 0;
 
 		while (curr != nullptr) {
@@ -1171,6 +1157,14 @@ public:
 				pos++;
 				curr = curr->next;
 			}
+		}
+
+		if (temp == nullptr) {
+			throw std::invalid_argument("startIndex out of bounds");
+		}
+
+		if (curr == nullptr) {
+			throw std::invalid_argument("endIndex out of bounds");
 		}
 
 		if (temp == head) {

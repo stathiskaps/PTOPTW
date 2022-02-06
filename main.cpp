@@ -117,12 +117,11 @@ void init(std::string filename, int numRoutes) {
 
 
 #if 1
+	std::cout.setstate(std::ios_base::failbit);
 	TA* depot = touristAttractions.at(0);
 	touristAttractions.erase(touristAttractions.begin());
 
 	OP op = OP(touristAttractions, points, depot, depot);
-
-	
 
 	ILS_OPTW ilsoptw = ILS_OPTW(numRoutes);
 

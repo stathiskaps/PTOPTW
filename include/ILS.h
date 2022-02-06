@@ -5,6 +5,7 @@
 #include <map>
 #include <stdexcept>
 #include <tuple>
+#include <chrono>
 #include <climits>
 #include <numeric>
 #include <signal.h>
@@ -24,6 +25,7 @@ private:
 	void LocalSearch(std::vector<Solution>&, std::vector<double>, OP&);
 	void Shake(std::vector<Solution>&, std::vector<ShakeParameters>, OP&);
 	std::tuple<double, double, double> calcTimeEventCut(ListTA&);
+	void correct(Solution&);
 	virtual void updateMaxShifts(Walk&, std::vector<std::vector<double>>&);
 	ListTA setBucketActivityDurations(ListTA&, double);
 	void construct(Solution&, std::vector<std::vector<double>>&);
@@ -31,6 +33,7 @@ private:
 	int collectScore(std::vector<Solution>);
 	std::vector<double> getTimeCuts(std::vector<std::vector<TA*>>);
 	std::tuple<int, int> getMinMaxLength(std::vector<Solution> solutions);
+	Solution connectSolutions(std::vector<Solution>);
 public:
     ILS();
 	ILS(int);

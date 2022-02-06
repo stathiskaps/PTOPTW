@@ -201,7 +201,7 @@ void ILS::LocalSearch(std::vector<Solution>& solutions, std::vector<double> cuts
 				cnext = solutions[i + 1].mUnvisited.copyPart(0,n-1).getWeightedCentroid();
 			}
 			op.AddPointToGraph(cnext);
-			op.PrintTravelTimes("New travel times");
+			//op.PrintTravelTimes("New travel times");
 			endDepot = new TA(cnext); //todo: delete endDepot
 			endDepot->timeWindow.closeTime = cuts[i];
 			//endDepot->maxShift = endDepot->timeWindow.closeTime - endDepot->depTime;
@@ -319,16 +319,6 @@ void ILS::LocalSearch(std::vector<Solution>& solutions, std::vector<double> cuts
 	}
 }
 
-void ILS::Shake(std::vector<Solution>& solutions, std::vector<ShakeParameters> params, OP& op) {
-	size_t solutionsSize = solutions.size();
-	for (int i = 0; i < solutionsSize; ++i) {
-		ListTA nodes = solutions[i].mWalk.grabPart(params[i].S, params[i].S + params[i].R - 1);
-		nodes.removeByIds({ op.mStartDepot->id, op.mEndDepot->id });
-		solutions[i].mUnvisited.append(nodes);
-		updateTimes(solutions[i], 1, false, op.mTravelTimes);
-	}
-}
-
 std::tuple<double, double, double> ILS::calcTimeEventCut(ListTA& unvisited) {
 	double dist;
 	double min = DBL_MAX;
@@ -442,8 +432,33 @@ std::tuple<int, int> ILS::getMinMaxLength(std::vector<Solution> solutions) {
 	return { min, max };
 }
 
+Solution ILS::connectSolutions(std::vector<Solution> solutions) {
+	Walk walk;
+	ListTA unvisited;
+	for (auto& s : solutions) {
+		walk.append(s.mWalk.copy());
+		unvisited.append(s.mUnvisited.copy());
+	}
+	return Solution(walk, unvisited);
+}
+
+void ILS::Shake(std::vector<Solution>& solutions, std::vector<ShakeParameters> params, OP& op) {
+	size_t solutionsSize = solutions.size();
+	for (int i = 0; i < solutionsSize; ++i) {
+		int walkLength = solutions[i].mWalk.getLength();
+
+		//todo: check what happens when s > length - 1
+		ListTA nodes = solutions[i].mWalk.grabPart(params[i].S, std::min(params[i].S + params[i].R - 1, walkLength - 1));
+		nodes.removeByIds({ op.mStartDepot->id, op.mEndDepot->id });
+		solutions[i].mUnvisited.append(nodes);
+		updateTimes(solutions[i], 1, false, op.mTravelTimes);
+	}
+}
 
 Solution ILS::Solve(OP& op) {
+
+	
+	auto started = std::chrono::high_resolution_clock::now();
 
 	ListTA unvisited = ListTA(op.mAttractions);
 	
@@ -453,7 +468,7 @@ Solution ILS::Solve(OP& op) {
 	cuts.push_back(op.mEndDepot->timeWindow.closeTime);
 
 	//intialize solutions
-	std::vector<Solution> processSolutions;
+	std::vector<Solution> processSolutions, best;
 	std::vector<ShakeParameters> parameters;
 	for (auto& bin : bins) {
 		processSolutions.push_back(Solution(bin));
@@ -479,33 +494,22 @@ Solution ILS::Solve(OP& op) {
 	auto [minEvent, avgEvent, maxEvent] = calcTimeEventCut(processSolution.mUnvisited);
 	processSolution.mUnvisited = setBucketActivityDurations(processSolution.mUnvisited, avgEvent);
 
-	
-
-
 	dbScan(processSolution.mUnvisited, op.mTravelTimes);
 
-	processSolution.mUnvisited.foreach([](TA* ta) {std::cout << "id: " << ta->id << ", cluster: " << ta->cluster << std::endl; });
-	//TA* temp = processSolution.mUnvisited.first();
-	//std::vector<TA*> tempVec;
-	//while (temp != nullptr) {
-	//	if (temp->cluster == 2) {
-	//		temp->print();
-	//	}
-	//	temp = temp->next;
-	//}
+	//processSolution.mUnvisited.foreach([](TA* ta) {std::cout << "id: " << ta->id << ", cluster: " << ta->cluster << std::endl; });
 
 	while (timesNotImproved < MAX_TIMES_NOT_IMPROVED) {
 		counter++;
-		std::cout << "this is revision: " << counter << std::endl;
-
 		LocalSearch(processSolutions, cuts, op);
 		int score = collectScore(processSolutions);
 
 		if (score > bestScore) {
 			bestScore = score;
 			bestSolution.reset();
-			bestSolution.copy(processSolution);
-			R = 1;
+			bestSolution = connectSolutions(processSolutions);
+			for (auto& params : parameters) {
+				params.R = 1;
+			}
 			timesNotImproved = 0;
 
 		}
@@ -515,20 +519,9 @@ Solution ILS::Solve(OP& op) {
 
 		auto [min, max] = getMinMaxLength(processSolutions);
 
-		//int numOfPois = processSolution.mWalk.getLength() - 2;
-		//if (S > numOfPois) {
-		//	S = 1;
-		//	// S = S - numOfPois;
-		//	// if (S <= 0)
-		//	// 	S = 1;
-		//}
-		//if (R > numOfPois / 2) {
-		//	R = 1;
-		//}
-
-		for (int i = 0; i < solutionsSize - 1; ++i) {
+		for (int i = 0; i < solutionsSize; ++i) {
 			int walkLength = processSolutions[i].mWalk.getLength();
-			if (parameters[i].S > walkLength) {
+			if (parameters[i].S > walkLength - 1) {
 				parameters[i].S = 0;
 			}
 			if (parameters[i].R > walkLength / 2) {
@@ -539,15 +532,17 @@ Solution ILS::Solve(OP& op) {
 		Shake(processSolutions, parameters, op);
 
 		for (auto& params : parameters) {
-			params.S += params.S;
 			params.S += 1;
+			params.R += 1;
 		}
-
-		//S += R;
-		//R += 1;
 
 
 	}
+	auto done = std::chrono::high_resolution_clock::now();
+	int finalScore = bestSolution.getScore();
+	std::cout.clear();
+	std::cout << "final score: " << finalScore << std::endl;
+	std::cout << "time taken: " << std::chrono::duration_cast<std::chrono::milliseconds>(done - started).count() << "ms" << std::endl;
 
 	return bestSolution;
 
@@ -575,12 +570,10 @@ void ILS::construct(Solution& sol, std::vector<std::vector<double>>& ttMatrix) {
 
 		while (curr != nullptr) {
 			minShift = DBL_MAX;
-			std::cout << "examine if node " << curr->id << " can be inserted." << std::endl;
 			std::tie(pos, minShift, arrPointId, depPointId) = getBestPos(curr, sol.mWalk, ttMatrix);
 
 			if (pos == -1) { //insertion is not feasible
 				curr = curr->next;
-				std::cout << "insertion is not feasible" << std::endl;
 				continue;
 			}
 
@@ -600,17 +593,20 @@ void ILS::construct(Solution& sol, std::vector<std::vector<double>>& ttMatrix) {
 
 		//if we have reached a point where there is no node which can be inserted, then we stop the search
 		if (nodeToInsert == nullptr) {
-			std::cout << "no more unvisited nodes can be inserted" << std::endl;
 			break;
 		}
-
-		std::cout << "Will insert node " << nodeToInsert->id << std::endl;
 
 		nodeToInsert = sol.mUnvisited.grab(nodeToInsert);
 		sol.mWalk.insertAt(nodeToInsert, bestPos, bestArrPointId, bestDepPointId, ttMatrix); //add it to route
 		updateTimes(sol, bestPos, true, ttMatrix);
 	}
 }
+
+//void ILS::correct(Solution& solution, double startLimit, double endLimit) {
+//	
+//}
+
+
 
 std::tuple<int, double, int, int> ILS::getBestPos(TA* ta, ListTA walk, std::vector<std::vector<double>> ttMatrix) {
 	double minShift = DBL_MAX;
@@ -696,6 +692,9 @@ std::tuple<int, double, int, int> ILS::getBestPos(TA* ta, ListTA walk, std::vect
 void ILS::updateTimes(Solution& solution, int startIndex, bool smart, std::vector<std::vector<double>>& ttMatrix) {
 	//update times first
 	TA* curr = solution.mWalk.get(startIndex);
+	if (curr == nullptr) {
+		return;
+	}
 
 	if (startIndex == 0) {
 		curr->startOfVisitTime = curr->arrTime + curr->waitDuration;
@@ -717,7 +716,7 @@ void ILS::updateTimes(Solution& solution, int startIndex, bool smart, std::vecto
 
 void ILS::updateMaxShifts(Walk& walk, std::vector<std::vector<double>>& ttMatrix) {
 	TA* curr = walk.last();
-
+	if (curr == nullptr) return;
 	curr->maxShift = curr->timeWindow.closeTime - curr->depTime;
 	curr = curr->prev;
 	while (curr != nullptr) {
@@ -861,6 +860,9 @@ std::tuple<int, double, int, int> ILS_OPTW::getBestPos(TA* ta, ListTA walk, std:
 void ILS_OPTW::updateTimes(Solution& solution, int startIndex, bool smart, std::vector<std::vector<double>>& ttMatrix) {
 	//update times first
 	TA* curr = solution.mWalk.get(startIndex);
+	if (curr == nullptr) {
+		return;
+	}
 
 	if (startIndex == 0) {
 		curr->waitDuration = std::max(0.0, curr->timeWindow.openTime - curr->arrTime);
@@ -889,7 +891,7 @@ void ILS_OPTW::updateTimes(Solution& solution, int startIndex, bool smart, std::
 
 void ILS_OPTW::updateMaxShifts(Walk& walk, std::vector<std::vector<double>>& ttMatrix) {
 	TA* curr = walk.last();
-
+	if (curr == nullptr) return;
 	curr->maxShift = curr->timeWindow.closeTime - curr->depTime;
 	curr = curr->prev;
 	while (curr != nullptr) {
@@ -994,6 +996,9 @@ std::tuple<int, double, int, int> ILS_TOPTW::getBestPos(TA* ta, ListTA walk, std
 void ILS_TOPTW::updateTimes(Solution& solution, int startIndex, bool smart, std::vector<std::vector<double>>& ttMatrix) {
 	//update times first
 	TA* curr = solution.mWalk.get(startIndex);
+	if (curr == nullptr) {
+		return;
+	}
 
 	if (startIndex == 0) {
 		curr->waitDuration = std::max(0.0, curr->timeWindow.openTime - curr->arrTime);
@@ -1022,7 +1027,7 @@ void ILS_TOPTW::updateTimes(Solution& solution, int startIndex, bool smart, std:
 
 void ILS_TOPTW::updateMaxShifts(Walk& walk, std::vector<std::vector<double>>& ttMatrix) {
 	TA* curr = walk.last();
-
+	if (curr == nullptr) return;
 	curr->maxShift = curr->timeWindow.closeTime - curr->depTime;
 	curr = curr->prev;
 	while (curr != nullptr) {
