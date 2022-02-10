@@ -1100,7 +1100,7 @@ public:
 		head->next = tail;
 		tail->prev = head;
 
-		return ListTA(first, last);
+		return TouristAttractionList(first, last);
 	}
 
 	//grabPart grabs a part of the list
