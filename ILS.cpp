@@ -29,10 +29,6 @@ ListTA operator+(ListTA & l1, ListTA & l2) {
 	return l3;
 }
 
-struct {
-
-};
-
 bool areNeighbors(TA* ta1, TA* ta2, double maxtime, std::vector<std::vector<double>> ttMatrix) {
 	bool neighbors = true;
 	//two nodes are neighbors if satisfy the following requirements
