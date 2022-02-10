@@ -20,12 +20,11 @@ class ILS{
 private:
 	int mBucketsNum;
 
-	virtual std::tuple<int, double, int, int> getBestPos(TA*, ListTA, std::vector<std::vector<double>>);
+	virtual std::tuple<int, double, int, int> getBestPos(TA*, ListTA, std::vector<std::vector<double>>&);
 	virtual void updateTimes(Solution&, int, bool, std::vector<std::vector<double>>&);
 	void LocalSearch(std::vector<Solution>&, std::vector<double>, OP&);
 	void Shake(std::vector<Solution>&, std::vector<ShakeParameters>, OP&);
 	std::tuple<double, double, double> calcTimeEventCut(ListTA&);
-	void correct(Solution&);
 	virtual void updateMaxShifts(Walk&, std::vector<std::vector<double>>&);
 	ListTA setBucketActivityDurations(ListTA&, double);
 	void construct(Solution&, std::vector<std::vector<double>>&);
@@ -38,7 +37,7 @@ public:
     ILS();
 	ILS(int);
     ~ILS();
-	virtual std::tuple<bool, std::string> validate(ListTA&, std::vector<std::vector<double>>);
+	virtual void validate(ListTA&, std::vector<std::vector<double>>);
 	Solution Solve(OP&);
 	
 
@@ -46,21 +45,21 @@ public:
 
 class ILS_OPTW : public ILS {
 private:
-	std::tuple<int, double, int, int> getBestPos(TA*, ListTA, std::vector<std::vector<double>>) override;
+	std::tuple<int, double, int, int> getBestPos(TA*, ListTA, std::vector<std::vector<double>>&) override;
 	void updateTimes(Solution&, int, bool, std::vector<std::vector<double>>&) override;
 	void updateMaxShifts(Walk&, std::vector<std::vector<double>>&) override;
 public:
 	using ILS::ILS; //inherit constructor
-	std::tuple<bool, std::string> validate(ListTA&, std::vector<std::vector<double>>) override;
+	void validate(ListTA&, std::vector<std::vector<double>>) override;
 };
 
 class ILS_TOPTW : public ILS {
 private:
-	std::tuple<int, double, int, int> getBestPos(TA*, ListTA, std::vector<std::vector<double>>) override;
+	std::tuple<int, double, int, int> getBestPos(TA*, ListTA, std::vector<std::vector<double>>&) override;
 	void updateTimes(Solution&, int, bool, std::vector<std::vector<double>>&) override;
 	void updateMaxShifts(Walk&, std::vector<std::vector<double>>&) override;
 public:
 	using ILS::ILS; //inherit constructor
-	std::tuple<bool, std::string> validate(ListTA&, std::vector<std::vector<double>>) override;
+	void validate(ListTA&, std::vector<std::vector<double>>) override;
 };
 
