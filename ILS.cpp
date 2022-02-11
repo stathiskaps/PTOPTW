@@ -330,7 +330,7 @@ void ILS::LocalSearch(std::vector<Solution>& solutions, std::vector<double> cuts
 
 //construct depends completely on first node's departure time and on last node's close time
 void ILS::construct(Solution& sol, std::vector<std::vector<double>>& ttMatrix) {
-	auto started = std::chrono::high_resolution_clock::now();
+	//auto started = std::chrono::high_resolution_clock::now();
 	double minShift;
 	int pos, bestPos = DEFAULT_POS;
 	double maxRatio = DBL_MIN, ratio;
@@ -377,9 +377,9 @@ void ILS::construct(Solution& sol, std::vector<std::vector<double>>& ttMatrix) {
 		sol.mWalk.insertAt(nodeToInsert, bestPos, bestArrPointId, bestDepPointId, ttMatrix); //add it to route
 		updateTimes(sol, bestPos, true, ttMatrix);
 	}
-	auto done = std::chrono::high_resolution_clock::now();
-	std::cout << "construct time taken: " << std::chrono::duration_cast<std::chrono::milliseconds>(done - started).count() << "ms" << std::endl;
-	totalConstructionTime += std::chrono::duration_cast<std::chrono::milliseconds>(done - started).count();
+	//auto done = std::chrono::high_resolution_clock::now();
+	//std::cout << "construct time taken: " << std::chrono::duration_cast<std::chrono::milliseconds>(done - started).count() << "ms" << std::endl;
+	//totalConstructionTime += std::chrono::duration_cast<std::chrono::milliseconds>(done - started).count();
 }
 
 std::tuple<int, double, int, int> ILS::getBestPos(TA* ta, ListTA walk, std::vector<std::vector<double>>& travelTimes) {
@@ -524,12 +524,15 @@ std::vector<std::vector<TA*>> ILS::getBuckets(std::vector<TA*> nodes, int m) {
 	std::sort(nodes.begin(), nodes.end(), &compareTimeWindowCenter);
 
 	for (int i = 0; i < m; ++i) {
-		std::vector<TA*> slice(nodes.begin() + offset, nodes.begin() + offset + bucketSize + remainder);
-		offset += bucketSize + remainder;
 		if (remainder > 0) {
+			std::vector<TA*> slice(nodes.begin() + offset, nodes.begin() + offset + bucketSize + 1);
+			buckets.push_back(slice);
 			remainder--;
 		}
-		buckets.push_back(slice);
+		else {
+			std::vector<TA*> slice(nodes.begin() + offset, nodes.begin() + offset + bucketSize);
+			buckets.push_back(slice);
+		}
 	}
 
 	return buckets;
