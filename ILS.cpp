@@ -78,6 +78,19 @@ std::vector<TA*> rangeQuery(TA* Q, ListTA nodes, double radius, double minCommon
 		curr = curr->next;
 	}
 
+	if (neighbors.size() >= 3) {
+		Divider divider;
+		std::vector<TA*> group;
+		group = divider.findBestAttractionCombination(neighbors);
+		if (group.size() > 1) {
+			for (auto& ta : group) {
+				std::cout << ta->id << std::endl;
+			}
+		}
+	}
+
+	//Step 2: filter neighbors based on their common time window
+
 	//auto [common, window] = commonTimeWindow(neighbors);
 	//if (!common) {
 	//	neighbors.clear();
@@ -148,6 +161,53 @@ void dbScan(ListTA list, std::vector<std::vector<double>> ttMatrix) {
 	
 }
 
+//In each revision we want to do two things:
+//1) swap unvisited nodes between buckets
+//2) find small clusters, construct small solutions, use them as route
+
+Solution ILS::Preprocess(OP& op) {
+
+	Walk walk;
+	walk.pushClone(op.mStartDepot);
+	walk.pushClone(op.mEndDepot);
+	ListTA unvisited = ListTA(op.mAttractions);
+	Solution processSolution = Solution(walk, unvisited, op.mStartDepot->timeWindow.openTime, op.mEndDepot->timeWindow.closeTime);
+	Solution bestSolution = Solution();
+	int times_not_improved = 0;
+
+	dbScan(processSolution.mUnvisited, op.mTravelTimes);
+	processSolution.mUnvisited.foreach([](TA* ta) {std::cout << "id: " << ta->id << ", cluster: " << ta->cluster << std::endl; });
+
+	int maxCluster = INT_MIN;
+	processSolution.mUnvisited.foreach([&maxCluster](TA* curr) {
+		if (curr->cluster > maxCluster) { maxCluster = curr->cluster; }
+	});
+
+	std::vector<ListTA> groups;
+	Divider divider;
+	for (int i = 1; i <= maxCluster; ++i) {
+		ListTA group = processSolution.mUnvisited.map([i](TA* ta) { return ta->cluster == i; });
+		if (group.getLength() > 2) {
+			std::vector<TA*> combination = divider.findBestAttractionCombination(group.toVecPtr());
+			Solution sol = Solution(Walk(), combination);
+			ILS ils = ILS();
+			ils.construct(sol, op.mTravelTimes);
+
+			Solution solution = Solution(Walk(), group);
+		}
+		
+	}
+
+	//while (times_not_improved < MAX_TIMES_NOT_IMPROVED){
+	//	//Step 1: choose small clusters
+	//}
+	return bestSolution;
+}
+
+
+
+
+
 Solution ILS::Solve(OP& op) {
 
 	std::cout.clear();
@@ -187,10 +247,6 @@ Solution ILS::Solve(OP& op) {
 
 	auto [minEvent, avgEvent, maxEvent] = calcTimeEventCut(processSolution.mUnvisited);
 	processSolution.mUnvisited = setBucketActivityDurations(processSolution.mUnvisited, avgEvent);
-
-	dbScan(processSolution.mUnvisited, op.mTravelTimes);
-
-	//processSolution.mUnvisited.foreach([](TA* ta) {std::cout << "id: " << ta->id << ", cluster: " << ta->cluster << std::endl; });
 
 	while (timesNotImproved < MAX_TIMES_NOT_IMPROVED) {
 		counter++;
@@ -268,17 +324,25 @@ void ILS::LocalSearch(std::vector<Solution>& solutions, std::vector<double> cuts
 				startDepot = op.mStartDepot->clone();
 			}
 			else {
-				startDepot = solutions[i - 1].mWalk.last()->clone();
+				int tempIndex = i;
+				do {
+					tempIndex--;
+				} while (solutions[tempIndex].mWalk.last() == nullptr && tempIndex != 0);
+				startDepot = solutions[tempIndex].mWalk.last()->clone();
 			}
 			solutions[i].mWalk.pushFront(startDepot);
 		}
 		else {
 			if (i > 0) {
-				startDepot = solutions[i - 1].mWalk.last()->clone();
+				int tempIndex = i;
+				do {
+					tempIndex--;
+				} while (solutions[tempIndex].mWalk.last() == nullptr && tempIndex != 0);
+				startDepot = solutions[tempIndex].mWalk.last()->clone();
 				solutions[i].mWalk.pushFront(startDepot);
 			}
 			else {
-				if (solutions[i].mWalk.first()->id != op.mStartDepot->id) {
+				if (solutions[i].mWalk.first()->id != op.mStartDepot->id) { //if it doesn't exist already push a clone of startDepot
 					solutions[i].mWalk.pushFront(op.mStartDepot->clone());
 				}
 			}
@@ -299,7 +363,12 @@ void ILS::LocalSearch(std::vector<Solution>& solutions, std::vector<double> cuts
 			Point cnext;
 			int nextWalkLength = solutions[i + 1].mWalk.getLength();
 			if (nextWalkLength == 0) {
-				cnext = solutions[i + 1].mUnvisited.getWeightedCentroid();
+				if (solutions[i + 1].mWalk.first() != nullptr) { 
+					cnext = solutions[i + 1].mUnvisited.getWeightedCentroid();
+				}
+				else { //next solution is totally empty
+					continue;
+				}
 			}
 			else {
 				int n = std::min(3, nextWalkLength);

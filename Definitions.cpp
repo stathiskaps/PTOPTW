@@ -4,6 +4,10 @@ bool contains(std::list<std::string>& list, std::string val) {
 	return (std::find(list.begin(), list.end(), val) != list.end());
 }
 
+bool contains(const std::vector<std::string>& v, std::string val) {
+	return (std::find(v.begin(), v.end(), val) != v.end());
+}
+
 namespace id {
 	std::string generate()
 	{

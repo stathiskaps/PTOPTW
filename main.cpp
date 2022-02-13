@@ -126,7 +126,7 @@ void init(std::string filename, int numRoutes) {
 	ILS_OPTW ilsoptw = ILS_OPTW(numRoutes);
 
 	ListTA attractions = ListTA(touristAttractions);
-	Solution solution = ilsoptw.Solve(op);
+	Solution solution = ilsoptw.Preprocess(op);
 
 	/*OPTW optw(touristAttractions, ttMatrix, depot, OPEN_DAY_TIME, CLOSE_DAY_TIME);
 	Solution sol = optw.solve();

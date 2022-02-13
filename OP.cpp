@@ -9,13 +9,13 @@ OP::~OP() {
 }
 
 OP::OP(std::vector<TA*> attractions, std::vector<Point> points, TA* startDepot, TA* endDepot) : mAttractions(attractions), mPoints(points) {
-	std::tuple<std::vector<std::vector<double>>, double> tuple = calcTravelTimesMatrix2(points); //TODO: delete pointer
+	std::tuple<std::vector<std::vector<double>>, double> tuple = calcTravelTimes(points); //TODO: delete pointer
 	mTravelTimes = std::get<0>(tuple);
 	mStartDepot = startDepot->clone();
 	mEndDepot = endDepot->clone();
 }
 
-double OP::GetEuclideanDistance2(int x1, int y1, int x2, int y2) {
+double OP::GetEuclideanDistance(int x1, int y1, int x2, int y2) {
 	double eu_dist;
 	double nearest;
 	eu_dist = pow(x2 - x1, 2) + pow(y2 - y1, 2);
@@ -24,28 +24,21 @@ double OP::GetEuclideanDistance2(int x1, int y1, int x2, int y2) {
 	return nearest;
 }
 
-std::tuple<std::vector<std::vector<double>>, double> OP::calcTravelTimesMatrix2(std::vector<Point>& points)
+std::tuple<std::vector<std::vector<double>>, double> OP::calcTravelTimes(std::vector<Point>& points)
 {
 	size_t pointsSize = points.size();
 	std::vector<std::vector<double>> ttMatrix;
 	double totalTravelTime = 0;
 	double meanTravelTime;
 	double val;
-	std::cout << "\t";
-	for (int i = 0; i < pointsSize; ++i) {
-		std::cout << i << "\t";
-	}
 	std::cout << std::endl;
 	for (int i = 0; i < pointsSize; ++i) {
 		std::vector<double> vec;
-		std::cout << i << ":\t";
 		for (int j = 0; j < pointsSize; j++) {
-			val = GetEuclideanDistance2(points.at(i).pos.lat, points.at(i).pos.lon, points.at(j).pos.lat, points.at(j).pos.lon);
+			val = GetEuclideanDistance(points.at(i).pos.lat, points.at(i).pos.lon, points.at(j).pos.lat, points.at(j).pos.lon);
 			vec.push_back(val);
-			std::cout << val << "\t";
 			totalTravelTime += val;
 		}
-		std::cout << std::endl;
 		ttMatrix.push_back(vec);
 	}
 

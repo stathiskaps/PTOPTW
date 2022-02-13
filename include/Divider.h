@@ -96,8 +96,9 @@ public:
 	double calcScore2(int, int, double, double);
 	std::vector<Cluster> intervals(std::vector<TA*>);
 	std::vector<TimeEdge> getTimeEdges(const std::vector<TA*>&);
-	std::tuple<int, int> getBestInterval(std::vector<TimeEdge>&, int, std::map<std::string, int>&, int);
+	std::tuple<int, int> getBestInterval(std::vector<TimeEdge>&, std::map<std::string, int>&, int);
 	static bool compareInterval(TimeWindowEvent, TimeWindowEvent);
+	std::vector<TA*> findBestAttractionCombination(std::vector<TA*>);
 };
 
 #endif

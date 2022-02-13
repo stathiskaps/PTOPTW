@@ -14,6 +14,7 @@
 #include "plog/Initializers/RollingFileInitializer.h"
 #include "List.h"
 #include "Solution.h"
+#include "Divider.h"
 #include "OP.h"
 
 class ILS{
@@ -33,12 +34,14 @@ private:
 	std::vector<double> getTimeCuts(std::vector<std::vector<TA*>>);
 	std::tuple<int, int> getMinMaxLength(std::vector<Solution> solutions);
 	Solution connectSolutions(std::vector<Solution>);
+	
 public:
     ILS();
 	ILS(int);
     ~ILS();
 	virtual void validate(ListTA&, std::vector<std::vector<double>>);
 	Solution Solve(OP&);
+	Solution Preprocess(OP&);
 	
 
 };

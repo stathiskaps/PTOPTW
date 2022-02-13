@@ -7,6 +7,7 @@
 #include <cfloat>
 #include <type_traits> // enable_if, conjuction
 #include <cstdarg>
+#include <functional>
 #include "Definitions.h"
 
 enum class touristAttractionType {none, sight, route};
@@ -721,8 +722,6 @@ public:
 		}
 	}
 
-
-
 	///* Function to delete the entire linked list */
 	//void del()
 	//{
@@ -883,6 +882,19 @@ public:
 		}
 	}
 
+	template<typename UnaryLambda>
+	TouristAttractionList map(UnaryLambda predicate) {
+		TA* curr = head;
+		TouristAttractionList part;
+		while (curr != nullptr) {
+			if (predicate(curr)) {
+				part.pushClone(curr);
+			}
+			curr = curr->next;
+		}
+		return part;
+	}
+
 	//insert ta n right before index
 	void insertAt(TA* n, int index, int arrPointId, int depPointId, std::vector<std::vector<double>> ttMatrix) {
 
@@ -937,6 +949,17 @@ public:
 		TA* curr = head;
 		while (curr != nullptr) {
 			v.push_back(*curr);
+			curr = curr->next;
+		}
+		return v;
+	}
+
+	std::vector<TA*> toVecPtr() {
+		std::vector<TA*> v;
+		TA* curr = head;
+		while (curr != nullptr) {
+			TA* temp = curr;
+			v.push_back(temp);
 			curr = curr->next;
 		}
 		return v;

@@ -73,7 +73,7 @@ public:
 //}
 
 bool contains(std::list<std::string>&, std::string);
-
+bool contains(const std::vector<std::string>&, std::string);
 #ifndef ID_H
 #define ID_H
 

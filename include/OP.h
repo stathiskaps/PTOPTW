@@ -15,8 +15,8 @@ private:
 	TA* mStartDepot;
 	TA* mEndDepot;
 
-	std::tuple<std::vector<std::vector<double>>, double> calcTravelTimesMatrix2(std::vector<Point>& points);
-	double GetEuclideanDistance2(int x1, int y1, int x2, int y2);	//returns euclidean distance
+	std::tuple<std::vector<std::vector<double>>, double> calcTravelTimes(std::vector<Point>& points);
+	double GetEuclideanDistance(int x1, int y1, int x2, int y2);	//returns euclidean distance
 
 public:
 	OP();

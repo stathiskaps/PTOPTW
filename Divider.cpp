@@ -167,6 +167,42 @@ std::vector<std::string> Divider::getActiveNodes(std::vector<TimeEdge>& edges, i
 
 
 
+std::vector<TA*> Divider::findBestAttractionCombination(std::vector<TA*> attractions) {
+
+	//std::cout << "finding best combination of nodes: ";
+	//for (auto& ta : attractions) {
+	//	std::cout << ta->id << "  ";
+	//}
+	//std::cout << std::endl;
+
+
+	std::map<std::string, int> profits;
+
+	for (const auto& a : attractions) {
+		profits[a->id] = a->profit;
+	}
+
+	std::vector<TimeEdge> edges = getTimeEdges(attractions);
+	auto [start, end] = getBestInterval(edges, profits, attractions.size());
+
+	std::vector<std::string> activeNodes = getActiveNodes(edges, start, end);
+
+	//std::cout << "best interval: [" << start << ", " << end << "]" << std::endl;
+	//std::cout << "active nodes: ";
+	//for (auto& n : activeNodes) {
+	//	std::cout << n << "  ";
+	//}
+	//std::cout << std::endl;
+
+	attractions.erase(std::remove_if(
+		attractions.begin(), attractions.end(),
+		[activeNodes](const TA* x) {
+			return contains(activeNodes, x->id); // put your condition here
+		}), attractions.end());
+
+	
+	return attractions;
+}
 
 
 //uses attractions of this cluster instance, to generate other clusters
@@ -187,7 +223,7 @@ std::vector<Cluster> Divider::intervals(std::vector<TA*> attractions) {
 
 	while (attractions.size() != 0) {
 		timeEdges = getTimeEdges(attractions);
-		std::tuple<int, int> bestInterval = getBestInterval(timeEdges, attractions.size(), profits, attractionsSize);
+		std::tuple<int, int> bestInterval = getBestInterval(timeEdges, profits, attractionsSize);
 
 		if (std::get<0>(bestInterval) != -1 && std::get<1>(bestInterval) != -1) {
 			//get active nodes of interval
@@ -256,9 +292,7 @@ int collectProfit(std::vector<std::string> attractionIds, std::map<std::string, 
 	return totalProfit;
 }
 
-
-
-std::tuple<int, int> Divider::getBestInterval(std::vector<TimeEdge>& timeEdges, int nodesSize, std::map<std::string, int>& profits,int attractionsSize) {
+std::tuple<int, int> Divider::getBestInterval(std::vector<TimeEdge>& timeEdges, std::map<std::string, int>& profits, int attractionsSize) {
 	std::vector<TimeEdge> timeEdgesCopy = timeEdges;
 	//double l; //time of interval / total time
 	//double n; //active nodes of interval / total nodes
