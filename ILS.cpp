@@ -175,7 +175,14 @@ Solution ILS::Preprocess(OP& op) {
 	Solution bestSolution = Solution();
 	int times_not_improved = 0;
 
-	dbScan(processSolution.mUnvisited, op.mTravelTimes);
+	{
+		auto started = std::chrono::high_resolution_clock::now();
+		dbScan(processSolution.mUnvisited, op.mTravelTimes);
+		auto done = std::chrono::high_resolution_clock::now();
+		std::cout << "dbscan time taken: " << std::chrono::duration_cast<std::chrono::milliseconds>(done - started).count() << "ms" << std::endl;
+	}
+	
+
 	processSolution.mUnvisited.foreach([](TA* ta) {std::cout << "id: " << ta->id << ", cluster: " << ta->cluster << std::endl; });
 
 	int maxCluster = INT_MIN;
@@ -201,6 +208,9 @@ Solution ILS::Preprocess(OP& op) {
 	//while (times_not_improved < MAX_TIMES_NOT_IMPROVED){
 	//	//Step 1: choose small clusters
 	//}
+	
+
+
 	return bestSolution;
 }
 
@@ -210,8 +220,8 @@ Solution ILS::Preprocess(OP& op) {
 
 Solution ILS::Solve(OP& op) {
 
+	
 	std::cout.clear();
-
 	auto started = std::chrono::high_resolution_clock::now();
 
 	ListTA unvisited = ListTA(op.mAttractions);
