@@ -261,27 +261,22 @@ Solution ILS::Solve(OP& op) {
 	while (timesNotImproved < MAX_TIMES_NOT_IMPROVED) {
 		counter++;
 		LocalSearch(processSolutions, cuts, op);
-		int score = collectScore(processSolutions);
-
-		/*construct(processSolution, op.mTravelTimes);
-		int score = processSolution.getScore();*/
+		processSolution = connectSolutions(processSolutions);
+		int score = processSolution.getScore();
 
 		if (score > bestScore) {
 			bestScore = score;
 			bestSolution.reset();
-			/*bestSolution.copy(processSolution);
-			R = 1;*/
-			bestSolution = connectSolutions(processSolutions);
-			for (auto& params : parameters) {
-				params.R = 1;
-			}
+			bestSolution.copy(processSolution);
+			R = 1;
 			timesNotImproved = 0;
-
 		}
 		else {
 			timesNotImproved++;
 		}
 
+
+		if ()
 		auto [min, max] = getMinMaxLength(processSolutions);
 
 		for (int i = 0; i < solutionsSize; ++i) {
@@ -316,6 +311,7 @@ Solution ILS::Solve(OP& op) {
 	return bestSolution;
 
 }
+
 
 void ILS::LocalSearch(std::vector<Solution>& solutions, std::vector<double> cuts, OP& op) {
 
