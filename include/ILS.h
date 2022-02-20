@@ -16,6 +16,8 @@
 #include "Solution.h"
 #include "Divider.h"
 #include "OP.h"
+#include "boost/geometry.hpp"
+#include "ygor/YgorClustering.hpp"
 
 class ILS{
 private:
