@@ -30,7 +30,7 @@ private:
 	void Shake(std::vector<Solution>&, std::vector<ShakeParameters>, OP&);
 	std::tuple<double, double, double> calcTimeEventCut(ListTA&);
 	virtual void updateMaxShifts(Walk&, std::vector<std::vector<double>>&);
-	ListTA setBucketActivityDurations(ListTA&, double);
+	ListTA setBucketActivityDurations(ListTA&, double, std::vector<double>);
 	void construct(Solution&, std::vector<std::vector<double>>&);
 	std::vector<std::vector<TA*>> getBuckets(std::vector<TA*>, int);
 	int collectScore(std::vector<Solution>);

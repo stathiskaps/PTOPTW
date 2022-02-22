@@ -214,12 +214,6 @@ Solution ILS::Preprocess(OP& op) {
 	return bestSolution;
 }
 
-void ILS::initializeMetrics(std::vector<TA*> attractions, std::vector<double> cuts){
-	for(auto& ta: attractions){
-		if()
-	}
-}
-
 
 
 Solution ILS::Solve(OP& op) {
@@ -231,11 +225,11 @@ Solution ILS::Solve(OP& op) {
 
 	//initialize num different buckets, in which we will run the problems. We want to swap nodes inside these buckets
 	auto bins = getBuckets(op.mAttractions, mBucketsNum);
-	auto cuts = getTimeCuts(bins);
+	std::vector<double> cuts;
+	cuts.push_back(op.mStartDepot->timeWindow.openTime);
+	auto timecuts = getTimeCuts(bins);
+	cuts.insert(cuts.end(), timecuts.begin(), timecuts.end());
 	cuts.push_back(op.mEndDepot->timeWindow.closeTime);
-
-	
-
 
 	//intialize solutions
 	std::vector<Solution> processSolutions, best;
@@ -246,8 +240,6 @@ Solution ILS::Solve(OP& op) {
 	}
 
 	int solutionsSize = processSolutions.size();
-
-
 
 	Walk walk;
 	walk.pushClone(op.mStartDepot);
@@ -262,7 +254,7 @@ Solution ILS::Solve(OP& op) {
 	int bestScore = INT_MIN;
 
 	auto [minEvent, avgEvent, maxEvent] = calcTimeEventCut(processSolution.mUnvisited);
-	processSolution.mUnvisited = setBucketActivityDurations(processSolution.mUnvisited, avgEvent);
+	processSolution.mUnvisited = setBucketActivityDurations(processSolution.mUnvisited, avgEvent, cuts);
 
 	while (timesNotImproved < MAX_TIMES_NOT_IMPROVED) {
 
@@ -285,8 +277,6 @@ Solution ILS::Solve(OP& op) {
 			timesNotImproved++;
 		}
 
-
-		if ()
 		auto [min, max] = getMinMaxLength(processSolutions);
 
 		for (int i = 0; i < solutionsSize; ++i) {
@@ -342,7 +332,7 @@ void ILS::LocalSearch(std::vector<Solution>& solutions, std::vector<double> cuts
 	for (int i = 0; i < solutionsSize; ++i) {
 
 		Walk walk;
-		double startTime = 0, endTime = cuts[i];
+		double startTime = 0, endTime = cuts[i+1];
 
 		int currentWalkLength = solutions[i].mWalk.getLength();
 		TA *startDepot, *endDepot;
@@ -405,7 +395,7 @@ void ILS::LocalSearch(std::vector<Solution>& solutions, std::vector<double> cuts
 			op.AddPointToGraph(cnext);
 			//op.PrintTravelTimes("New travel times");
 			endDepot = new TA(cnext); //todo: delete endDepot
-			endDepot->timeWindow.closeTime = cuts[i];
+			endDepot->timeWindow.closeTime = cuts[i+1];
 			//endDepot->maxShift = endDepot->timeWindow.closeTime - endDepot->depTime;
 			solutions[i].mWalk.pushBack(endDepot);
 		}
@@ -597,12 +587,21 @@ std::tuple<double, double, double> ILS::calcTimeEventCut(ListTA& unvisited) {
 }
 
 
-ListTA ILS::setBucketActivityDurations(ListTA& unvisited, double avgEvent) {
+ListTA ILS::setBucketActivityDurations(ListTA& unvisited, double avgEvent, std::vector<double> cuts) {
 
 	TA* curr = unvisited.first();
 	while (curr != nullptr) {
-		curr->bucketActivities[0].duration = avgEvent - curr->timeWindow.openTime;
-		curr->bucketActivities[1].duration = curr->timeWindow.closeTime - avgEvent;
+		for(size_t i = 0; i < cuts.size() - 1; ++i){
+			BucketActivity activity{.duration = avgEvent};
+			curr->metrics.bucketActivities.push_back(activity);
+		}
+		// for(auto& c: cuts){
+		// 	BucketActivity activity{.duration = avgEvent}
+		// }
+		// BucketActivity activity{.duration = avgEvent}
+		// curr->metrics.bucketActivities.push_back(std::abs())
+		// curr->bucketActivities[0].duration = avgEvent - curr->timeWindow.openTime;
+		// curr->bucketActivities[1].duration = curr->timeWindow.closeTime - avgEvent;
 		curr = curr->next;
 	}
 	return unvisited;
@@ -675,7 +674,8 @@ std::tuple<int, int> ILS::getMinMaxLength(std::vector<Solution> solutions) {
 }
 
 std::vector<Solution> splitSolution(Solution sol, std::vector<double> cuts){
-	
+	std::vector<Solution> solutions;
+	return solutions;
 }
 
 Solution ILS::connectSolutions(std::vector<Solution> solutions) {

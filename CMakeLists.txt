@@ -9,15 +9,16 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++2a")
 set(CMAKE_BUILD_TYPE "DEBUG")
 
 project ("AMTOPTW_algorithm")
-set(INCLUDE_DIRECTORY "${PROJECT_SOURCE_DIR}/include")
+set(INCLUDE_DIR "${PROJECT_SOURCE_DIR}/include")
 
-set(HEADER_FILES "${INCLUDE_DIRECTORY}/Controller.h" "${INCLUDE_DIRECTORY}/Definitions.h"  "${INCLUDE_DIRECTORY}/Divider.h" "${INCLUDE_DIRECTORY}/ILS.h" "${INCLUDE_DIRECTORY}/List.h"  "${INCLUDE_DIRECTORY}/Processor.h" "${INCLUDE_DIRECTORY}/Solution.h" "${INCLUDE_DIRECTORY}/TaskManager.h" "${INCLUDE_DIRECTORY}/Unifier.h")
+set(HEADER_FILES "${INCLUDE_DIR}/Controller.h" "${INCLUDE_DIR}/Definitions.h"  "${INCLUDE_DIR}/Divider.h" "${INCLUDE_DIR}/ILS.h" "${INCLUDE_DIR}/List.h"  "${INCLUDE_DIR}/Processor.h" "${INCLUDE_DIR}/Solution.h" "${INCLUDE_DIR}/TaskManager.h" "${INCLUDE_DIR}/OP.h")
+set(SOURCE "main.cpp" "Controller.cpp" "Definitions.cpp"  "Divider.cpp"  "Processor.cpp" "TaskManager.cpp"  "ILS.cpp"   "OP.cpp")
 
-include_directories(${INCLUDE_DIRECTORY})
+include_directories(${INCLUDE_DIR})
 
 # Add source to this project's executable.
-add_executable (AMTOPTW_algorithm "main.cpp" "Controller.cpp" "Definitions.cpp"  "Divider.cpp"  "Processor.cpp" "TaskManager.cpp" "Unifier.cpp" ${HEADER_FILES} "ILS.cpp"  "include/OP.h" "OP.cpp")
+add_executable (AMTOPTW_algorithm ${HEADER_FILES} ${SOURCE})
 
-#target_include_directories(AMTOPTW_algorithm PRIVATE ${INCLUDE_DIRECTORY})
+#target_include_directories(AMTOPTW_algorithm PRIVATE ${INCLUDE_DIR})
 
 # TODO: Add tests and install targets if needed.
