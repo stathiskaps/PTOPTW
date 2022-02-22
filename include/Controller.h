@@ -4,7 +4,6 @@
 #include "Divider.h"
 #include "Processor.h"
 #include "TaskManager.h"
-#include "Unifier.h"
 
 #ifndef CONTROLLER_H
 #define CONTROLLER_H

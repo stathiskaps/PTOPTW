@@ -104,15 +104,6 @@ void Controller::exec() {
 	end = std::chrono::steady_clock::now();
 	std::cout << "Processor duration = " << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() << "[ms]" << std::endl;
 
-	begin = std::chrono::steady_clock::now();
-
-	Unifier unifier(solutions, m_tmax, ttMatrix, depot);
-	std::vector<Solution> final_solution = unifier.exec();
-
-	end = std::chrono::steady_clock::now();
-	std::cout << "Unifier duration = " << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() << "[ms]" << std::endl;
-
-
 }
 
 

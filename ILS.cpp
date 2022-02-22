@@ -214,13 +214,16 @@ Solution ILS::Preprocess(OP& op) {
 	return bestSolution;
 }
 
-
+void ILS::initializeMetrics(std::vector<TA*> attractions, std::vector<double> cuts){
+	for(auto& ta: attractions){
+		if()
+	}
+}
 
 
 
 Solution ILS::Solve(OP& op) {
 
-	
 	std::cout.clear();
 	auto started = std::chrono::high_resolution_clock::now();
 
@@ -230,6 +233,9 @@ Solution ILS::Solve(OP& op) {
 	auto bins = getBuckets(op.mAttractions, mBucketsNum);
 	auto cuts = getTimeCuts(bins);
 	cuts.push_back(op.mEndDepot->timeWindow.closeTime);
+
+	
+
 
 	//intialize solutions
 	std::vector<Solution> processSolutions, best;
@@ -259,6 +265,10 @@ Solution ILS::Solve(OP& op) {
 	processSolution.mUnvisited = setBucketActivityDurations(processSolution.mUnvisited, avgEvent);
 
 	while (timesNotImproved < MAX_TIMES_NOT_IMPROVED) {
+
+		//fill buckets using unvisited list 
+		std::vector<ListTA> buckets;
+
 		counter++;
 		LocalSearch(processSolutions, cuts, op);
 		processSolution = connectSolutions(processSolutions);
@@ -309,6 +319,18 @@ Solution ILS::Solve(OP& op) {
 	std::cout << "total insertion time: " << totalInsertionTime << "microseconds" << std::endl;
 
 	return bestSolution;
+
+}
+
+void ILS::SplitSearch(Solution& solution, std::vector<double> cuts, OP& op){
+	//split solution's walk based on cuts
+	TA* curr = solution.mWalk.first();
+	std::vector<Walk> walks;
+
+	// while(curr != nullptr){
+	// 	if()
+	// 	curr = curr->next;
+	// }
 
 }
 
@@ -650,6 +672,10 @@ std::tuple<int, int> ILS::getMinMaxLength(std::vector<Solution> solutions) {
 	}
 
 	return { min, max };
+}
+
+std::vector<Solution> splitSolution(Solution sol, std::vector<double> cuts){
+	
 }
 
 Solution ILS::connectSolutions(std::vector<Solution> solutions) {

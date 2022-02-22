@@ -26,6 +26,7 @@ private:
 	virtual std::tuple<int, double, int, int> getBestPos(TA*, ListTA, std::vector<std::vector<double>>&);
 	virtual void updateTimes(Solution&, int, bool, std::vector<std::vector<double>>&);
 	void LocalSearch(std::vector<Solution>&, std::vector<double>, OP&);
+	void SplitSearch(Solution&, std::vector<double>, OP&);
 	void Shake(std::vector<Solution>&, std::vector<ShakeParameters>, OP&);
 	std::tuple<double, double, double> calcTimeEventCut(ListTA&);
 	virtual void updateMaxShifts(Walk&, std::vector<std::vector<double>>&);

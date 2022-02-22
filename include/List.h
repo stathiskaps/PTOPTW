@@ -71,6 +71,10 @@ struct BucketActivity {
 	double duration = 0;
 };
 
+struct Metrics{
+	std::vector<BucketActivity> bucketActivities;
+}
+
 typedef struct TouristAttraction {
 	const std::string id;
 	Point point;
@@ -85,7 +89,7 @@ typedef struct TouristAttraction {
 	int arrPointId, depPointId;
 	TouristAttraction* next;
 	TouristAttraction* prev;
-	BucketActivity bucketActivities[2];
+	Metrics metrics;
 
 
 	//default constructor
@@ -108,7 +112,8 @@ typedef struct TouristAttraction {
 		depPointId(DEFAULT_POINT_ID),
 		type(touristAttractionType::sight),
 		category(sightCategory::none),
-		next(nullptr), prev(nullptr)
+		next(nullptr), prev(nullptr),
+		bucket
 	{
 	}
 
