@@ -795,6 +795,7 @@ public:
 		tail = nullptr;
 		if(size_ != 0){
 			std::cerr << "empty: something went wrong (size_=" << size_ << "!=0)" << std::endl;
+			std::exit(1);
 		}
 	}
 
