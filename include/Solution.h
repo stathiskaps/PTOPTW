@@ -110,7 +110,7 @@ public:
 	}
 
 	TA* toTA() {
-		mWalk.removeNodesWithId(DEFAULT_DEPOT_ID);
+		mWalk.removeById(DEFAULT_DEPOT_ID);
 		std::vector<TA> nodes = mWalk.toVec();
 		double duration = mWalk.getDuration();
 		if (nodes.size() == 0) {

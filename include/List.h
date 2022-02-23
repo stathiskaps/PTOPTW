@@ -360,12 +360,12 @@ struct Cluster {
 	void setCentroid(int id) {
 		double totalLat = .0;
 		double totalLon = .0;
-		size_t nodesSize = nodes.size();
+		size_t nodessize = nodes.size();
 		for (auto& node : nodes) {
 			totalLat += node->point.pos.lat;
 			totalLon += node->point.pos.lon;
 		}
-		centroid = Point(id, totalLat / nodesSize, totalLon / nodesSize);
+		centroid = Point(id, totalLat / nodessize, totalLon / nodessize);
 	}
 };
 
@@ -388,7 +388,7 @@ protected:
 protected:
 	T* head;
 	T* tail;
-	int length;
+	int size_;
 
 	void disconnect(T* curr) {
 		if (head == curr) {
@@ -409,6 +409,8 @@ protected:
 		curr->prev = nullptr;
 	}
 
+	
+
 
 
 public:
@@ -416,7 +418,7 @@ public:
 	List<T>() {
 		head = nullptr;
 		tail = nullptr;
-		length = 0;
+		size_ = 0;
 	}
 
 	List<T>(T* start) {
@@ -449,8 +451,12 @@ public:
 		return tail->prev;
 	}
 
+	int size(){
+		return size_;
+	}
+
 	bool isEmpty() {
-		return getLength() == 0;
+		return size_ == 0;
 	}
 
 	void print() {
@@ -492,63 +498,17 @@ public:
 
 	void print(std::string msg) {
 		std::cout << msg << std::endl;
-		char type = '_';
-		Sight* s = nullptr;
-		Route* r = nullptr;
-		if (head != nullptr)
-		{
-			T* curr = head;
-			while (curr != nullptr)
-			{
-				if ((s = dynamic_cast<Sight*>(curr))) {
-					type = 's';
-				}
-				else if ((r = dynamic_cast<Route*>(curr))) {
-					type = 'r';
-				}
-				if(curr == head){
-					std::cout << curr->id << "(" << curr << ")" << "[" << type <<  "]" << "(head)" << "\t <=> \t";
-				} else if (curr == tail){
-					std::cout << curr->id << "(" << curr << ")" << "[" << type << "]" << "(tail)";
-				} else {
-					
-					std::cout << curr->id << "(" << curr << ")" << "[" << type << "]" << "\t<=>\t";
-				}
-				curr = curr->next;
-			}
-			
-			// std::cout << "<=\ttail(" << tail << ")";
-			std::cout << std::endl;
-		}
-		else
-		{
-			std::cout << "List is empty." << std::endl;
-		}
+		print();
 	}
 
-	
-
-	T* grabUsingPos(int index) {
+	T* grab(int index) {
 		T* curr = head;
-		T* temp;
 		int pos = 0;
 		while (curr != nullptr) {
 			if (pos == index) {
-				temp = curr;
-				curr = curr->next;
-				if (temp == head) {
-					head = temp->next;
-				}
-				if (temp == tail) {
-					tail = temp->prev;
-				}
-				if (temp->prev != nullptr) {
-					temp->prev->next = temp->next;
-				}
-				if (temp->next != nullptr) {
-					temp->next->prev = temp->prev;
-				}
-				return temp;
+				disconnect(curr);
+				size_--;
+				return curr;
 			}
 			else {
 				pos++;
@@ -558,17 +518,18 @@ public:
 		return nullptr;
 	}
 
-	//i am not sure if I should do that. It saves some times by not searching for an id, but what if the n isn't inside the current list?
+	//i am not sure if I should do that. It saves some time by not searching for an id, but what if the n isn't inside the current list?
 	T* grab(T* n) {
 		disconnect(n);
 		return n;
 	}
 
-	T* grabUsingID(std::string id) {
+	T* grab(std::string id) {
 		T* curr = head;
 		while (curr != nullptr) {
 			if (curr->id == id) {
 				disconnect(curr);
+				size_--;
 				return curr;
 			}
 			else {
@@ -592,6 +553,7 @@ public:
 			curr = curr->next;
 			disconnect(temp);
 			delete(temp);
+			size_--;
 		}
 	}
 
@@ -608,6 +570,7 @@ public:
 			curr = curr->prev;
 			disconnect(temp);
 			delete(temp);
+			size_--;
 		}
 	}
 
@@ -617,16 +580,9 @@ public:
 		int pos = 0;
 		while (curr != nullptr) {
 			if (pos == index) {
-				if(curr == head){
-					head = curr->next;
-				}
-
-				if(curr == tail){
-					tail = curr->prev;
-				}
-
 				disconnect(curr);
 				delete(curr);
+				size_--;
 			}
 			else {
 				pos++;
@@ -660,6 +616,7 @@ public:
 				tail = n;
 			}
 		}
+		size_++;
 	}
 
 	void pushBack(T* ptr) {
@@ -676,6 +633,7 @@ public:
 			ptr->next = nullptr;
 			tail = ptr;
 		}
+		size_++;
 	}
 
 	void pushFront(T* ptr) {
@@ -692,6 +650,7 @@ public:
 			head->prev = ptr;
 			head = ptr;
 		}
+		size_++;
 	}
 
 	void iterate(void (*f)(TA*)) {
@@ -705,7 +664,6 @@ public:
 				curr = curr->next;
 			}
 		}
-	
 	}
 	
 
@@ -724,6 +682,7 @@ public:
 			tail->next = ptr;
 			tail = ptr;
 		}
+		size_++;
 	}
 
 	///* Function to delete the entire linked list */
@@ -766,24 +725,24 @@ public:
 		return get(index);
 	}
 
-	int getLength() {
-		int length = 0;
-		if (head != nullptr)
-		{
-			T* curr = head;
-			while (curr != nullptr)
-			{
-				length++;
-				curr = curr->next;
-			}
-		}
+	// int getLength() {
+	// 	int length = 0;
+	// 	if (head != nullptr)
+	// 	{
+	// 		T* curr = head;
+	// 		while (curr != nullptr)
+	// 		{
+	// 			length++;
+	// 			curr = curr->next;
+	// 		}
+	// 	}
 
-		return length;
-	}
+	// 	return length;
+	// }
 
 	List<T>* splitAtIndex(int index) {
 		if (index < 0) {
-			index = getLength() - index;
+			index = size_ - index;
 		}
 		T* curr = head;
 		std::tuple<List<T>, List<T>> parts;
@@ -803,10 +762,6 @@ public:
 		return parts;
 	}
 
-	void setLength() {
-		this->length = this->getLength();
-	}
-
 	void append(List<T> list)
 	{
 		if (list.isEmpty()) return;
@@ -820,8 +775,10 @@ public:
 			list.head->prev = tail;
 			tail = list.tail;
 		}
+		size_+=list.size();
 		list.head = nullptr;
 		list.tail = nullptr;
+		list.size_ = 0;
 	}
 
 	void empty() {
@@ -831,10 +788,36 @@ public:
 			del = curr;
 			curr = curr->next;
 			delete(del);
+			size_--;
 		}
 
 		head = nullptr;
 		tail = nullptr;
+		if(size_ != 0){
+			std::cerr << "empty: something went wrong (size_=" << size_ << "!=0)" << std::endl;
+		}
+	}
+
+
+	//TODO: CHECK IF THIS FUNCTION IS FINE
+	List<T> grabIntermediateNodes() {
+		
+		if (head == nullptr || tail == nullptr || head->next == tail) {
+			return List<T>();
+		}
+
+		List<T> nodes;
+
+		TA *curr = head->next, *temp;
+		while(curr->next != nullptr){
+			temp = curr;
+			curr=curr->next;
+			disconnect(temp);
+			size_--;
+			nodes.push(temp);
+		}
+
+		return nodes;
 	}
 };
 
@@ -848,22 +831,33 @@ public:
 
 	TouristAttractionList(TA* start) {
 		head = start;
+		size_ = 0;
 		TA* curr = head;
 
 		while (curr->next != nullptr) {
+			size_++;
 			curr = curr->next;
 		}
 		tail = curr;
+		size_++;
 	}
 
 	TouristAttractionList(TA* start, TA* end) {
-		pushBack(start);
-		pushBack(end);
+		head = start;
+		tail = end;
+		size_ = 0;
+		TA* curr = head;
+		while(curr != nullptr){
+			size_++;
+			curr = curr->next;
+		}
 	}
 
 	TouristAttractionList(std::vector<TA*> v) {
+		size_ = 0;
 		for (auto& i : v) {
 			this->pushBack(i);
+			size_++;
 		}
 	}
 
@@ -946,6 +940,7 @@ public:
 				}
 			}
 		}
+		size_++;
 	}
 
 	std::vector<TA> toVec() {
@@ -985,6 +980,7 @@ public:
 			tail->next = n;
 			tail = n;
 		}
+		size_++;
 	}
 
 	void pushClones(const std::list<TA*>& refs) {
@@ -1011,13 +1007,12 @@ public:
 		int pos = 0;
 
 		if (startIndex < 0 || endIndex < 0) {
-			size_t length = getLength();
 			if (startIndex < 0) {
-				startIndex += length;
+				startIndex += size_;
 			}
 
 			if (endIndex < 0) {
-				endIndex += length;
+				endIndex += size_;
 			}
 		}
 
@@ -1047,114 +1042,23 @@ public:
 	}
 
 	//removePart removes a part of the list
-	// si = start index
-	// ei = end index 
-	TouristAttractionList removePart(int si, int ei)
-	{
-
-		if(si > ei) {
-			std::cerr << "Invalid arguments" << std::endl;
-			exit(1);
-		}
-
-		TA* curr = head;
-		TA* temp;
-		int pos = 0;
-
-		while (curr != nullptr) {
-			if (pos == si) {
-				temp = curr; //temp points to the first node that gets deleted
-				break;
-			}
-			else {
-				pos++;
-				curr = curr->next;
-			}
-
-		}
-
-		while(curr != nullptr){
-			if(pos == ei){
-
-				// if (curr == tail) {
-				// 	curr = tail->prev;
-				// }
-				std::cout << "Will remove part from " << temp->id << " to " << curr->id << " ( " << si << " " << ei << " of total route length " <<  this->getLength() << " ) " << std::endl;
-
-				// if (head == temp) {
-				// 	head = curr->next;
-				// }
-
-				if (temp->prev != nullptr) {
-					temp->prev->next = curr->next;
-				}
-
-				if (curr->next != nullptr) {
-					curr->next->prev = temp->prev;
-				}
-
-				temp->prev = nullptr;
-				curr->next = nullptr;
-
-
-				//TODO: delete nodes
-				TouristAttractionList removed(temp);
-				return removed;
-
-			} else {
-				pos++;
-				curr = curr->next;
-			}
-		}
-
-
-
-		return *this;
-	}
-
-	TouristAttractionList grabIntermediateNodes() {
-		
-		if (head == nullptr || tail == nullptr || head->next == tail) {
-			return TouristAttractionList();
-		}
-
-		TA* first = head->next;
-		TA* last = tail->prev;
-
-		first->prev = nullptr;
-		last->next = nullptr;
-
-		head->next = tail;
-		tail->prev = head;
-
-		return TouristAttractionList(first, last);
+	void removePart(int startIndex, int endIndex) {
+		TouristAttractionList list = grabPart(startIndex, endIndex);
+		list.empty();
 	}
 
 	//grabPart grabs a part of the list
-	// si = start index
-	// ei = end index 
 	TouristAttractionList grabPart(int startIndex, int endIndex)
 	{
 		if (startIndex < 0 || endIndex < 0) {
-			int length = getLength();
 			if (startIndex < 0) {
-				startIndex += length;
+				startIndex += size_;
 			}
 
 			if (endIndex < 0) {
-				endIndex += length;
+				endIndex += size_;
 			}
-
-			//if (endIndex > length - 1) {
-			//	//todo: make sure that this is fine
-			//	std::cout << "endIndex out of bounds so will grab until the end" << std::endl;
-			//	endIndex = length - 1;
-			//}
 		}
-
-		//if (endIndex > length - 1) {
-		//	throw std::invalid_argument("endIndex out of bounds");
-		//}
 
 		if (startIndex > endIndex) {
 			std::cerr << "grabPart: invalid arguments" << std::endl;
@@ -1214,8 +1118,8 @@ public:
 		curr->next = nullptr;
 
 		TouristAttractionList part(temp);
+		size_ -= part.size();
 		return part;
-		//return *this;
 	}
 
 	Point getCentroid() {
@@ -1250,42 +1154,13 @@ public:
 		return Point{ DEFAULT_POINT_ID, pos };
 	}
 
-	void removeNodesWithId(std::string id) {
-		TA* curr = head;
-		TA* temp;
-		while (curr != nullptr) {
-			if (curr->id == id) {
-				temp = curr;
-				curr = curr->next;
-				if (temp == head) {
-					head = temp->next;
-				}
-				if (temp == tail) {
-					tail = temp->prev;
-				}
-				if (temp->next != nullptr) {
-					temp->next->prev = temp->prev;
-				}
-				if (temp->prev != nullptr) {
-					temp->prev->next = temp->next;
-				}
-				temp->next = nullptr;
-				temp->prev = nullptr;
-				delete(temp);
-			}
-			else {
-				curr = curr->next;
-			}			
-		}
-	}
-
 	std::tuple<TouristAttractionList, TouristAttractionList> splitAtIndex(int index) {
 		TA* curr = head;
 		std::tuple<TouristAttractionList, TouristAttractionList> lists;
 		int pos = 0;
 
 		if (index < 0) {
-			index = getLength() - index;
+			index = size_ - index;
 		}
 
 		while (curr != nullptr) {
@@ -1311,6 +1186,7 @@ public:
 				curr = curr->next;
 				disconnect(temp);
 				delete(temp);
+				size_--;
 			}
 			else {
 				curr = curr->next;
@@ -1326,6 +1202,7 @@ public:
 				curr = curr->next;
 				disconnect(temp);
 				delete(temp);
+				size_--;
 			}
 			else {
 				curr = curr->next;

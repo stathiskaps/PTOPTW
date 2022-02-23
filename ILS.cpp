@@ -194,7 +194,7 @@ Solution ILS::Preprocess(OP& op) {
 	Divider divider;
 	for (int i = 1; i <= maxCluster; ++i) {
 		ListTA group = processSolution.mUnvisited.map([i](TA* ta) { return ta->cluster == i; });
-		if (group.getLength() > 2) {
+		if (group.size() > 2) {
 			std::vector<TA*> combination = divider.findBestAttractionCombination(group.toVecPtr());
 			Solution sol = Solution(Walk(), combination);
 			ILS ils = ILS();
@@ -280,7 +280,7 @@ Solution ILS::Solve(OP& op) {
 		auto [min, max] = getMinMaxLength(processSolutions);
 
 		for (int i = 0; i < solutionsSize; ++i) {
-			int walkLength = processSolutions[i].mWalk.getLength();
+			int walkLength = processSolutions[i].mWalk.size();
 			if (parameters[i].S > walkLength - 1) {
 				parameters[i].S = 0;
 			}
@@ -334,7 +334,7 @@ void ILS::LocalSearch(std::vector<Solution>& solutions, std::vector<double> cuts
 		Walk walk;
 		double startTime = 0, endTime = cuts[i+1];
 
-		int currentWalkLength = solutions[i].mWalk.getLength();
+		int currentWalkLength = solutions[i].mWalk.size();
 		TA *startDepot, *endDepot;
 		if (currentWalkLength == 0) {
 			//TODO: check if there is a case where previous walk is empty
@@ -367,7 +367,7 @@ void ILS::LocalSearch(std::vector<Solution>& solutions, std::vector<double> cuts
 			//if i == 0 keep the same startNode
 		}
 
-		currentWalkLength = solutions[i].mWalk.getLength();
+		currentWalkLength = solutions[i].mWalk.size();
 
 		if (i == solutionsSize - 1) {
 			endDepot = op.mEndDepot->clone();
@@ -379,7 +379,7 @@ void ILS::LocalSearch(std::vector<Solution>& solutions, std::vector<double> cuts
 		}
 		else {
 			Point cnext;
-			int nextWalkLength = solutions[i + 1].mWalk.getLength();
+			int nextWalkLength = solutions[i + 1].mWalk.size();
 			if (nextWalkLength == 0) {
 				if (solutions[i + 1].mWalk.first() != nullptr) { 
 					cnext = solutions[i + 1].mUnvisited.getWeightedCentroid();
@@ -471,7 +471,7 @@ void ILS::construct(Solution& sol, std::vector<std::vector<double>>& ttMatrix) {
 
 std::tuple<int, double, int, int> ILS::getBestPos(TA* ta, ListTA walk, std::vector<std::vector<double>>& travelTimes) {
 	double minShift = DBL_MAX;
-	int length = walk.getLength();
+	int length = walk.size();
 	double shift;
 	int pos = 1;
 	TA* temp = walk.first();
@@ -660,7 +660,7 @@ std::tuple<int, int> ILS::getMinMaxLength(std::vector<Solution> solutions) {
 	int min = INT_MAX, max = INT_MIN;
 
 	for (auto& sol : solutions) {
-		int walkLength = sol.mWalk.getLength();
+		int walkLength = sol.mWalk.size();
 		if (walkLength > max) {
 			max = walkLength;
 		}
@@ -691,7 +691,7 @@ Solution ILS::connectSolutions(std::vector<Solution> solutions) {
 void ILS::Shake(std::vector<Solution>& solutions, std::vector<ShakeParameters> params, OP& op) {
 	size_t solutionsSize = solutions.size();
 	for (int i = 0; i < solutionsSize; ++i) {
-		int walkLength = solutions[i].mWalk.getLength();
+		int walkLength = solutions[i].mWalk.size();
 
 		//todo: check what happens when s > length - 1
 		ListTA nodes = solutions[i].mWalk.grabPart(params[i].S, std::min(params[i].S + params[i].R - 1, walkLength - 1));
@@ -780,7 +780,7 @@ void ILS::validate(ListTA& walk, std::vector<std::vector<double>> ttMatrix) {
 
 std::tuple<int, double, int, int> ILS_OPTW::getBestPos(TA* ta, ListTA walk, std::vector<std::vector<double>>& travelTimes) {
 	double minShift = DBL_MAX;
-	int length = walk.getLength();
+	int length = walk.size();
 	double arrTime, waitDuration, startOfVisitTime, startOfVisitTime1, startOfVisitTime2, depTime, depTime1, depTime2, shift;
 	int pos = 1;
 
@@ -999,7 +999,7 @@ void ILS_OPTW::validate(ListTA& walk, std::vector<std::vector<double>> ttMatrix)
 
 std::tuple<int, double, int, int> ILS_TOPTW::getBestPos(TA* ta, ListTA walk, std::vector<std::vector<double>>& travelTimes) {
 	double minShift = DBL_MAX;
-	int length = walk.getLength();
+	int length = walk.size();
 	double arrTime, waitDuration, startOfVisitTime, depTime, shift;
 	int pos = 1;
 	std::tuple<int, double, int, int> res = std::make_tuple(-1, -1, -1, -1);
