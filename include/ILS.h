@@ -28,6 +28,7 @@ private:
 	void LocalSearch(std::vector<Solution>&, std::vector<double>, OP&);
 	void SplitSearch(Solution&, std::vector<double>, OP&);
 	void Shake(std::vector<Solution>&, std::vector<ShakeParameters>, OP&);
+	void Shake(Solution&, int, int, OP&);
 	std::tuple<double, double, double> calcTimeEventCut(ListTA&);
 	virtual void updateMaxShifts(Walk&, std::vector<std::vector<double>>&);
 	ListTA setBucketActivityDurations(ListTA&, double, std::vector<double>);

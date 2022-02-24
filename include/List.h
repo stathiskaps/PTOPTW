@@ -521,6 +521,7 @@ public:
 	//i am not sure if I should do that. It saves some time by not searching for an id, but what if the n isn't inside the current list?
 	T* grab(T* n) {
 		disconnect(n);
+		size_--;
 		return n;
 	}
 
@@ -932,7 +933,7 @@ public:
 						n->prev = curr->prev;
 						curr->prev = n;
 						n->next = curr;
-						return;
+						break;
 					}
 					else {
 						curr = curr->next;
@@ -1062,7 +1063,7 @@ public:
 		}
 
 		if (startIndex > endIndex) {
-			std::cerr << "grabPart: invalid arguments" << std::endl;
+			std::cerr << "grabPart: invalid arguments: " << startIndex  <<  ", " << endIndex  << std::endl;
 			std::exit(1);
 		}
 
@@ -1072,7 +1073,7 @@ public:
 
 		while (curr != nullptr) {
 			if (pos == startIndex) {
-				temp = curr; //temp points to the first node that gets deleted
+				temp = curr; //temp points to the first node that gets removed
 				break;
 			}
 			else {
@@ -1084,7 +1085,7 @@ public:
 
 		while(curr != nullptr){
 			if(pos == endIndex){
-				break;
+				break; //curr will point to the last node that will be removed
 			} else {
 				pos++;
 				curr = curr->next;

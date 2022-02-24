@@ -254,7 +254,7 @@ Solution ILS::Solve(OP& op) {
 	int bestScore = INT_MIN;
 
 	auto [minEvent, avgEvent, maxEvent] = calcTimeEventCut(processSolution.mUnvisited);
-	processSolution.mUnvisited = setBucketActivityDurations(processSolution.mUnvisited, avgEvent, cuts);
+	// processSolution.mUnvisited = setBucketActivityDurations(processSolution.mUnvisited, avgEvent, cuts);
 
 	while (timesNotImproved < MAX_TIMES_NOT_IMPROVED) {
 
@@ -262,8 +262,9 @@ Solution ILS::Solve(OP& op) {
 		std::vector<ListTA> buckets;
 
 		counter++;
-		LocalSearch(processSolutions, cuts, op);
-		processSolution = connectSolutions(processSolutions);
+		// LocalSearch(processSolutions, cuts, op);
+		// processSolution = connectSolutions(processSolutions);
+		construct(processSolution, op.mTravelTimes);
 		int score = processSolution.getScore();
 
 		if (score > bestScore) {
@@ -277,24 +278,34 @@ Solution ILS::Solve(OP& op) {
 			timesNotImproved++;
 		}
 
-		auto [min, max] = getMinMaxLength(processSolutions);
+		// auto [min, max] = getMinMaxLength(processSolutions);
 
-		for (int i = 0; i < solutionsSize; ++i) {
-			int walkLength = processSolutions[i].mWalk.size();
-			if (parameters[i].S > walkLength - 1) {
-				parameters[i].S = 0;
-			}
-			if (parameters[i].R == 2 * walkLength / 3) {
-				parameters[i].R = 1;
-			}
+		// for (int i = 0; i < solutionsSize; ++i) {
+		// 	int walkLength = processSolutions[i].mWalk.size();
+		// 	if (parameters[i].S > walkLength - 1) {
+		// 		parameters[i].S = 0;
+		// 	}
+		// 	if (parameters[i].R == 2 * walkLength / 3) {
+		// 		parameters[i].R = 1;
+		// 	}
+		// }
+
+		if(S > processSolution.mWalk.size() - 1){
+			S = 1;
+		}
+		if(R >= 2 * processSolution.mWalk.size() / 3){
+			R = 1;
 		}
 
-		Shake(processSolutions, parameters, op);
+		// Shake(processSolutions, parameters, op);
+		Shake(processSolution, S, R, op);
 
-		for (auto& params : parameters) {
-			params.S += 1;
-			params.R += 1;
-		}
+		S += 1;
+		R += 1;
+		// for (auto& params : parameters) {
+		// 	params.S += 1;
+		// 	params.R += 1;
+		// }
 
 
 	}
@@ -698,6 +709,27 @@ void ILS::Shake(std::vector<Solution>& solutions, std::vector<ShakeParameters> p
 		nodes.removeByIds({ op.mStartDepot->id, op.mEndDepot->id });
 		solutions[i].mUnvisited.append(nodes);
 		updateTimes(solutions[i], 1, false, op.mTravelTimes);
+	}
+}
+
+void ILS::Shake(Solution& solution, int S, int R, OP& op) {
+	while(R > 0){
+		if(solution.mWalk.size() == 2){
+			return;
+		}
+		if(S + R > solution.mWalk.size() - 1){
+			int currentR = solution.mWalk.size() - 1 - S;
+			R -= currentR;
+			std::cout << "currentR: " << currentR << std::endl;
+			ListTA nodes = solution.mWalk.grabPart(S, currentR);
+			solution.mUnvisited.append(nodes);
+			updateTimes(solution, 1, false, op.mTravelTimes);
+			S = 1;
+		} else {
+			ListTA nodes = solution.mWalk.grabPart(S, R);
+			solution.mUnvisited.append(nodes);
+			updateTimes(solution, 1, false, op.mTravelTimes);
+		}
 	}
 }
 
