@@ -290,18 +290,12 @@ Solution ILS::Solve(OP& op) {
 		// 	}
 		// }
 
-		if(S > processSolution.mWalk.size() - 1){
-			S = 1;
-		}
-		if(R >= 2 * processSolution.mWalk.size() / 3){
-			R = 1;
-		}
+		
 
 		// Shake(processSolutions, parameters, op);
 		Shake(processSolution, S, R, op);
 
-		S += 1;
-		R += 1;
+		
 		// for (auto& params : parameters) {
 		// 	params.S += 1;
 		// 	params.R += 1;
@@ -712,25 +706,37 @@ void ILS::Shake(std::vector<Solution>& solutions, std::vector<ShakeParameters> p
 	}
 }
 
-void ILS::Shake(Solution& solution, int S, int R, OP& op) {
-	while(R > 0){
-		if(solution.mWalk.size() == 2){
-			return;
-		}
-		if(S + R > solution.mWalk.size() - 1){
-			int currentR = solution.mWalk.size() - 1 - S;
-			R -= currentR;
-			std::cout << "currentR: " << currentR << std::endl;
-			ListTA nodes = solution.mWalk.grabPart(S, currentR);
-			solution.mUnvisited.append(nodes);
-			updateTimes(solution, 1, false, op.mTravelTimes);
-			S = 1;
-		} else {
-			ListTA nodes = solution.mWalk.grabPart(S, R);
-			solution.mUnvisited.append(nodes);
-			updateTimes(solution, 1, false, op.mTravelTimes);
-		}
+void ILS::Shake(Solution& solution, int &S, int &R, OP& op) {
+
+	if(solution.mWalk.size() == 2){
+		return;
 	}
+
+	if(S > solution.mWalk.size() - 2){
+		S = 1;
+	}
+
+	if(R >= 2 * solution.mWalk.size() / 3){
+		R = 1;
+	}
+
+	if(S + R > solution.mWalk.size() - 1){ //if S = 7 and R = 2 then the extracted nodes will be 7 and 8
+		int R1 = solution.mWalk.size() - 1 - S;
+		int R2 = R - R1;
+		ListTA nodes1 = solution.mWalk.grabPart(S, S + R1 - 1);
+		ListTA nodes2 = solution.mWalk.grabPart(1, 1 + R2 - 1);
+		solution.mUnvisited.append(nodes1);
+		solution.mUnvisited.append(nodes2);
+		updateTimes(solution, 1, false, op.mTravelTimes);
+	} else {
+		ListTA nodes = solution.mWalk.grabPart(S, S + R - 1);
+		solution.mUnvisited.append(nodes);
+		updateTimes(solution, 1, false, op.mTravelTimes);
+	}
+	
+
+	S += 1;
+	R += 1;
 }
 
 void ILS::updateTimes(Solution& solution, int startIndex, bool smart, std::vector<std::vector<double>>& ttMatrix) {

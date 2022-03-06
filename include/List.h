@@ -859,7 +859,6 @@ public:
 		size_ = 0;
 		for (auto& i : v) {
 			this->pushBack(i);
-			size_++;
 		}
 	}
 
