@@ -593,6 +593,7 @@ public:
 	}
 
 	void pushBack(T node) {
+		std::cout << "Using pushback of node" << std::endl;
 		T* n = &node;
 		if (head == nullptr) {
 			// The list is empty
@@ -621,6 +622,7 @@ public:
 	}
 
 	void pushBack(T* ptr) {
+		std::cout << "Using pushBack of pointer";
 		if (head == nullptr) {
 			// The list is empty
 			head = ptr;
@@ -858,7 +860,7 @@ public:
 	TouristAttractionList(std::vector<TA*> v) {
 		size_ = 0;
 		for (auto& i : v) {
-			this->pushBack(i);
+			pushClone(i);
 		}
 	}
 

@@ -304,14 +304,11 @@ Solution ILS::Solve(OP& op) {
 
 	}
 	auto done = std::chrono::high_resolution_clock::now();
-	std::cout << "time taken: " << std::chrono::duration_cast<std::chrono::milliseconds>(done - started).count() << "ms" << std::endl;
-
 	int finalScore = bestSolution.getScore();
 	std::cout << "final score: " << finalScore << std::endl;
+	std::cout << "time taken: " << std::chrono::duration_cast<std::chrono::milliseconds>(done - started).count() << "ms" << std::endl;
+	std::cout << "max times not improved: " << MAX_TIMES_NOT_IMPROVED << std::endl;
 	validate(bestSolution.mWalk, op.mTravelTimes);
-	std::cout << "total construction time: " << totalConstructionTime << "ms" << std::endl;
-	std::cout << "total search for best pos time: " << totalSearchingBestPosTime << "microseconds" << std::endl;
-	std::cout << "total insertion time: " << totalInsertionTime << "microseconds" << std::endl;
 
 	return bestSolution;
 
@@ -441,7 +438,7 @@ void ILS::construct(Solution& sol, std::vector<std::vector<double>>& ttMatrix) {
 			minShift = DBL_MAX;
 			std::tie(pos, minShift, arrPointId, depPointId) = getBestPos(curr, sol.mWalk, ttMatrix);
 
-			if (pos == -1) { //insertion is not feasible
+			if (pos == DEFAULT_POS) { //insertion is not feasible
 				curr = curr->next;
 				continue;
 			}
@@ -478,7 +475,7 @@ std::tuple<int, double, int, int> ILS::getBestPos(TA* ta, ListTA walk, std::vect
 	double minShift = DBL_MAX;
 	int length = walk.size();
 	double shift;
-	int pos = 1;
+	int pos = DEFAULT_POS;
 	TA* temp = walk.first();
 
 	TA* curr = temp->next;
