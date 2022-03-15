@@ -16,22 +16,30 @@
 #include "Solution.h"
 #include "Divider.h"
 #include "OP.h"
-#include "boost/geometry.hpp"
-#include "ygor/YgorClustering.hpp"
+#include "Custom.h"
+//#include "boost/geometry.hpp"
+//#include "ygor/YgorClustering.hpp"
+
+template <typename T>
+using Vector2D = std::vector<std::vector<T>>;
 
 class ILS{
 private:
 	int mBucketsNum;
 
 	virtual std::tuple<int, double, int, int> getBestPos(TA*, ListTA, std::vector<std::vector<double>>&);
+	virtual std::tuple<CustomListTA::iterator, double, int, int> getBestPos(const TA& ta, const CustomList<TA>& walk, const Vector2D<double>& travel_times);
 	virtual void updateTimes(Solution&, int, bool, std::vector<std::vector<double>>&);
+	inline virtual void updateTimes(CustomSolution&, const CustomList<TA>::iterator&, const bool, const Vector2D<double>&);
 	void LocalSearch(std::vector<Solution>&, std::vector<double>, OP&);
 	void SplitSearch(Solution&, std::vector<double>, OP&);
 	void Shake(std::vector<Solution>&, std::vector<ShakeParameters>, OP&);
 	void Shake(Solution&, int&, int&, OP&);
 	std::tuple<double, double, double> calcTimeEventCut(ListTA&);
 	virtual void updateMaxShifts(Walk&, std::vector<std::vector<double>>&);
+	inline virtual void updateMaxShifts(CustomList<TA>&, const Vector2D<double>&);
 	ListTA setBucketActivityDurations(ListTA&, double, std::vector<double>);
+	void construct(CustomSolution&, const Vector2D<double>&);
 	void construct(Solution&, std::vector<std::vector<double>>&);
 	std::vector<std::vector<TA*>> getBuckets(std::vector<TA*>, int);
 	int collectScore(std::vector<Solution>);
@@ -45,6 +53,7 @@ public:
     ~ILS();
 	virtual void validate(ListTA&, std::vector<std::vector<double>>);
 	Solution Solve(OP&);
+	void SolveNew(OP&);
 	Solution Preprocess(OP&);
 	
 

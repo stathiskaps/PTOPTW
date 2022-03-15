@@ -1,8 +1,31 @@
 #pragma once
 #include <stdexcept>
 #include "List.h"
+#include "Custom.h"
 
+class CustomSolution {
+	friend class ILS;
+	friend class ILS_OPTW;
+	friend class ILS_TOPTW;
+	CustomList<TA> m_unvisited, m_walk;
+public:
+	CustomSolution() {}
+	CustomSolution(CustomList<TA> unvisited, CustomList<TA> walk) : m_unvisited(unvisited), m_walk(walk) {}
+	explicit CustomSolution(TA start, TA end, CustomList<TA> unvisited, double startTime, double endTime) : m_walk{ start, end }, m_unvisited(unvisited) {
+		m_walk.front().depTime = startTime;
+		m_walk.front().timeWindow = TimeWindow{ startTime, endTime };
+		m_walk.back().timeWindow = TimeWindow{ startTime, endTime };
+		m_walk.back().maxShift = endTime - startTime;
+	}
 
+	inline int getScore() {
+		int sum{}; for (auto& p : m_walk) sum += p.profit; return sum;
+	}
+
+	CustomList<TA>& getUnvisited() { return m_unvisited; }
+	CustomList<TA>& getWalk() { return m_walk; }
+
+};
 
 class Solution {
 	friend struct Cluster;
