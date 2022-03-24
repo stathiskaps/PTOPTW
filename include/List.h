@@ -76,7 +76,7 @@ struct Metrics{
 };
 
 typedef struct TouristAttraction {
-	const std::string id;
+	std::string id;
 	Point point;
 	TimeWindow timeWindow;
 	const touristAttractionType type;
@@ -138,29 +138,10 @@ typedef struct TouristAttraction {
 		next(nullptr), prev(nullptr)
 	{
 	}
-	
-	TouristAttraction(Point p)
-		: id(DEFAULT_DEPOT_ID),
-		point(p),
-		visitDuration(.0),
-		profit(0),
-		timeWindow(TimeWindow{ .0, .0 }),
-		arrTime(.0),
-		waitDuration(.0),
-		startOfVisitTime(.0),
-		depTime(.0),
-		shift(.0),
-		maxShift(.0),
-		route(-1),
-		cluster(UNDEFINED),
-		minDist(DBL_MAX),
-		arrPointId(p.id),
-		depPointId(p.id),
-		type(touristAttractionType::sight),
-		category(sightCategory::none),
-		next(nullptr), prev(nullptr)
-	{
-	}
+
+	TouristAttraction(std::string pId) : TouristAttraction(pId, Point()) {}
+
+	TouristAttraction(Point p) : TouristAttraction(DEFAULT_DEPOT_ID, p) {}
 
 	TouristAttraction(std::string pId, Point p, double pVisitDuration, int pProfit, double pOpenTime, double pCloseTime)
 		: id(pId),

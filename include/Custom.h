@@ -151,6 +151,15 @@ public:
         return insert(insertBeforePosition, il.begin(), il.end());
     }
 
+    iterator disconnect(const iterator& posToDisconnect) {
+        Node* nodeToDisconnect = posToDisconnect.iter;
+
+        if (nodeToDisconnect != head) {
+            nodeToDisconnect->previous->next = nodeToDisconnect->next;
+            nodeToDisconnect->next->previous = nodeToDisconnect->prev;
+        }
+    }
+
     iterator erase(const iterator& posToDelete) {
         iterator result = posToDelete;
         ++result;
@@ -167,16 +176,36 @@ public:
         }
         return result;
     }
-    iterator erase(const iterator& first, const iterator& last) {
+    iterator erase(iterator& first, const iterator& last) {
         iterator result{ end() };
         if (first == begin() && last == end())
             clear();
         else {
-            //while (first != last)
-            //    first = erase(first);
+            while (first != last)
+                first = erase(first);
             result = last;
         }
         return result;
+    }
+
+
+
+    CustomList<T> copy_part(iterator& first, const iterator& last) {
+        CustomList<T> part;
+        while (first != last) {
+            part.push_back(first.iter->data);
+            first++;
+        }
+        return part;
+    }
+
+    CustomList<T> grab_part(iterator& first, const iterator& last) {
+        CustomList<T> part;
+        while (first != last) {
+            part.push_back(first.iter->data);
+            first = erase(first);
+        }
+        return part;
     }
 
     void pop_front() { erase(begin()); };
@@ -184,6 +213,8 @@ public:
 
     void pop_back() { erase(--end()); };
     void push_back(const T& d) { insert(end(), d); }
+
+    
 
     void resize(size_t count, const T& value) {
         if (numberOfElements < count)
@@ -200,6 +231,13 @@ public:
         else
             while (count--)
                 pop_back();
+    }
+
+    //this can be improved by implementing a vector's emplace_back function
+    void append(const CustomList<T>& li) {
+        for (CustomList<T>::iterator it = li.begin(); it != li.end(); ++it) {
+            push_back(it.iter->data);
+        }
     }
 
     void swap(CustomList& other) { std::swap(head, other.head); std::swap(numberOfElements, other.numberOfElements); }

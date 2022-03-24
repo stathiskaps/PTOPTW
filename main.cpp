@@ -118,15 +118,16 @@ void init(std::string filename, int numRoutes) {
 
 #if 1
 	std::cout.setstate(std::ios_base::failbit);
-	TA* depot = touristAttractions.at(0);
+	TA* depot = touristAttractions[0];
 	touristAttractions.erase(touristAttractions.begin());
 
+	depot->id = DEFAULT_DEPOT_ID;
 	OP op = OP(touristAttractions, points, depot, depot);
 
 	ILS_OPTW ilsoptw = ILS_OPTW(numRoutes);
 
 	ListTA attractions = ListTA(touristAttractions);
-	Solution solution = ilsoptw.Solve(op);
+	ilsoptw.SolveNew(op);
 
 	/*OPTW optw(touristAttractions, ttMatrix, depot, OPEN_DAY_TIME, CLOSE_DAY_TIME);
 	Solution sol = optw.solve();
