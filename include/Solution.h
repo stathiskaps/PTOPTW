@@ -8,6 +8,7 @@ class CustomSolution {
 	friend class ILS_OPTW;
 	friend class ILS_TOPTW;
 	CustomList<TA> m_unvisited, m_walk;
+	CustomList<CustomList<TA>> m_walks;
 public:
 	CustomSolution() {}
 	CustomSolution(CustomList<TA> unvisited, CustomList<TA> walk) : m_unvisited(unvisited), m_walk(walk) {}
