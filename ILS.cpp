@@ -262,6 +262,7 @@ void ILS::SolveNew(OP& op) {
 
 	}
 	std::cout << "Best score: " << best_score << std::endl;
+	std::cout << "Visits: " << best_solution.m_walk.size() << std::endl;
 	std::cout << std::endl;
 }
 
@@ -577,10 +578,7 @@ void ILS::Shake(CustomSolution& sol, int& S, int& R, OP& op) {
 	updateTimes(sol, next, false, op.mTravelTimes);
 
 	S++;
-	R++;
-	//size_t start_index{ S }, end_index{ std::min(S+R, (int)solution.m_walk.size() - 1)};
-	//CustomList<TA>::iterator start{ solution.m_walk.begin() + start_index }, end{ solution.m_walk.begin() + end_index };
-
+	R+=S;
 }
 
 void ILS::updateTimes(CustomSolution& solution, const CustomList<TA>::iterator& start_pos, const bool smart, const Vector2D<double>& travel_times) {
