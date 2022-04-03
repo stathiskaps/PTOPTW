@@ -12,8 +12,8 @@ private:
 	std::vector<TA*> mAttractions;
 	std::vector<Point> mPoints;
 	std::vector<std::vector<double>> mTravelTimes;
-	TA* mStartDepot;
-	TA* mEndDepot;
+	TA *mStartDepot, *mEndDepot;
+	int m_walks_num;
 
 	std::tuple<std::vector<std::vector<double>>, double> calcTravelTimes(std::vector<Point>& points);
 	double GetEuclideanDistance(int x1, int y1, int x2, int y2);	//returns euclidean distance
@@ -21,7 +21,7 @@ private:
 public:
 	OP();
 	~OP();
-	OP(std::vector<TA*>, std::vector<Point>, TA*, TA*);
+	OP(std::vector<TA*>, std::vector<Point>, TA*, TA*, int);
 	void AddPointToGraph(Point&);
 	void PrintTravelTimes(std::string);
 

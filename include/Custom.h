@@ -82,8 +82,8 @@ public:
     template <int N> CustomList& operator =(T(&other)[N]) { clear(); insert(begin(), std::begin(other), std::end(other)); return *this; }
 
     template <typename Iter> void assign(const Iter& first, const Iter& last) { clear(); insert(begin(), first, last); }
-    template <int N> void assign(const T(&other)[N]) { clear(); insert(begin(), std::begin(other), std::end(other)); return *this; }
-    template <int N> void assign(T(&other)[N]) { clear(); insert(begin(), std::begin(other), std::end(other)); return *this; }
+    template <int N> void assign(const T(&other)[N]) { clear(); insert(begin(), std::begin(other), std::end(other)); }
+    template <int N> void assign(T(&other)[N]) { clear(); insert(begin(), std::begin(other), std::end(other)); }
     void assign(const size_t count, const T& value) { clear(); insert(begin(), count, value); }
     void assign(const std::initializer_list<T>& il) { clear(); insert(begin(), il.begin(), il.end()); }
 

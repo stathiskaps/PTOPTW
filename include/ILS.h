@@ -28,9 +28,10 @@ private:
 	int mBucketsNum;
 
 	virtual std::tuple<CustomListTA::iterator, double, int, int> getBestPos(const TA&, const CustomList<TA>&, const Vector2D<double>&);
-	virtual void updateTimes(CustomSolution&, const CustomList<TA>::iterator&, const bool, const Vector2D<double>&);
+	virtual std::tuple<CustomList<CustomList<TA>>::iterator, CustomListTA::iterator, double, int, int> getBestPos(const TA&, const CustomList<CustomList<TA>>&, const Vector2D<double>&);
+	virtual void updateTimes(CustomList<TA>&, const CustomList<TA>::iterator&, const bool, const Vector2D<double>&);
 	void SplitSearch(Solution&, std::vector<double>, OP&);
-	void Shake(CustomSolution&, int&, int&, OP&);
+	void Shake(CustomSolution&, int&, int&, OP&, const int&);
 	std::tuple<double, double, double> calcTimeEventCut(ListTA&);
 	virtual void updateMaxShifts(const CustomList<TA>&, const Vector2D<double>&);
 	ListTA setBucketActivityDurations(ListTA&, double, std::vector<double>);
@@ -45,8 +46,8 @@ public:
     ILS();
 	ILS(int);
     ~ILS();
-	virtual void validate(ListTA&, std::vector<std::vector<double>>);
-	inline virtual void validate(const CustomList<TA>&, const Vector2D<double>&);
+	virtual void validate(const CustomList<TA>&, const Vector2D<double>&);
+	virtual void validate(const CustomList<CustomList<TA>>&, const Vector2D<double>&);
 	inline void print(const CustomList<TA>&);
 	void SolveNew(OP&);
 	Solution Preprocess(OP&);
@@ -54,13 +55,15 @@ public:
 
 };
 
-class ILS_OPTW : public ILS {
+class ILS_TOPTW : public ILS {
 private:
 	std::tuple<CustomListTA::iterator, double, int, int> getBestPos(const TA&, const CustomList<TA>&, const Vector2D<double>&) override;
-	void updateTimes(CustomSolution&, const CustomList<TA>::iterator&, const bool, const Vector2D<double>&) override;
+	std::tuple<CustomList<CustomList<TA>>::iterator, CustomListTA::iterator, double, int, int> getBestPos(const TA&, const CustomList<CustomList<TA>>&, const Vector2D<double>&) override;
+	void updateTimes(CustomList<TA>&, const CustomList<TA>::iterator&, const bool, const Vector2D<double>&) override;
 	void updateMaxShifts(const CustomList<TA>&, const Vector2D<double>&) override;
 public:
 	using ILS::ILS; //inherit constructor
+	void validate(const CustomList<CustomList<TA>>&, const Vector2D<double>&);
 	void validate(const CustomList<TA>&, const Vector2D<double>&) override;
 };
 
