@@ -25,8 +25,14 @@ using Vector2D = std::vector<std::vector<T>>;
 
 class ILS{
 private:
+	struct Bin{
+		CustomList<TA> unvisited;
+		TimeWindow tw;
+	};
+
 	int mBucketsNum;
 
+	bool compareTimeWindowCenter(const CustomList<TA>::iterator&, const CustomList<TA>::iterator&);
 	virtual std::tuple<CustomListTA::iterator, double, int, int> getBestPos(const TA&, const CustomList<TA>&, const Vector2D<double>&);
 	virtual std::tuple<CustomList<CustomList<TA>>::iterator, CustomListTA::iterator, double, int, int> getBestPos(const TA&, const CustomList<CustomList<TA>>&, const Vector2D<double>&);
 	virtual void updateTimes(CustomList<TA>&, const CustomList<TA>::iterator&, const bool, const Vector2D<double>&);
@@ -41,6 +47,7 @@ private:
 	std::vector<double> getTimeCuts(std::vector<std::vector<TA*>>);
 	std::tuple<int, int> getMinMaxLength(std::vector<Solution> solutions);
 	Solution connectSolutions(std::vector<Solution>);
+	std::vector<double> Preprocessing(std::vector<TA*>, int, double);
 	
 public:
     ILS();

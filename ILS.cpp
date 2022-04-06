@@ -210,14 +210,60 @@ Solution ILS::Preprocess(OP& op) {
 	return bestSolution;
 }
 
-void ILS::SolveNew(OP& op) {
-	std::cout.clear();
-	std::vector<TA> custom;
-	for (auto ta : op.mAttractions) {
-		custom.push_back(*ta);
+std::vector<double> ILS::Preprocessing(std::vector<TA*> unvisited, int bins_num, double day_close_time) {
+	std::vector<double> cuts;
+	cuts.reserve(bins_num + 1);
+	std::vector<Bin> bins;
+	bins.reserve(bins_num);
+	int offset{};
+	uint64_t remainder{ unvisited.size() % bins_num }, bucketSize{ unvisited.size() / bins_num };
+
+	std::sort(unvisited.begin(), unvisited.end(), [](const TA* left,const TA* right) -> bool {
+		return left->timeWindow.openTime + left->timeWindow.closeTime < right->timeWindow.openTime + right->timeWindow.closeTime;
+	});
+
+	for (int i = 0; i < bins_num; ++i) {
+		if (remainder > 0) {
+			std::vector<TA*> slice(unvisited.begin() + offset, unvisited.begin() + offset + bucketSize + 1);
+			bins.push_back(Bin{.unvisited = CustomListTA(slice) });
+			remainder--;
+		}
+		else {
+			std::vector<TA*> slice(unvisited.begin() + offset, unvisited.begin() + offset + bucketSize);
+			bins.push_back(Bin{ .unvisited = CustomListTA(slice) });
+		}
 	}
 
-	CustomListTA unvisited = CustomListTA(custom);
+	cuts.push_back(0);
+	for (std::vector<Bin>::iterator it = bins.begin() + 1; it != bins.end(); ++it) {
+		const TA &ta = *(it->unvisited.begin());
+		cuts.push_back((ta.timeWindow.openTime + ta.timeWindow.closeTime) / 2 - 1);
+	}
+	cuts.push_back(day_close_time);
+	
+
+	for (std::vector<TA*>::iterator it = unvisited.begin(); it != unvisited.end(); ++it) {
+		for (std::vector<double>::iterator left = cuts.begin(), right = cuts.begin() + 1; right != cuts.end(); ++left, ++right) {
+			double duration = std::min((*it)->timeWindow.closeTime, * right) - std::max((*it)->timeWindow.openTime, *left);
+			if (duration < 0) duration = 0;
+			ActivityInBucket activity{ .duration = duration };
+			(*it)->stats.buckets.push_back(activity);
+		}
+	}
+
+	
+
+	return cuts;
+}
+
+void ILS::SolveNew(OP& op) {
+	std::cout.clear();
+	std::vector<TA> unvisitedVec;
+	for (auto ta : op.mAttractions) {
+		unvisitedVec.push_back(*ta);
+	}
+
+	CustomListTA unvisited = CustomListTA(unvisitedVec);
 	CustomList<TA>::iterator l1 = unvisited.begin();
 	int total_score{ 0 };
 	for (auto& p : unvisited) {
@@ -230,6 +276,8 @@ void ILS::SolveNew(OP& op) {
 	//CustomList<TA>::iterator t1{ unvisited.begin() + 3 }, t2{ unvisited.begin() + 5 };
 	//CustomList<TA> part(t1, t2);
 	//unvisited.erase(t1, t2);
+
+	Preprocessing(op.mAttractions, 2, op.mEndDepot->timeWindow.closeTime);
 
 	CustomSolution process_solution{ *op.mStartDepot, *op.mEndDepot, unvisited, op.mStartDepot->timeWindow.openTime, op.mEndDepot->timeWindow.closeTime, op.m_walks_num }, best_solution{};
 
@@ -847,8 +895,8 @@ ListTA ILS::setBucketActivityDurations(ListTA& unvisited, double avgEvent, std::
 	TA* curr = unvisited.first();
 	while (curr != nullptr) {
 		for (size_t i = 0; i < cuts.size() - 1; ++i) {
-			BucketActivity activity{ .duration = avgEvent };
-			curr->metrics.bucketActivities.push_back(activity);
+			//Bucket bucket{ .duration = avgEvent };
+			//curr->metrics.bucketActivities.push_back(activity);
 		}
 		// for(auto& c: cuts){
 		// 	BucketActivity activity{.duration = avgEvent}
@@ -863,31 +911,27 @@ ListTA ILS::setBucketActivityDurations(ListTA& unvisited, double avgEvent, std::
 
 }
 
-bool compareTimeWindowCenter(const TA* left, const TA* right) {
-	return (left->timeWindow.openTime + left->timeWindow.closeTime) / 2 < (right->timeWindow.openTime + right->timeWindow.closeTime) / 2;
-}
-
-std::vector<std::vector<TA*>> ILS::getBuckets(std::vector<TA*> nodes, int m) {
-
-	std::vector<std::vector<TA*>> buckets;
-	int offset = 0, remainder = nodes.size() % m, bucketSize = nodes.size() / m;
-
-	std::sort(nodes.begin(), nodes.end(), &compareTimeWindowCenter);
-
-	for (int i = 0; i < m; ++i) {
-		if (remainder > 0) {
-			std::vector<TA*> slice(nodes.begin() + offset, nodes.begin() + offset + bucketSize + 1);
-			buckets.push_back(slice);
-			remainder--;
-		}
-		else {
-			std::vector<TA*> slice(nodes.begin() + offset, nodes.begin() + offset + bucketSize);
-			buckets.push_back(slice);
-		}
-	}
-
-	return buckets;
-}
+//std::vector<std::vector<TA*>> ILS::getBuckets(std::vector<TA*> nodes, int m) {
+//
+//	std::vector<std::vector<TA*>> buckets;
+//	int offset = 0, remainder = nodes.size() % m, bucketSize = nodes.size() / m;
+//
+//	std::sort(nodes.begin(), nodes.end(), &compareTimeWindowCenter);
+//
+//	for (int i = 0; i < m; ++i) {
+//		if (remainder > 0) {
+//			std::vector<TA*> slice(nodes.begin() + offset, nodes.begin() + offset + bucketSize + 1);
+//			buckets.push_back(slice);
+//			remainder--;
+//		}
+//		else {
+//			std::vector<TA*> slice(nodes.begin() + offset, nodes.begin() + offset + bucketSize);
+//			buckets.push_back(slice);
+//		}
+//	}
+//
+//	return buckets;
+//}
 
 std::vector<double> ILS::getTimeCuts(std::vector<std::vector<TA*>> buckets) {
 	std::vector<double> cuts;

@@ -340,5 +340,6 @@ class CustomListTA : public CustomList<TA> {
 public:
 
     CustomListTA(const std::vector<TA>& v) { init(); insert(begin(), v.begin(), v.end()); }
+    CustomListTA(const std::vector<TA*>& v) { init(); for (auto& ta : v) push_back(*ta); }
 
 } ;

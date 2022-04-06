@@ -65,14 +65,16 @@ struct TimeWindow {
 	}
 };
 
-struct BucketActivity {
+
+
+struct ActivityInBucket {
 	int inBucket = 0;
 	int inWalk = 0;
 	double duration = 0;
 };
 
-struct Metrics{
-	std::vector<BucketActivity> bucketActivities;
+struct Stats {
+	std::vector<ActivityInBucket> buckets;
 };
 
 typedef struct TouristAttraction {
@@ -81,7 +83,7 @@ typedef struct TouristAttraction {
 	TimeWindow timeWindow;
 	const touristAttractionType type;
 	const sightCategory category;
-	const double visitDuration = 0;
+	const double visitDuration;
 	const int profit;
 	double arrTime, waitDuration, startOfVisitTime, depTime, shift, maxShift;
 	int route, cluster;
@@ -89,7 +91,7 @@ typedef struct TouristAttraction {
 	int arrPointId, depPointId;
 	TouristAttraction* next;
 	TouristAttraction* prev;
-	Metrics metrics;
+	Stats stats;
 
 
 	//default constructor
