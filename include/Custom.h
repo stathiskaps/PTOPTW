@@ -28,8 +28,6 @@
 // ------------------------------------------------------------------------------------------------
 // This would be in a header file -----------------------------------------------------------------
 
-class CustomListTA;
-
 // Type trait helper to identify iterators --------------------------------------------------------
 template<typename T, typename = void>
 struct is_iterator { static constexpr bool value = false; };
@@ -41,7 +39,6 @@ struct is_iterator<T, typename std::enable_if<!std::is_same<typename std::iterat
 // The CustomList class ---------------------------------------------------------------------------------
 template <typename T>
 class CustomList {
-    friend class CustomListTA;
     // Sub class for a Node -----------
     struct Node {
         T data{};
@@ -55,9 +52,10 @@ class CustomList {
     // Protected CustomList data and functions --------
     Node* head{};
     size_t numberOfElements{};
-    void init() { head = new Node(); head->next = head; head->previous = head; numberOfElements = 0; }
 
 protected:
+
+    void init() { head = new Node(); head->next = head; head->previous = head; numberOfElements = 0; }
 
 public:
     struct iterator;    // Forward declaration
@@ -67,6 +65,7 @@ public:
     explicit CustomList(const size_t count) { init(); insert(begin(), count); }
     explicit CustomList(const size_t count, const T& value) { init(); insert(begin(), count, value); };
     explicit CustomList(const std::vector<T> v) { init(); insert(begin(), v.begin(), v.end()); }
+    explicit CustomList(const std::vector<T*> v) { init(); for (auto& i : v) push_back(*i); }
     template <typename Iter>
     CustomList(const Iter& first, const Iter& last) { init(); insert(begin(), first, last); }
     CustomList(const CustomList& other) { init(), insert(begin(), other.begin(), other.end()); };
@@ -100,8 +99,6 @@ public:
     // Iterators ----------------------
     iterator begin() const { return iterator(head->next, head); }
     iterator end() const { return iterator(head, head); }
-
-    iterator get(int i) { return begin() + 1 };
 
     // Capacity -----------------------
     inline size_t size() const { return numberOfElements; }
@@ -355,20 +352,18 @@ public:
 
 };
 
-class CustomListTA : public CustomList<TA> {
-public:
-    CustomListTA() {}
-    CustomListTA(const std::vector<TA>& v) { init(); insert(begin(), v.begin(), v.end()); }
-    CustomListTA(const std::vector<TA*>& v) { init(); for (auto& ta : v) push_back(*ta); }
-    CustomListTA(const CustomList& other) { init(); insert(begin(), other.begin(), other.end()); }
-    CustomListTA(CustomList&& other) { init(); head = other.head; other.clear(); }
-    CustomListTA(const iterator& first, const iterator& last) { init(); insert(begin(), first, last); }
-
-    CustomListTA& operator =(const CustomList& other) { clear(); insert(begin(), other.begin(), other.end()); return *this; }
-    CustomListTA& operator =(CustomList&& other) { clear(); head = other.head; other.clear(); return *this; }
-
-    int collectProfit() const { int sum{}; for (auto n : *this) { sum += n.profit; } return sum; }
-
-    
-
-} ;
+//class CustomListTA : public CustomList<TA> {
+//public:
+//    CustomListTA() {}
+//    CustomListTA(const std::vector<TA>& v) { init(); insert(begin(), v.begin(), v.end()); }
+//    CustomListTA(const std::vector<TA*>& v) { init(); for (auto& ta : v) push_back(*ta); }
+//    CustomListTA(const CustomList& other) { init(); insert(begin(), other.begin(), other.end()); }
+//    CustomListTA(CustomList&& other) { init(); head = other.head; other.clear(); }
+//    CustomListTA(const iterator& first, const iterator& last) { init(); insert(begin(), first, last); }
+//
+//    CustomListTA& operator =(const CustomList& other) { clear(); insert(begin(), other.begin(), other.end()); return *this; }
+//    CustomListTA& operator =(CustomList&& other) { clear(); head = other.head; other.clear(); return *this; }
+//
+//    int collectProfit() const { int sum{}; for (auto n : *this) { sum += n.profit; } return sum; }
+//
+//} ;

@@ -225,12 +225,12 @@ std::vector<double> ILS::Preprocessing(std::vector<TA*> unvisited, int bins_num,
 	for (int i = 0; i < bins_num; ++i) {
 		if (remainder > 0) {
 			std::vector<TA*> slice(unvisited.begin() + offset, unvisited.begin() + offset + bucketSize + 1);
-			bins.push_back(Bin{.unvisited = CustomListTA(slice) });
+			bins.push_back(Bin{.unvisited = CustomList<TA>(slice) });
 			remainder--;
 		}
 		else {
 			std::vector<TA*> slice(unvisited.begin() + offset, unvisited.begin() + offset + bucketSize);
-			bins.push_back(Bin{ .unvisited = CustomListTA(slice) });
+			bins.push_back(Bin{ .unvisited = CustomList<TA>(slice) });
 		}
 	}
 
@@ -269,7 +269,7 @@ void ILS::SolveNew(OP& op) {
 		unvisitedVec.push_back(*ta);
 	}
 
-	CustomListTA unvisited = CustomListTA(unvisitedVec);
+	CustomList<TA> unvisited = CustomList<TA>(unvisitedVec);
 	CustomList<TA>::iterator l1 = unvisited.begin();
 	int total_score{ 0 };
 	for (auto& p : unvisited) {
@@ -345,13 +345,13 @@ void ILS::Shake(CustomSolution& sol, int& S, int& R, OP& op, const int& max_to_r
 	R++;
 }
 
-int ILS::collectProfit(const CustomListTA::iterator& first, const CustomListTA::iterator& last) const {
+int ILS::collectProfit(const CustomList<TA>::iterator& first, const CustomList<TA>::iterator& last) const {
 	int sum{};
-	for (CustomListTA::iterator it = first; it != last; ++it) { sum += it.iter->data.profit; }
+	for (CustomList<TA>::iterator it = first; it != last; ++it) { sum += it.iter->data.profit; }
 	return sum;
 }
 
-Point ILS::getWeightedCentroid(const CustomListTA::iterator& first, const CustomListTA::iterator& last) {
+Point ILS::getWeightedCentroid(const CustomList<TA>::iterator& first, const CustomList<TA>::iterator& last) {
 
 	int total_profit{ collectProfit(first, last) };
 	Position pos;
@@ -378,7 +378,7 @@ void ILS::SplitSearch(std::vector<CustomSolution>& solutions, const std::vector<
 
 				Point cnext;
 				if (solutions[i + 1].m_walks[j].size() > min_size) {
-					const CustomListTA& next_solution_walk = solutions[i + 1].m_walks[j];
+					const CustomList<TA>& next_solution_walk = solutions[i + 1].m_walks[j];
 					cnext = getWeightedCentroid(next_solution_walk.at(0), next_solution_walk.at(min_size));
 				}
 				else {
@@ -398,13 +398,13 @@ void ILS::SplitSearch(std::vector<CustomSolution>& solutions, const std::vector<
 				if (solutions[i].m_walks[j].empty()) { // if empty
 					solutions[i].m_walks[j].push_back(*op.mEndDepot); //start point
 				}
-				CustomListTA::iterator prev_ta = solutions[i - 1].m_walks[j].end();
+				CustomList<TA>::iterator prev_ta = solutions[i - 1].m_walks[j].end();
 				solutions[i].m_walks[j].push_front(prev_ta.iter->data);
 			}
 		}
 		else {
 			for (size_t j = 0; j < solutions[i].m_walks.size(); ++j) { //foreach walk
-				CustomListTA::iterator prev_ta = solutions[i - 1].m_walks[j].end();
+				CustomList<TA>::iterator prev_ta = solutions[i - 1].m_walks[j].end();
 				solutions[i].m_walks[j].push_front(prev_ta.iter->data);
 			}
 		}
@@ -533,11 +533,11 @@ void ILS::construct(CustomSolution& sol, const Vector2D<double>& travel_times) {
 	double min_shift{}, max_ratio{ DBL_MIN }, ratio{};
 	int best_arr_point_id{ DEFAULT_POINT_ID }, best_dep_point_id{ DEFAULT_POINT_ID }, 
 		arr_point_id{ DEFAULT_POINT_ID }, dep_point_id{ DEFAULT_POINT_ID };
-	CustomList<CustomListTA>::iterator best_walk_it;
+	CustomList<CustomList<TA>>::iterator best_walk_it;
 
-	CustomListTA::iterator pos{ sol.m_walk.end() }, best_pos{ sol.m_walk.end() };
+	CustomList<TA>::iterator pos{ sol.m_walk.end() }, best_pos{ sol.m_walk.end() };
 
-	CustomListTA::iterator insert_it{ sol.m_unvisited.end() }, curr{}, inserted_it{};
+	CustomList<TA>::iterator insert_it{ sol.m_unvisited.end() }, curr{}, inserted_it{};
 
 	while (true) {
 		max_ratio = DBL_MIN;
@@ -583,15 +583,15 @@ void ILS::construct(CustomSolution& sol, const Vector2D<double>& travel_times) {
 	}
 }
 
-std::tuple<CustomList<CustomListTA>::iterator, CustomListTA::iterator, double, int, int> ILS::getBestPos(const TA& ta, const CustomList<CustomListTA>& walks, const Vector2D<double>& travel_times) {
+std::tuple<CustomList<CustomList<TA>>::iterator, CustomList<TA>::iterator, double, int, int> ILS::getBestPos(const TA& ta, const CustomList<CustomList<TA>>& walks, const Vector2D<double>& travel_times) {
 
-	CustomList<CustomListTA>::iterator best_walk{ walks.end() };
-	CustomListTA::iterator best_pos{ best_walk.iter->data.end() };
+	CustomList<CustomList<TA>>::iterator best_walk{ walks.end() };
+	CustomList<TA>::iterator best_pos{ best_walk.iter->data.end() };
 	int arr_point_id{ DEFAULT_POINT_ID }, dep_point_id{ DEFAULT_POINT_ID };
 	double min_shift{ DBL_MAX };
 
 
-	for (CustomList<CustomListTA>::iterator walk_it = walks.begin(); walk_it != walks.end(); ++walk_it) {
+	for (CustomList<CustomList<TA>>::iterator walk_it = walks.begin(); walk_it != walks.end(); ++walk_it) {
 		CustomList<TA> walk = walk_it.iter->data;
 		if (walk.size() < 2) {
 			std::cerr << "invalid length of route" << std::endl;
@@ -599,7 +599,7 @@ std::tuple<CustomList<CustomListTA>::iterator, CustomListTA::iterator, double, i
 		}
 
 		double shift{};
-		CustomListTA::iterator left{ walk.begin() }, right{ walk.begin() + 1 };
+		CustomList<TA>::iterator left{ walk.begin() }, right{ walk.begin() + 1 };
 		int temp_arr_point_id{ DEFAULT_POINT_ID }, temp_dep_point_id{ DEFAULT_POINT_ID };
 
 		while (right != walk.end()) {
@@ -625,7 +625,7 @@ std::tuple<CustomList<CustomListTA>::iterator, CustomListTA::iterator, double, i
 	return { best_walk, best_pos, min_shift, arr_point_id, dep_point_id };
 }
 
-std::tuple<CustomListTA::iterator, double, int, int> ILS::getBestPos(const TA& ta, const CustomListTA& walk, const Vector2D<double>& travel_times) {
+std::tuple<CustomList<TA>::iterator, double, int, int> ILS::getBestPos(const TA& ta, const CustomList<TA>& walk, const Vector2D<double>& travel_times) {
 
 	if (walk.size() < 2) {
 		std::cerr << "invalid length of route" << std::endl;
@@ -634,9 +634,9 @@ std::tuple<CustomListTA::iterator, double, int, int> ILS::getBestPos(const TA& t
 
 	const TA* ptr{ &ta };
 	double min_shift{ DBL_MAX }, shift{};
-	CustomListTA::iterator best_pos{ walk.end() };
+	CustomList<TA>::iterator best_pos{ walk.end() };
 
-	CustomListTA::iterator left{ walk.begin() }, right{ walk.begin() + 1};
+	CustomList<TA>::iterator left{ walk.begin() }, right{ walk.begin() + 1};
 	
 	int arr_point_id{ DEFAULT_POINT_ID }, dep_point_id{ DEFAULT_POINT_ID },
 		temp_arr_point_id{ DEFAULT_POINT_ID }, temp_dep_point_id{ DEFAULT_POINT_ID };
@@ -738,7 +738,7 @@ Solution ILS::connectSolutions(std::vector<Solution> solutions) {
 
 void ILS::updateTimes(CustomList<TA>& walk, const CustomList<TA>::iterator& start_pos, const bool smart, const Vector2D<double>& travel_times) {
 	//update times first
-	CustomListTA::iterator it{ start_pos };
+	CustomList<TA>::iterator it{ start_pos };
 
 	while (it != walk.end()) {
 		it.iter->data.arrTime = it.iter->previous->data.depTime + travel_times[it.iter->previous->data.depPointId][it.iter->data.arrPointId];
@@ -766,13 +766,13 @@ void ILS::print(const CustomList<TA>& li) {
 	std::cout << std::endl;
 }
 
-void ILS::validate(const CustomList<CustomListTA>& walks, const Vector2D<double>& travel_times) {
+void ILS::validate(const CustomList<CustomList<TA>>& walks, const Vector2D<double>& travel_times) {
 	for (auto& walk : walks) {
 		validate(walk, travel_times);
 	}
 }
 
-void ILS::validate(const CustomListTA& walk, const Vector2D<double>& travel_times) {
+void ILS::validate(const CustomList<TA>& walk, const Vector2D<double>& travel_times) {
 	std::cout << "validating walk: "; print(walk);
 	std::string msg{};
 	bool valid{ true };
@@ -830,21 +830,21 @@ void ILS::validate(const CustomListTA& walk, const Vector2D<double>& travel_time
 	}
 }
 
-std::tuple<CustomList<CustomListTA>::iterator, CustomListTA::iterator, double, int, int> ILS_TOPTW::getBestPos(const TA& ta, const CustomList<CustomListTA>& walks, const Vector2D<double>& travel_times) {
+std::tuple<CustomList<CustomList<TA>>::iterator, CustomList<TA>::iterator, double, int, int> ILS_TOPTW::getBestPos(const TA& ta, const CustomList<CustomList<TA>>& walks, const Vector2D<double>& travel_times) {
 
-	CustomList<CustomListTA>::iterator best_walk{ walks.end() };
-	CustomListTA::iterator best_pos{ best_walk.iter->data.end() };
+	CustomList<CustomList<TA>>::iterator best_walk{ walks.end() };
+	CustomList<TA>::iterator best_pos{ best_walk.iter->data.end() };
 	int arr_point_id{ DEFAULT_POINT_ID }, dep_point_id{ DEFAULT_POINT_ID };
 	double min_shift{ DBL_MAX };
 
-	for (CustomList<CustomListTA>::iterator walk_it = walks.begin(); walk_it != walks.end(); ++walk_it) {
+	for (CustomList<CustomList<TA>>::iterator walk_it = walks.begin(); walk_it != walks.end(); ++walk_it) {
 		if (walk_it.iter->data.size() < 2) {
 			std::cerr << "invalid length of route" << std::endl;
 			std::exit(1);
 		}
 
 		double arr_time{}, wait_dur{}, start_of_visit_time{}, dep_time{}, shift{};
-		CustomListTA::iterator left{ walk_it.iter->data.begin() }, right{ walk_it.iter->data.begin() + 1 };
+		CustomList<TA>::iterator left{ walk_it.iter->data.begin() }, right{ walk_it.iter->data.begin() + 1 };
 		int temp_arr_point_id{ DEFAULT_POINT_ID }, temp_dep_point_id{ DEFAULT_POINT_ID };
 
 		while (right != walk_it.iter->data.end()) {
@@ -875,7 +875,7 @@ std::tuple<CustomList<CustomListTA>::iterator, CustomListTA::iterator, double, i
 	return { best_walk, best_pos, min_shift, arr_point_id, dep_point_id };
 }
 
-std::tuple<CustomListTA::iterator, double, int, int> ILS_TOPTW::getBestPos(const TA& ta, const CustomListTA& walk, const Vector2D<double>& travel_times) {
+std::tuple<CustomList<TA>::iterator, double, int, int> ILS_TOPTW::getBestPos(const TA& ta, const CustomList<TA>& walk, const Vector2D<double>& travel_times) {
 
 	if (walk.size() < 2) {
 		std::cerr << "invalid length of route" << std::endl;
@@ -883,7 +883,7 @@ std::tuple<CustomListTA::iterator, double, int, int> ILS_TOPTW::getBestPos(const
 	}
 
 	double min_shift{ DBL_MAX }, arr_time{}, wait_dur{}, start_of_visit_time{}, dep_time{}, shift{};
-	CustomListTA::iterator best_pos{ walk.end() }, left{ walk.begin() }, right{ walk.begin() + 1 };
+	CustomList<TA>::iterator best_pos{ walk.end() }, left{ walk.begin() }, right{ walk.begin() + 1 };
 
 	int arr_point_id{ DEFAULT_POINT_ID }, dep_point_id{ DEFAULT_POINT_ID },
 		temp_arr_point_id{ DEFAULT_POINT_ID }, temp_dep_point_id{ DEFAULT_POINT_ID };
@@ -916,7 +916,7 @@ std::tuple<CustomListTA::iterator, double, int, int> ILS_TOPTW::getBestPos(const
 
 void ILS_TOPTW::updateTimes(CustomList<TA>& walk, const CustomList<TA>::iterator& start_pos, const bool smart, const Vector2D<double>& travel_times) {
 	//update times first
-	CustomListTA::iterator it{ start_pos };
+	CustomList<TA>::iterator it{ start_pos };
 
 	if (it == walk.begin()) {
 		it.iter->data.waitDuration = std::max(0.0, it.iter->data.timeWindow.openTime - it.iter->data.arrTime);
@@ -945,7 +945,7 @@ void ILS_TOPTW::updateMaxShifts(const CustomList<TA>& li, const Vector2D<double>
 	} while (it-- != li.begin());
 }
 
-void ILS_TOPTW::validate(const CustomList<CustomListTA>& walks, const Vector2D<double>& travel_times) {
+void ILS_TOPTW::validate(const CustomList<CustomList<TA>>& walks, const Vector2D<double>& travel_times) {
 	for (auto& walk : walks) {
 		validate(walk, travel_times);
 	}
@@ -960,7 +960,7 @@ void ILS_TOPTW::validate(const CustomList<CustomListTA>& walks, const Vector2D<d
 /// </summary>
 /// <param name="walk">Holds the walk that gets examined</param>
 /// <param name="ttMatrix">Holds the travel times between the points of the problem</param>
-void ILS_TOPTW::validate(const CustomListTA& walk, const Vector2D<double>& travel_times) {
+void ILS_TOPTW::validate(const CustomList<TA>& walk, const Vector2D<double>& travel_times) {
 	std::cout << "validating walk: "; print(walk);
 	std::string msg{};
 	bool valid{ true };

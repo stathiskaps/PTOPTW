@@ -7,19 +7,19 @@ class CustomSolution {
 	friend class ILS;
 	friend class ILS_OPTW;
 	friend class ILS_TOPTW;
-	CustomListTA m_unvisited, m_walk;
-	CustomList<CustomListTA> m_walks;
+	CustomList<TA> m_unvisited, m_walk;
+	CustomList<CustomList<TA>> m_walks;
 public:
 	CustomSolution() {}
 	CustomSolution(CustomList<TA> unvisited, CustomList<TA> walk) : m_unvisited(unvisited), m_walk(walk) {}
-	explicit CustomSolution(TA start, TA end, CustomListTA unvisited, double startTime, double endTime) : m_walk{ start, end }, m_unvisited(unvisited) {
+	explicit CustomSolution(TA start, TA end, CustomList<TA> unvisited, double startTime, double endTime) : m_walk{ start, end }, m_unvisited(unvisited) {
 		m_walk.front().depTime = startTime;
 		m_walk.front().timeWindow = TimeWindow{ startTime, endTime };
 		m_walk.back().timeWindow = TimeWindow{ startTime, endTime };
 		m_walk.back().maxShift = endTime - startTime;
 	}
 
-	CustomSolution(TA start, TA end, CustomListTA unvisited, double startTime, double endTime, int walksNum) : m_unvisited(unvisited) {
+	CustomSolution(TA start, TA end, CustomList<TA> unvisited, double startTime, double endTime, int walksNum) : m_unvisited(unvisited) {
 		for (int i = 0; i < walksNum; ++i) {
 			CustomList<TA> walk{ start, end };
 			walk.front().depTime = startTime;
