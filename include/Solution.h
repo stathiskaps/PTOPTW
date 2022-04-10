@@ -7,19 +7,19 @@ class CustomSolution {
 	friend class ILS;
 	friend class ILS_OPTW;
 	friend class ILS_TOPTW;
-	CustomList<TA> m_unvisited, m_walk;
-	CustomList<CustomList<TA>> m_walks;
+	CustomListTA m_unvisited, m_walk;
+	CustomList<CustomListTA> m_walks;
 public:
 	CustomSolution() {}
 	CustomSolution(CustomList<TA> unvisited, CustomList<TA> walk) : m_unvisited(unvisited), m_walk(walk) {}
-	explicit CustomSolution(TA start, TA end, CustomList<TA> unvisited, double startTime, double endTime) : m_walk{ start, end }, m_unvisited(unvisited) {
+	explicit CustomSolution(TA start, TA end, CustomListTA unvisited, double startTime, double endTime) : m_walk{ start, end }, m_unvisited(unvisited) {
 		m_walk.front().depTime = startTime;
 		m_walk.front().timeWindow = TimeWindow{ startTime, endTime };
 		m_walk.back().timeWindow = TimeWindow{ startTime, endTime };
 		m_walk.back().maxShift = endTime - startTime;
 	}
 
-	CustomSolution(TA start, TA end, CustomList<TA> unvisited, double startTime, double endTime, int walksNum) : m_unvisited(unvisited) {
+	CustomSolution(TA start, TA end, CustomListTA unvisited, double startTime, double endTime, int walksNum) : m_unvisited(unvisited) {
 		for (int i = 0; i < walksNum; ++i) {
 			CustomList<TA> walk{ start, end };
 			walk.front().depTime = startTime;
@@ -70,12 +70,12 @@ class Solution {
 	friend class ILS_TOPTW;
 
 	ListTA mUnvisited;
-	Walk mWalk;
+	ListTA mWalk;
 
 public:
 	Solution(ListTA unvisited) {
 		mUnvisited = unvisited;
-		mWalk = Walk();
+		mWalk = ListTA();
 	};
 	Solution(){
 	};
@@ -90,7 +90,7 @@ public:
 		mWalk.last()->timeWindow.closeTime = closeTime;
 		mWalk.last()->maxShift = closeTime - mWalk.last()->depTime;
 	};
-	Solution(Walk walk, ListTA unvisited, double openTime, double closeTime) {
+	Solution(ListTA walk, ListTA unvisited, double openTime, double closeTime) {
 		mUnvisited = unvisited;
 		mWalk = walk;
 
@@ -101,7 +101,7 @@ public:
 		mWalk.last()->maxShift = closeTime - mWalk.last()->depTime;
 	};
 
-	Solution(Walk walk, ListTA unvisited) {
+	Solution(ListTA walk, ListTA unvisited) {
 		mUnvisited = unvisited;
 		mWalk = walk;
 	}
@@ -137,8 +137,8 @@ public:
 
 
 	~Solution() {};
-	void SetRoute(Walk route) { mWalk = route; }
-	Walk GetRoute() { return mWalk; }
+	void SetRoute(ListTA route) { mWalk = route; }
+	ListTA GetRoute() { return mWalk; }
 	
 	void copy(Solution sol) {
 		this->mUnvisited = sol.mUnvisited.copy();

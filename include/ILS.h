@@ -23,6 +23,8 @@
 template <typename T>
 using Vector2D = std::vector<std::vector<T>>;
 
+using Walks = CustomList<CustomList<TA>>;
+
 class ILS{
 private:
 	struct Bin{
@@ -32,11 +34,12 @@ private:
 
 	int mBucketsNum;
 
-	bool compareTimeWindowCenter(const CustomList<TA>::iterator&, const CustomList<TA>::iterator&);
-	virtual std::tuple<CustomListTA::iterator, double, int, int> getBestPos(const TA&, const CustomList<TA>&, const Vector2D<double>&);
-	virtual std::tuple<CustomList<CustomList<TA>>::iterator, CustomListTA::iterator, double, int, int> getBestPos(const TA&, const CustomList<CustomList<TA>>&, const Vector2D<double>&);
+	bool compareTimeWindowCenter(const CustomListTA::iterator&, const CustomList<TA>::iterator&);
+	virtual std::tuple<CustomListTA::iterator, double, int, int> getBestPos(const TA&, const CustomListTA&, const Vector2D<double>&);
+	virtual std::tuple<CustomList<CustomListTA>::iterator, CustomListTA::iterator, double, int, int> getBestPos(const TA&, const CustomList<CustomListTA>&, const Vector2D<double>&);
 	virtual void updateTimes(CustomList<TA>&, const CustomList<TA>::iterator&, const bool, const Vector2D<double>&);
-	void SplitSearch(Solution&, std::vector<double>, OP&);
+	void SplitSearch(std::vector<CustomSolution>&, const std::vector<double>&, OP&);
+	inline Point getWeightedCentroid(const CustomListTA::iterator& first, const CustomListTA::iterator& last);
 	void Shake(CustomSolution&, int&, int&, OP&, const int&);
 	std::tuple<double, double, double> calcTimeEventCut(ListTA&);
 	virtual void updateMaxShifts(const CustomList<TA>&, const Vector2D<double>&);
@@ -48,13 +51,14 @@ private:
 	std::tuple<int, int> getMinMaxLength(std::vector<Solution> solutions);
 	Solution connectSolutions(std::vector<Solution>);
 	std::vector<double> Preprocessing(std::vector<TA*>, int, double);
+	inline int collectProfit (const CustomListTA::iterator&, const CustomListTA::iterator&) const;
 	
 public:
     ILS();
 	ILS(int);
     ~ILS();
-	virtual void validate(const CustomList<TA>&, const Vector2D<double>&);
-	virtual void validate(const CustomList<CustomList<TA>>&, const Vector2D<double>&);
+	virtual void validate(const CustomListTA&, const Vector2D<double>&);
+	virtual void validate(const CustomList<CustomListTA>&, const Vector2D<double>&);
 	inline void print(const CustomList<TA>&);
 	void SolveNew(OP&);
 	Solution Preprocess(OP&);
@@ -64,13 +68,13 @@ public:
 
 class ILS_TOPTW : public ILS {
 private:
-	std::tuple<CustomListTA::iterator, double, int, int> getBestPos(const TA&, const CustomList<TA>&, const Vector2D<double>&) override;
-	std::tuple<CustomList<CustomList<TA>>::iterator, CustomListTA::iterator, double, int, int> getBestPos(const TA&, const CustomList<CustomList<TA>>&, const Vector2D<double>&) override;
+	std::tuple<CustomListTA::iterator, double, int, int> getBestPos(const TA&, const CustomListTA&, const Vector2D<double>&) override;
+	std::tuple<CustomList<CustomListTA>::iterator, CustomListTA::iterator, double, int, int> getBestPos(const TA&, const CustomList<CustomListTA>&, const Vector2D<double>&) override;
 	void updateTimes(CustomList<TA>&, const CustomList<TA>::iterator&, const bool, const Vector2D<double>&) override;
 	void updateMaxShifts(const CustomList<TA>&, const Vector2D<double>&) override;
 public:
 	using ILS::ILS; //inherit constructor
-	void validate(const CustomList<CustomList<TA>>&, const Vector2D<double>&);
-	void validate(const CustomList<TA>&, const Vector2D<double>&) override;
+	void validate(const CustomList<CustomListTA>&, const Vector2D<double>&);
+	void validate(const CustomListTA&, const Vector2D<double>&) override;
 };
 
