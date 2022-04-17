@@ -300,17 +300,25 @@ std::vector<CustomSolution> ILS::splitSolution(CustomSolution& sol, const std::v
 	return solutions;
 }
 
-CustomSolution ILS::connectSolutions(std::vector<CustomSolution> solutions) {
-	Walk walk;
-	ListTA unvisited;
-	for (auto& s : solutions) {
-		//walk.append(s.mWalk.copy());
-		//unvisited.append(s.mUnvisited.copy());
+CustomSolution ILS::connectSolutions(std::vector<CustomSolution>& sols, const size_t walks_num) {
+	CustomSolution solution;
+	//Connect unvisited
+	for (auto& s : sols) {
+		solution.m_unvisited.append(s.m_unvisited);
+		s.m_unvisited.clear();
 	}
-	return CustomSolution();
+	for (size_t i = 0; i < walks_num; ++i) {
+		CustomList<TA> walk;
+		for (auto& s : sols) {
+			walk.append(s.m_walks[i]);
+			s.m_walks[i].clear();
+		}
+		solution.m_walks.push_back(walk);
+	}
+	return solution;
 }
 
-int collectScores(std::vector<CustomSolution> sols) {
+int ILS::collectScores(std::vector<CustomSolution> sols) {
 	int total_score{};
 	for (auto& sol : sols) {
 		total_score += sol.getScores();
@@ -345,7 +353,8 @@ void ILS::SolveNew(OP& op) {
 		counter++;
 		
 		SplitSearch(process_solutions, cuts, op);
-		int score = collectScores(process_solutions);
+		process_solution = connectSolutions(process_solutions, op.m_walks_num);
+		int score = process_solution.getScores();
 		//construct(process_solution, op.mTravelTimes);
 		//int score = process_solution.getScores();
 		if (score > best_score) {
@@ -452,8 +461,8 @@ void ILS::SplitSearch(std::vector<CustomSolution>& solutions, const std::vector<
 				if (solutions[i].m_walks[j].empty()) { // if empty
 					solutions[i].m_walks[j].push_back(*op.mEndDepot); //start point
 				}
-				CustomList<TA>::iterator prev_ta = solutions[i - 1].m_walks[j].end();
-				solutions[i].m_walks[j].push_front(prev_ta.iter->data);
+				TA prev_ta = solutions[i - 1].m_walks[j].back();
+				solutions[i].m_walks[j].push_front(prev_ta);
 			}
 		}
 		else {

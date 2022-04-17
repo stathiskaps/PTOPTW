@@ -51,7 +51,7 @@ private:
 	int collectScores(std::vector<CustomSolution>);
 	std::vector<double> getTimeCuts(std::vector<std::vector<TA*>>);
 	std::tuple<int, int> getMinMaxLength(std::vector<Solution> solutions);
-	CustomSolution connectSolutions(std::vector<CustomSolution>);
+	CustomSolution connectSolutions(std::vector<CustomSolution>&, const size_t);
 	std::vector<double> Preprocessing(std::vector<TA*>, int, double);
 	inline int collectProfit (const CustomList<TA>::iterator&, const CustomList<TA>::iterator&) const;
 	
