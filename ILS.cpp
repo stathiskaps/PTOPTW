@@ -246,35 +246,80 @@ std::vector<double> ILS::Preprocessing(std::vector<TA*> unvisited, int bins_num,
 		for (std::vector<double>::iterator left = cuts.begin(), right = cuts.begin() + 1; right != cuts.end(); ++left, ++right) {
 			double duration = std::min((*it)->timeWindow.closeTime, * right) - std::max((*it)->timeWindow.openTime, *left);
 			if (duration < 0) duration = 0;
-			ActivityInBucket activity{ .duration = duration };
+			ActivityInBucket activity{ .inBucket = 1, .inWalk = 1, .duration = duration };
 			(*it)->stats.buckets.push_back(activity);
 		}
 	}
 
-	std::vector<Solution> solutions;
-	solutions.reserve(3);
-	for (std::vector<Bin>::iterator it = bins.begin(); it != bins.end(); ++it) {
+	return cuts;
+}
 
-	}
-
+std::vector<CustomSolution> ILS::splitSolution(CustomSolution& sol, const std::vector<double>& cuts) {
+	std::vector<CustomSolution> solutions(cuts.size() - 1, CustomSolution());
 	
 
-	return cuts;
+	//Split Unvisited
+	for (auto& ta : sol.m_unvisited) {
+		const double total_duration{ ta.timeWindow.closeTime - ta.timeWindow.openTime };
+		double max_score{ -1 };
+		std::vector<ActivityInBucket>::iterator best_bucket{ta.stats.buckets.begin()};
+		for (std::vector<ActivityInBucket>::iterator b = ta.stats.buckets.begin(); b != ta.stats.buckets.end(); ++b) {
+			double score = (b->duration / total_duration) * (b->inWalk / b->inBucket);
+			if (score > max_score) {
+				max_score = score;
+				best_bucket = b;
+			}
+		}
+		const int index = best_bucket - ta.stats.buckets.begin();
+		solutions[index].m_unvisited.push_back(ta);
+	}
+
+	sol.m_unvisited.clear();
+
+	//Split Walks
+	for (auto& s : solutions) {
+		for (size_t i = 0; i < sol.m_walks.size(); ++i) {
+			s.m_walks.push_back(CustomList<TA>());
+		}
+	}
+	
+	for (CustomList<CustomList<TA>>::iterator walk_it = sol.m_walks.begin(); walk_it != sol.m_walks.end(); ++walk_it) {
+		if (walk_it.iter->data.size() == 2) continue;
+		for (CustomList<TA>::iterator ta_it = walk_it.iter->data.begin(); ta_it != walk_it.iter->data.end(); ++ta_it) {
+			for (std::vector<double>::const_iterator left = cuts.begin(), right = cuts.begin() + 1; right != cuts.end(); ++left, ++right) {
+				if (ta_it.iter->data.depTime > *left && ta_it.iter->data.depTime < *right) {
+					int64_t sol_index{ left - cuts.begin() }, walk_index{walk_it - sol.m_walks.begin()};
+					solutions[sol_index].m_walks[walk_index].push_back(ta_it.iter->data);
+					break;
+				}
+			}
+		}
+		walk_it.iter->data.clear();
+	}
+	
+	return solutions;
+}
+
+CustomSolution ILS::connectSolutions(std::vector<CustomSolution> solutions) {
+	Walk walk;
+	ListTA unvisited;
+	for (auto& s : solutions) {
+		//walk.append(s.mWalk.copy());
+		//unvisited.append(s.mUnvisited.copy());
+	}
+	return CustomSolution();
+}
+
+int collectScores(std::vector<CustomSolution> sols) {
+	int total_score{};
+	for (auto& sol : sols) {
+		total_score += sol.getScores();
+	}
+	return total_score;
 }
 
 void ILS::SolveNew(OP& op) {
 	std::cout.clear();
-	std::vector<TA> unvisitedVec;
-	for (auto ta : op.mAttractions) {
-		unvisitedVec.push_back(*ta);
-	}
-
-	CustomList<TA> unvisited = CustomList<TA>(unvisitedVec);
-	CustomList<TA>::iterator l1 = unvisited.begin();
-	int total_score{ 0 };
-	for (auto& p : unvisited) {
-		total_score += p.profit;
-	}
 
 	const int num_locations = op.mAttractions.size();
 	const int max_to_remove = num_locations / (3 * op.m_walks_num);
@@ -283,17 +328,26 @@ void ILS::SolveNew(OP& op) {
 	//CustomList<TA> part(t1, t2);
 	//unvisited.erase(t1, t2);
 
-	Preprocessing(op.mAttractions, 2, op.mEndDepot->timeWindow.closeTime);
+	std::vector<double> cuts = Preprocessing(op.mAttractions, 2, op.mEndDepot->timeWindow.closeTime);
+
+	CustomList<TA> unvisited;
+	for (auto ta : op.mAttractions) {
+		unvisited.push_back(*ta);
+	}
 
 	CustomSolution process_solution{ *op.mStartDepot, *op.mEndDepot, unvisited, op.mStartDepot->timeWindow.openTime, op.mEndDepot->timeWindow.closeTime, op.m_walks_num }, best_solution{};
+
+	std::vector<CustomSolution> process_solutions = splitSolution(process_solution, cuts);
 
 	int counter{}, S{ 1 }, R{ 1 }, times_not_improved{ 0 }, best_score{ INT_MIN };
 
 	while (times_not_improved < MAX_TIMES_NOT_IMPROVED) {
 		counter++;
-		construct(process_solution, op.mTravelTimes);
-		int score = process_solution.getScores();
-		//validate(process_solution.m_walk, op.mTravelTimes);
+		
+		SplitSearch(process_solutions, cuts, op);
+		int score = collectScores(process_solutions);
+		//construct(process_solution, op.mTravelTimes);
+		//int score = process_solution.getScores();
 		if (score > best_score) {
 			best_score = score;
 			//best_solution.reset();
@@ -535,7 +589,7 @@ void ILS::construct(CustomSolution& sol, const Vector2D<double>& travel_times) {
 		arr_point_id{ DEFAULT_POINT_ID }, dep_point_id{ DEFAULT_POINT_ID };
 	CustomList<CustomList<TA>>::iterator best_walk_it;
 
-	CustomList<TA>::iterator pos{ sol.m_walk.end() }, best_pos{ sol.m_walk.end() };
+	CustomList<TA>::iterator pos{ }, best_pos{ };
 
 	CustomList<TA>::iterator insert_it{ sol.m_unvisited.end() }, curr{}, inserted_it{};
 
@@ -716,24 +770,6 @@ std::tuple<CustomList<TA>::iterator, double, int, int> ILS::getBestPos(const TA&
 	//		left++; right++;
 	//	}
 	//}
-}
-
-
-
-
-std::vector<Solution> splitSolution(Solution sol, std::vector<double> cuts){
-	std::vector<Solution> solutions;
-	return solutions;
-}
-
-Solution ILS::connectSolutions(std::vector<Solution> solutions) {
-	Walk walk;
-	ListTA unvisited;
-	for (auto& s : solutions) {
-		walk.append(s.mWalk.copy());
-		unvisited.append(s.mUnvisited.copy());
-	}
-	return Solution(walk, unvisited);
 }
 
 void ILS::updateTimes(CustomList<TA>& walk, const CustomList<TA>::iterator& start_pos, const bool smart, const Vector2D<double>& travel_times) {

@@ -39,6 +39,7 @@ private:
 	virtual std::tuple<CustomList<CustomList<TA>>::iterator, CustomList<TA>::iterator, double, int, int> getBestPos(const TA&, const CustomList<CustomList<TA>>&, const Vector2D<double>&);
 	virtual void updateTimes(CustomList<TA>&, const CustomList<TA>::iterator&, const bool, const Vector2D<double>&);
 	void SplitSearch(std::vector<CustomSolution>&, const std::vector<double>&, OP&);
+	std::vector<CustomSolution> splitSolution(CustomSolution&, const std::vector<double>&);
 	inline Point getWeightedCentroid(const CustomList<TA>::iterator& first, const CustomList<TA>::iterator& last);
 	void Shake(CustomSolution&, int&, int&, OP&, const int&);
 	std::tuple<double, double, double> calcTimeEventCut(ListTA&);
@@ -47,9 +48,10 @@ private:
 	void construct(CustomSolution&, const Vector2D<double>&);
 	std::vector<std::vector<TA*>> getBuckets(std::vector<TA*>, int);
 	int collectScore(std::vector<Solution>);
+	int collectScores(std::vector<CustomSolution>);
 	std::vector<double> getTimeCuts(std::vector<std::vector<TA*>>);
 	std::tuple<int, int> getMinMaxLength(std::vector<Solution> solutions);
-	Solution connectSolutions(std::vector<Solution>);
+	CustomSolution connectSolutions(std::vector<CustomSolution>);
 	std::vector<double> Preprocessing(std::vector<TA*>, int, double);
 	inline int collectProfit (const CustomList<TA>::iterator&, const CustomList<TA>::iterator&) const;
 	

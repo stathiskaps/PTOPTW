@@ -105,6 +105,16 @@ public:
     inline bool empty() { return size() == 0; }
 
     // Modifiers ----------------------
+    CustomList& disc(iterator& first, iterator& last) {
+        if (head == first) {
+            head = last->next;
+        } 
+        first->prev->next = last->next;
+        last->next->prev = first->prev;
+        first->prev = nullptr;
+        last->next = nullptr;
+    }
+
     void clear() {
         for (Node* nextNode{}, * currentNode(head->next); currentNode != head; currentNode = nextNode) {
             nextNode = currentNode->next;
