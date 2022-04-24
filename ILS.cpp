@@ -616,6 +616,9 @@ void ILS::construct(CustomSolution& sol, const Vector2D<double>& travel_times) {
 		while (curr != sol.m_unvisited.end()) {
 			min_shift = DBL_MAX;
 			auto [walk_it, pos, min_shift, arr_point_id, dep_point_id] = getBestPos(curr.iter->data, sol.m_walks, travel_times);
+			//default value of walk_it is sol.m_walks.end()
+			//default value of pos is sol.m_walks.front().end()
+			//if these iterators have these values then insertion is infeasible
 
 			if (walk_it == sol.m_walks.end()) {
 				curr++;
@@ -655,7 +658,7 @@ void ILS::construct(CustomSolution& sol, const Vector2D<double>& travel_times) {
 std::tuple<Walks::iterator, CustomList<TA>::iterator, double, int, int> ILS::getBestPos(const TA& ta, Walks& walks, const Vector2D<double>& travel_times) {
 
 	Walks::iterator best_walk{ walks.end() };
-	CustomList<TA>::iterator best_pos{ best_walk->end() };
+	CustomList<TA>::iterator best_pos{ walks.front().end() };
 	int arr_point_id{ DEFAULT_POINT_ID }, dep_point_id{ DEFAULT_POINT_ID };
 	double min_shift{ DBL_MAX };
 
@@ -885,7 +888,7 @@ void ILS::validate(const CustomList<TA>& walk, const Vector2D<double>& travel_ti
 std::tuple<Walks::iterator, CustomList<TA>::iterator, double, int, int> ILS_TOPTW::getBestPos(const TA& ta, Walks& walks, const Vector2D<double>& travel_times) {
 
 	Walks::iterator best_walk{ walks.end() };
-	CustomList<TA>::iterator best_pos{ best_walk->end() };
+	CustomList<TA>::iterator best_pos{ walks.front().end()};
 	int arr_point_id{ DEFAULT_POINT_ID }, dep_point_id{ DEFAULT_POINT_ID };
 	double min_shift{ DBL_MAX };
 
