@@ -215,28 +215,35 @@ std::vector<double> ILS::Preprocessing(std::vector<TA*> unvisited, int bins_num,
 	cuts.reserve(bins_num + 1);
 	std::vector<Bin> bins;
 	bins.reserve(bins_num);
-	int offset{};
 	uint64_t remainder{ unvisited.size() % bins_num }, bucketSize{ unvisited.size() / bins_num };
 
 	std::sort(unvisited.begin(), unvisited.end(), [](const TA* left,const TA* right) -> bool {
 		return left->timeWindow.openTime + left->timeWindow.closeTime < right->timeWindow.openTime + right->timeWindow.closeTime;
 	});
 
-	for (int i = 0; i < bins_num; ++i) {
+	for (int i = 0, offset = 0; i < bins_num; ++i) {
 		if (remainder > 0) {
 			std::vector<TA*> slice(unvisited.begin() + offset, unvisited.begin() + offset + bucketSize + 1);
-			bins.push_back(Bin{.unvisited = CustomList<TA>(slice) });
+			Bin b;
+			b.unvisited.reserve(slice.size());
+			for (auto& p : slice) b.unvisited.push_back(*p);
+			bins.push_back(b);
+			offset += bucketSize + 1;
 			remainder--;
 		}
 		else {
 			std::vector<TA*> slice(unvisited.begin() + offset, unvisited.begin() + offset + bucketSize);
-			bins.push_back(Bin{ .unvisited = CustomList<TA>(slice) });
+			Bin b;
+			b.unvisited.reserve(slice.size());
+			for (auto& p : slice) b.unvisited.push_back(*p);
+			offset += bucketSize;
+			bins.push_back(b);
 		}
 	}
 
 	cuts.push_back(0);
 	for (std::vector<Bin>::iterator it = bins.begin() + 1; it != bins.end(); ++it) {
-		const TA &ta = *(it->unvisited.begin());
+		const TA &ta = it->unvisited.front();
 		cuts.push_back((ta.timeWindow.openTime + ta.timeWindow.closeTime) / 2 - 1);
 	}
 	cuts.push_back(day_close_time);

@@ -28,7 +28,7 @@ using Walks = std::vector<CustomList<TA>>;
 class ILS{
 private:
 	struct Bin{
-		CustomList<TA> unvisited;
+		std::vector<TA> unvisited;
 		TimeWindow tw;
 	};
 
