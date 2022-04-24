@@ -23,7 +23,7 @@
 template <typename T>
 using Vector2D = std::vector<std::vector<T>>;
 
-using Walks = CustomList<CustomList<TA>>;
+using Walks = std::vector<CustomList<TA>>;
 
 class ILS{
 private:
@@ -36,7 +36,7 @@ private:
 
 	bool compareTimeWindowCenter(const CustomList<TA>::iterator&, const CustomList<TA>::iterator&);
 	virtual std::tuple<CustomList<TA>::iterator, double, int, int> getBestPos(const TA&, const CustomList<TA>&, const Vector2D<double>&);
-	virtual std::tuple<CustomList<CustomList<TA>>::iterator, CustomList<TA>::iterator, double, int, int> getBestPos(const TA&, const CustomList<CustomList<TA>>&, const Vector2D<double>&);
+	virtual std::tuple<Walks::iterator, CustomList<TA>::iterator, double, int, int> getBestPos(const TA&, Walks&, const Vector2D<double>&);
 	virtual void updateTimes(CustomList<TA>&, const CustomList<TA>::iterator&, const bool, const Vector2D<double>&);
 	void SplitSearch(std::vector<CustomSolution>&, const std::vector<double>&, OP&);
 	std::vector<CustomSolution> splitSolution(CustomSolution&, const std::vector<double>&);
@@ -54,24 +54,30 @@ private:
 	CustomSolution connectSolutions(std::vector<CustomSolution>&, const size_t);
 	std::vector<double> Preprocessing(std::vector<TA*>, int, double);
 	inline int collectProfit (const CustomList<TA>::iterator&, const CustomList<TA>::iterator&) const;
+
+
 	
 public:
     ILS();
 	ILS(int);
     ~ILS();
 	virtual void validate(const CustomList<TA>&, const Vector2D<double>&);
-	virtual void validate(const CustomList<CustomList<TA>>&, const Vector2D<double>&);
+	virtual void validate(const Walks&, const Vector2D<double>&);
 	inline void print(const CustomList<TA>&);
 	void SolveNew(OP&);
 	Solution Preprocess(OP&);
-	
+	//template <typename Container, typename ConstIterator>
+	//typename Container::iterator remove_constness(Container& c, ConstIterator it) const
+	//{
+	//	return c.erase(it, it);
+	//}
 
 };
 
 class ILS_TOPTW : public ILS {
 private:
 	std::tuple<CustomList<TA>::iterator, double, int, int> getBestPos(const TA&, const CustomList<TA>&, const Vector2D<double>&) override;
-	std::tuple<CustomList<CustomList<TA>>::iterator, CustomList<TA>::iterator, double, int, int> getBestPos(const TA&, const CustomList<CustomList<TA>>&, const Vector2D<double>&) override;
+	std::tuple<Walks::iterator, CustomList<TA>::iterator, double, int, int> getBestPos(const TA&, Walks&, const Vector2D<double>&) override;
 	void updateTimes(CustomList<TA>&, const CustomList<TA>::iterator&, const bool, const Vector2D<double>&) override;
 	void updateMaxShifts(const CustomList<TA>&, const Vector2D<double>&) override;
 public:

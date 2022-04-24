@@ -283,9 +283,9 @@ std::vector<CustomSolution> ILS::splitSolution(CustomSolution& sol, const std::v
 		}
 	}
 	
-	for (CustomList<CustomList<TA>>::iterator walk_it = sol.m_walks.begin(); walk_it != sol.m_walks.end(); ++walk_it) {
-		if (walk_it.iter->data.size() == 2) continue;
-		for (CustomList<TA>::iterator ta_it = walk_it.iter->data.begin(); ta_it != walk_it.iter->data.end(); ++ta_it) {
+	for (Walks::iterator walk_it = sol.m_walks.begin(); walk_it != sol.m_walks.end(); ++walk_it) {
+		if (walk_it->size() == 2) continue;
+		for (CustomList<TA>::iterator ta_it = walk_it->begin(); ta_it != walk_it->end(); ++ta_it) {
 			for (std::vector<double>::const_iterator left = cuts.begin(), right = cuts.begin() + 1; right != cuts.end(); ++left, ++right) {
 				if (ta_it.iter->data.depTime > *left && ta_it.iter->data.depTime < *right) {
 					int64_t sol_index{ left - cuts.begin() }, walk_index{walk_it - sol.m_walks.begin()};
@@ -294,7 +294,7 @@ std::vector<CustomSolution> ILS::splitSolution(CustomSolution& sol, const std::v
 				}
 			}
 		}
-		walk_it.iter->data.clear();
+		walk_it->clear();
 	}
 	
 	return solutions;
@@ -596,8 +596,7 @@ void ILS::construct(CustomSolution& sol, const Vector2D<double>& travel_times) {
 	double min_shift{}, max_ratio{ DBL_MIN }, ratio{};
 	int best_arr_point_id{ DEFAULT_POINT_ID }, best_dep_point_id{ DEFAULT_POINT_ID }, 
 		arr_point_id{ DEFAULT_POINT_ID }, dep_point_id{ DEFAULT_POINT_ID };
-	CustomList<CustomList<TA>>::iterator best_walk_it;
-
+	Walks::iterator best_walk_it;
 	CustomList<TA>::iterator pos{ }, best_pos{ };
 
 	CustomList<TA>::iterator insert_it{ sol.m_unvisited.end() }, curr{}, inserted_it{};
@@ -634,38 +633,37 @@ void ILS::construct(CustomSolution& sol, const Vector2D<double>& travel_times) {
 			break;
 		}
 
-		inserted_it = best_walk_it.iter->data.insert(best_pos, insert_it.iter->data);
+		inserted_it = best_walk_it->insert(best_pos, insert_it.iter->data);
 		//inserted_it = sol.m_walk.insert(best_pos, insert_it.iter->data);
 		inserted_it.iter->data.arrPointId = best_arr_point_id;
 		inserted_it.iter->data.depPointId = best_dep_point_id;
 		sol.m_unvisited.erase(insert_it);
-		updateTimes(best_walk_it.iter->data, inserted_it, true, travel_times);
+		updateTimes(*best_walk_it, inserted_it, true, travel_times);
 		//sol.mWalk.insertAt(to_insert, bestPos, bestArrPointId, bestDepPointId, ttMatrix); //add it to route
 		//updateTimes(sol, bestPos, true, ttMatrix);
 
 	}
 }
 
-std::tuple<CustomList<CustomList<TA>>::iterator, CustomList<TA>::iterator, double, int, int> ILS::getBestPos(const TA& ta, const CustomList<CustomList<TA>>& walks, const Vector2D<double>& travel_times) {
+std::tuple<Walks::iterator, CustomList<TA>::iterator, double, int, int> ILS::getBestPos(const TA& ta, Walks& walks, const Vector2D<double>& travel_times) {
 
-	CustomList<CustomList<TA>>::iterator best_walk{ walks.end() };
-	CustomList<TA>::iterator best_pos{ best_walk.iter->data.end() };
+	Walks::iterator best_walk{ walks.end() };
+	CustomList<TA>::iterator best_pos{ best_walk->end() };
 	int arr_point_id{ DEFAULT_POINT_ID }, dep_point_id{ DEFAULT_POINT_ID };
 	double min_shift{ DBL_MAX };
 
 
-	for (CustomList<CustomList<TA>>::iterator walk_it = walks.begin(); walk_it != walks.end(); ++walk_it) {
-		CustomList<TA> walk = walk_it.iter->data;
-		if (walk.size() < 2) {
+	for (Walks::iterator walk_it = walks.begin(); walk_it != walks.end(); ++walk_it) {
+		if (walk_it->size() < 2) {
 			std::cerr << "invalid length of route" << std::endl;
 			std::exit(1);
 		}
 
 		double shift{};
-		CustomList<TA>::iterator left{ walk.begin() }, right{ walk.begin() + 1 };
+		CustomList<TA>::iterator left{ walk_it->begin() }, right{ walk_it->begin() + 1 };
 		int temp_arr_point_id{ DEFAULT_POINT_ID }, temp_dep_point_id{ DEFAULT_POINT_ID };
 
-		while (right != walk.end()) {
+		while (right != walk_it->end()) {
 			shift = travel_times[left.iter->data.depPointId][ta.point.id]
 				+ ta.visitDuration
 				+ travel_times[ta.point.id][right.iter->data.arrPointId]
@@ -684,6 +682,8 @@ std::tuple<CustomList<CustomList<TA>>::iterator, CustomList<TA>::iterator, doubl
 			left++; right++;
 		}
 	}
+
+
 	
 	return { best_walk, best_pos, min_shift, arr_point_id, dep_point_id };
 }
@@ -811,7 +811,7 @@ void ILS::print(const CustomList<TA>& li) {
 	std::cout << std::endl;
 }
 
-void ILS::validate(const CustomList<CustomList<TA>>& walks, const Vector2D<double>& travel_times) {
+void ILS::validate(const std::vector<CustomList<TA>>& walks, const Vector2D<double>& travel_times) {
 	for (auto& walk : walks) {
 		validate(walk, travel_times);
 	}
@@ -875,24 +875,24 @@ void ILS::validate(const CustomList<TA>& walk, const Vector2D<double>& travel_ti
 	}
 }
 
-std::tuple<CustomList<CustomList<TA>>::iterator, CustomList<TA>::iterator, double, int, int> ILS_TOPTW::getBestPos(const TA& ta, const CustomList<CustomList<TA>>& walks, const Vector2D<double>& travel_times) {
+std::tuple<Walks::iterator, CustomList<TA>::iterator, double, int, int> ILS_TOPTW::getBestPos(const TA& ta, Walks& walks, const Vector2D<double>& travel_times) {
 
-	CustomList<CustomList<TA>>::iterator best_walk{ walks.end() };
-	CustomList<TA>::iterator best_pos{ best_walk.iter->data.end() };
+	Walks::iterator best_walk{ walks.end() };
+	CustomList<TA>::iterator best_pos{ best_walk->end() };
 	int arr_point_id{ DEFAULT_POINT_ID }, dep_point_id{ DEFAULT_POINT_ID };
 	double min_shift{ DBL_MAX };
 
-	for (CustomList<CustomList<TA>>::iterator walk_it = walks.begin(); walk_it != walks.end(); ++walk_it) {
-		if (walk_it.iter->data.size() < 2) {
+	for (Walks::iterator walk_it = walks.begin(); walk_it != walks.end(); ++walk_it) {
+		if (walk_it->size() < 2) {
 			std::cerr << "invalid length of route" << std::endl;
 			std::exit(1);
 		}
 
 		double arr_time{}, wait_dur{}, start_of_visit_time{}, dep_time{}, shift{};
-		CustomList<TA>::iterator left{ walk_it.iter->data.begin() }, right{ walk_it.iter->data.begin() + 1 };
+		CustomList<TA>::iterator left{ walk_it->begin() }, right{ walk_it->begin() + 1 };
 		int temp_arr_point_id{ DEFAULT_POINT_ID }, temp_dep_point_id{ DEFAULT_POINT_ID };
 
-		while (right != walk_it.iter->data.end()) {
+		while (right != walk_it->end()) {
 			arr_time = left.iter->data.depTime + travel_times[left.iter->data.depPointId][ta.point.id];
 			wait_dur = std::max(0.0, ta.timeWindow.openTime - arr_time);
 			start_of_visit_time = arr_time + wait_dur;

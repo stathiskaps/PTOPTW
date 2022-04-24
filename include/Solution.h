@@ -8,7 +8,7 @@ class CustomSolution {
 	friend class ILS_OPTW;
 	friend class ILS_TOPTW;
 	CustomList<TA> m_unvisited;
-	CustomList<CustomList<TA>> m_walks;
+	std::vector<CustomList<TA>> m_walks;
 public:
 	CustomSolution() {}
 	//todo: check what explicit is
