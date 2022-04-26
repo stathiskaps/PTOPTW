@@ -294,7 +294,7 @@ std::vector<CustomSolution> ILS::splitSolution(CustomSolution& sol, const std::v
 		if (walk_it->size() == 2) continue;
 		for (CustomList<TA>::iterator ta_it = walk_it->begin(); ta_it != walk_it->end(); ++ta_it) {
 			for (std::vector<double>::const_iterator left = cuts.begin(), right = cuts.begin() + 1; right != cuts.end(); ++left, ++right) {
-				if (ta_it.iter->data.depTime > *left && ta_it.iter->data.depTime < *right) {
+				if (ta_it.iter->data.depTime >= *left && ta_it.iter->data.depTime < *right) {
 					int64_t sol_index{ left - cuts.begin() }, walk_index{walk_it - sol.m_walks.begin()};
 					solutions[sol_index].m_walks[walk_index].push_back(ta_it.iter->data);
 					break;
@@ -352,13 +352,14 @@ void ILS::SolveNew(OP& op) {
 
 	CustomSolution process_solution{ *op.mStartDepot, *op.mEndDepot, unvisited, op.mStartDepot->timeWindow.openTime, op.mEndDepot->timeWindow.closeTime, op.m_walks_num }, best_solution{};
 
-	std::vector<CustomSolution> process_solutions = splitSolution(process_solution, cuts);
+	
 
 	int counter{}, S{ 1 }, R{ 1 }, times_not_improved{ 0 }, best_score{ INT_MIN };
 
 	while (times_not_improved < MAX_TIMES_NOT_IMPROVED) {
 		counter++;
-		
+
+		std::vector<CustomSolution> process_solutions = splitSolution(process_solution, cuts);
 		SplitSearch(process_solutions, cuts, op);
 		process_solution = connectSolutions(process_solutions, op.m_walks_num);
 		int score = process_solution.getScores();
@@ -600,6 +601,11 @@ void ILS::SplitSearch(std::vector<CustomSolution>& solutions, const std::vector<
 
 
 void ILS::construct(CustomSolution& sol, const Vector2D<double>& travel_times) {
+	
+	if (sol.m_unvisited.empty()) {
+		return;
+	}
+
 	double min_shift{}, max_ratio{ DBL_MIN }, ratio{};
 	int best_arr_point_id{ DEFAULT_POINT_ID }, best_dep_point_id{ DEFAULT_POINT_ID }, 
 		arr_point_id{ DEFAULT_POINT_ID }, dep_point_id{ DEFAULT_POINT_ID };
