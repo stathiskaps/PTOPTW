@@ -32,6 +32,8 @@ private:
 		TimeWindow tw;
 	};
 
+	std::map<std::string, std::vector<ActivityInBucket>> registry;
+
 	int mBucketsNum;
 
 	bool compareTimeWindowCenter(const CustomList<TA>::iterator&, const CustomList<TA>::iterator&);

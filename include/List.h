@@ -65,12 +65,22 @@ struct TimeWindow {
 	}
 };
 
+struct Bucket {
+	int inBucket;
+	int inWalks;
+};
+
+struct Activity {
+	double duration;
+	std::vector<Bucket> buckets;
+};
 
 
 struct ActivityInBucket {
 	int inBucket = 0;
 	int inWalk = 0;
 	double duration = 0;
+	double improvedSolution = 0;
 };
 
 struct Stats {

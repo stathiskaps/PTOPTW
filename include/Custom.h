@@ -282,6 +282,19 @@ public:
     T& operator[](const size_t index) const { return begin()[index]; }
     iterator at(const size_t index) const { return begin() + index; }
 
+    struct const_iterator {
+
+        using iterator_category = std::bidirectional_iterator_tag;
+        using difference_type = std::ptrdiff_t;
+        using value_type = T;
+        using pointer = T*;
+        using reference = T&;
+
+        const Node* iter{};
+        const Node* head{};
+
+    };
+
     // ------------------------------------------------------------------------
     // Define iterator capability ---------------------------------------------
     struct iterator {
@@ -303,7 +316,7 @@ public:
 
         // Dereferencing --------------
         reference operator*() const { return iter->data; }
-        //reference operator->() const { return &**this; }
+        reference operator->() const { return &**this; }
 
         // Arithmetic operations ------
         iterator operator++() { iter = iter->next; return *this; }

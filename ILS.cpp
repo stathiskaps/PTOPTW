@@ -264,10 +264,12 @@ std::vector<double> ILS::Preprocessing(std::vector<TA*> unvisited, int bins_num,
 std::vector<CustomSolution> ILS::splitSolution(CustomSolution& sol, const std::vector<double>& cuts) {
 	std::vector<CustomSolution> solutions(cuts.size() - 1, CustomSolution());
 	
-
+	std::cout << "Splitting unvisited" << std::endl;
 	//Split Unvisited
 	for (auto& ta : sol.m_unvisited) {
+		std::cout << "Checking ta " << ta.id << std::endl;
 		const double total_duration{ ta.timeWindow.closeTime - ta.timeWindow.openTime };
+		std::cout << "total_duration: " << total_duration << std::endl;
 		double max_score{ -1 };
 		std::vector<ActivityInBucket>::iterator best_bucket{ta.stats.buckets.begin()};
 		for (std::vector<ActivityInBucket>::iterator b = ta.stats.buckets.begin(); b != ta.stats.buckets.end(); ++b) {
@@ -279,6 +281,8 @@ std::vector<CustomSolution> ILS::splitSolution(CustomSolution& sol, const std::v
 		}
 		const int index = best_bucket - ta.stats.buckets.begin();
 		solutions[index].m_unvisited.push_back(ta);
+		ta.stats.buckets[index].inWalk++;
+		//registry[ta.id] = index;
 	}
 
 	sol.m_unvisited.clear();
@@ -322,6 +326,9 @@ CustomSolution ILS::connectSolutions(std::vector<CustomSolution>& sols, const si
 		}
 		solution.m_walks.push_back(walk);
 	}
+
+	registry.clear();
+
 	return solution;
 }
 
@@ -343,16 +350,23 @@ void ILS::SolveNew(OP& op) {
 	//CustomList<TA> part(t1, t2);
 	//unvisited.erase(t1, t2);
 
-	std::vector<double> cuts = Preprocessing(op.mAttractions, 2, op.mEndDepot->timeWindow.closeTime);
+	std::vector<double> cuts = Preprocessing(op.mAttractions, 3, op.mEndDepot->timeWindow.closeTime);
 
 	CustomList<TA> unvisited;
 	for (auto ta : op.mAttractions) {
 		unvisited.push_back(*ta);
 	}
 
-	CustomSolution process_solution{ *op.mStartDepot, *op.mEndDepot, unvisited, op.mStartDepot->timeWindow.openTime, op.mEndDepot->timeWindow.closeTime, op.m_walks_num }, best_solution{};
+	std::map<std::string, Activity> reg;
 
-	
+	for (CustomList<TA>::iterator ta_it = unvisited.begin(); ta_it != unvisited.end(); ++ta_it) {
+		reg[ta_it.iter->data.id] = Activity{.duration = ta_it.iter->data.timeWindow.closeTime - ta_it.iter->data.timeWindow.openTime, .buckets = std::vector<Bucket>()};
+		for (size_t i = 0; i < cuts.size() - 1; ++i) {
+			reg[ta_it.iter->data.id].buckets.push_back(Bucket{ .inBucket = 1, .inWalks = 1 });
+		}
+	}
+
+	CustomSolution process_solution{ *op.mStartDepot, *op.mEndDepot, unvisited, op.mStartDepot->timeWindow.openTime, op.mEndDepot->timeWindow.closeTime, op.m_walks_num }, best_solution{};
 
 	int counter{}, S{ 1 }, R{ 1 }, times_not_improved{ 0 }, best_score{ INT_MIN };
 
@@ -619,6 +633,8 @@ void ILS::construct(CustomSolution& sol, const Vector2D<double>& travel_times) {
 		insert_it = sol.m_unvisited.end();
 		curr = sol.m_unvisited.begin();
 
+		//const int bucketIndex = registry[curr.iter->data.id];
+
 		while (curr != sol.m_unvisited.end()) {
 			min_shift = DBL_MAX;
 			auto [walk_it, pos, min_shift, arr_point_id, dep_point_id] = getBestPos(curr.iter->data, sol.m_walks, travel_times);
@@ -650,6 +666,7 @@ void ILS::construct(CustomSolution& sol, const Vector2D<double>& travel_times) {
 		}
 
 		inserted_it = best_walk_it->insert(best_pos, insert_it.iter->data);
+		//insert_it.iter->data.stats.buckets[bucketIndex].inWalk++;
 		//inserted_it = sol.m_walk.insert(best_pos, insert_it.iter->data);
 		inserted_it.iter->data.arrPointId = best_arr_point_id;
 		inserted_it.iter->data.depPointId = best_dep_point_id;
