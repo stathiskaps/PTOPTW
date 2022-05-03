@@ -67,7 +67,9 @@ struct TimeWindow {
 
 struct Bucket {
 	int inBucket;
-	int inWalks;
+	int inSolution;
+	double duration;
+	double ratio;
 };
 
 struct Activity {
@@ -153,7 +155,7 @@ typedef struct TouristAttraction {
 
 	TouristAttraction(std::string pId) : TouristAttraction(pId, Point()) {}
 
-	TouristAttraction(Point p) : TouristAttraction(DEFAULT_DEPOT_ID, p) {}
+	TouristAttraction(Point p) : TouristAttraction(DEPOT_ID, p) {}
 
 	TouristAttraction(std::string pId, Point p, double pVisitDuration, int pProfit, double pOpenTime, double pCloseTime)
 		: id(pId),
@@ -180,7 +182,7 @@ typedef struct TouristAttraction {
 
 	//constructor for depots
 	TouristAttraction(Point p, double pDepTime, double pOpenTime, double pCloseTime)
-		: id(DEFAULT_DEPOT_ID),
+		: id(DEPOT_ID),
 		point(p),
 		visitDuration(0),
 		profit(0),

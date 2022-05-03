@@ -15,7 +15,7 @@
 
 #define DEFAULT_CENTROID_ID "c"
 #define DEFAULT_TA_ID ""
-#define DEFAULT_DEPOT_ID "depot"
+#define DEPOT_ID "depot"
 #define DEFAULT_POINT_ID -1
 #define DEFAULT_CLUSTER_ID -2
 #define DEFAULT_POS -1

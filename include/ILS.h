@@ -25,6 +25,8 @@ using Vector2D = std::vector<std::vector<T>>;
 
 using Walks = std::vector<CustomList<TA>>;
 
+using MapOfActivities = std::map<std::string, Activity>;
+
 class ILS{
 private:
 	struct Bin{
@@ -32,7 +34,7 @@ private:
 		TimeWindow tw;
 	};
 
-	std::map<std::string, std::vector<ActivityInBucket>> registry;
+	//std::map<std::string, std::vector<ActivityInBucket>> registry;
 
 	int mBucketsNum;
 
@@ -40,14 +42,14 @@ private:
 	virtual std::tuple<CustomList<TA>::iterator, double, int, int> getBestPos(const TA&, const CustomList<TA>&, const Vector2D<double>&);
 	virtual std::tuple<Walks::iterator, CustomList<TA>::iterator, double, int, int> getBestPos(const TA&, Walks&, const Vector2D<double>&);
 	virtual void updateTimes(CustomList<TA>&, const CustomList<TA>::iterator&, const bool, const Vector2D<double>&);
-	void SplitSearch(std::vector<CustomSolution>&, const std::vector<double>&, OP&);
-	std::vector<CustomSolution> splitSolution(CustomSolution&, const std::vector<double>&);
+	void SplitSearch(std::vector<CustomSolution>&, const std::vector<double>&, OP&, std::map<std::string, Activity>&);
+	std::vector<CustomSolution> splitSolution(CustomSolution&, const std::vector<double>&, std::map<std::string, Activity>&);
 	inline Point getWeightedCentroid(const CustomList<TA>::iterator& first, const CustomList<TA>::iterator& last);
 	void Shake(CustomSolution&, int&, int&, OP&, const int&);
 	std::tuple<double, double, double> calcTimeEventCut(ListTA&);
 	virtual void updateMaxShifts(const CustomList<TA>&, const Vector2D<double>&);
 	ListTA setBucketActivityDurations(ListTA&, double, std::vector<double>);
-	void construct(CustomSolution&, const Vector2D<double>&);
+	std::vector<std::string> construct(CustomSolution&, const Vector2D<double>&);
 	std::vector<std::vector<TA*>> getBuckets(std::vector<TA*>, int);
 	int collectScore(std::vector<Solution>);
 	int collectScores(std::vector<CustomSolution>);
@@ -56,6 +58,7 @@ private:
 	CustomSolution connectSolutions(std::vector<CustomSolution>&, const size_t);
 	std::vector<double> Preprocessing(std::vector<TA*>, int, double);
 	inline int collectProfit (const CustomList<TA>::iterator&, const CustomList<TA>::iterator&) const;
+	inline std::map<std::string, Activity> initializeRegistry(const CustomList<TA>&, const std::vector<double>&);
 
 
 	

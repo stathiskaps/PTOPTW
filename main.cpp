@@ -122,7 +122,7 @@ void init(std::string filename, int numRoutes) {
 	TA* depot = touristAttractions[0];
 	touristAttractions.erase(touristAttractions.begin());
 
-	depot->id = DEFAULT_DEPOT_ID;
+	depot->id = DEPOT_ID;
 	OP op = OP(touristAttractions, points, depot, depot, numRoutes);
 
 	ILS_TOPTW ilstoptw = ILS_TOPTW(numRoutes);
