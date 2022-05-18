@@ -210,6 +210,54 @@ Solution ILS::Preprocess(OP& op) {
 	return bestSolution;
 }
 
+void ILS::SolveNew(OP& op) {
+	std::cout.clear();
+
+	//todo: for pr13 and buckets_num 4 got invalid bucket error
+	const int num_locations = op.mAttractions.size();
+	const int max_to_remove = num_locations / (3 * op.m_walks_num);
+	const int buckets_num = 4;
+
+	CustomList<TA> unvisited;
+	for (auto ta : op.mAttractions) {
+		unvisited.push_back(*ta);
+	}
+
+	std::vector<double> cuts = Preprocessing(op.mAttractions, buckets_num, op.mEndDepot->timeWindow.closeTime);
+	std::map<std::string, Activity> registry = initializeRegistry(unvisited, cuts);
+	CustomSolution process_solution{ *op.mStartDepot, *op.mEndDepot, unvisited, op.mStartDepot->timeWindow.openTime, op.mEndDepot->timeWindow.closeTime, op.m_walks_num }, best_solution{};
+
+	int counter{}, S{ 1 }, R{ 1 }, times_not_improved{ 0 }, best_score{ INT_MIN };
+
+	while (times_not_improved < MAX_TIMES_NOT_IMPROVED) {
+		counter++;
+
+		std::vector<CustomSolution> process_solutions = splitSolution(process_solution, cuts, registry);
+		SplitSearch(process_solutions, cuts, op, registry);
+		process_solution = connectSolutions(process_solutions, op.m_walks_num);
+		int score = process_solution.getScores();
+		//construct(process_solution, op.mTravelTimes);
+		//int score = process_solution.getScores();
+		if (score > best_score) {
+			best_score = score;
+			//best_solution.reset();
+			best_solution = process_solution;
+			R = 1;
+			times_not_improved = 0;
+		}
+		else {
+			times_not_improved++;
+		}
+
+		Shake(process_solution, S, R, op, max_to_remove);
+
+	}
+	validate(best_solution.m_walks, op.mTravelTimes);
+	std::cout << "Best score: " << best_score << std::endl;
+	std::cout << "Visits: " << best_solution.getVisits() << std::endl;
+	std::cout << std::endl;
+}
+
 std::vector<double> ILS::Preprocessing(std::vector<TA*> unvisited, int bins_num, double day_close_time) {
 	std::vector<double> cuts;
 	cuts.reserve(bins_num + 1);
@@ -242,9 +290,9 @@ std::vector<double> ILS::Preprocessing(std::vector<TA*> unvisited, int bins_num,
 	}
 
 	cuts.push_back(0);
-	for (std::vector<Bin>::iterator it = bins.begin(); it != bins.end() - 1; ++it) {
-		const TA &ta = it->unvisited.back();
-		cuts.push_back((ta.timeWindow.openTime + ta.timeWindow.closeTime) / 2 + 1);
+	for (std::vector<Bin>::iterator it = bins.begin() + 1; it != bins.end(); ++it) {
+		const TA &ta = it->unvisited.front();
+		cuts.push_back((ta.timeWindow.openTime + ta.timeWindow.closeTime) / 2 - 1);
 	}
 	cuts.push_back(day_close_time);
 	
@@ -357,54 +405,6 @@ std::map<std::string, Activity> ILS::initializeRegistry(const CustomList<TA>& un
 	return reg;
 }
 
-void ILS::SolveNew(OP& op) {
-	std::cout.clear();
-
-	//todo: for pr13 and buckets_num 4 got invalid bucket error
-	const int num_locations = op.mAttractions.size();
-	const int max_to_remove = num_locations / (3 * op.m_walks_num);
-	const int buckets_num = 4;
-
-	CustomList<TA> unvisited;
-	for (auto ta : op.mAttractions) {
-		unvisited.push_back(*ta);
-	}
-
-	std::vector<double> cuts = Preprocessing(op.mAttractions, buckets_num, op.mEndDepot->timeWindow.closeTime);
-	std::map<std::string, Activity> registry = initializeRegistry(unvisited, cuts);
-	CustomSolution process_solution{ *op.mStartDepot, *op.mEndDepot, unvisited, op.mStartDepot->timeWindow.openTime, op.mEndDepot->timeWindow.closeTime, op.m_walks_num }, best_solution{};
-
-	int counter{}, S{ 1 }, R{ 1 }, times_not_improved{ 0 }, best_score{ INT_MIN };
-
-	while (times_not_improved < MAX_TIMES_NOT_IMPROVED) {
-		counter++;
-
-		std::vector<CustomSolution> process_solutions = splitSolution(process_solution, cuts, registry);
-		SplitSearch(process_solutions, cuts, op, registry);
-		process_solution = connectSolutions(process_solutions, op.m_walks_num);
-		int score = process_solution.getScores();
-		//construct(process_solution, op.mTravelTimes);
-		//int score = process_solution.getScores();
-		if (score > best_score) {
-			best_score = score;
-			//best_solution.reset();
-			best_solution = process_solution;
-			R = 1;
-			times_not_improved = 0;
-		}
-		else {
-			times_not_improved++;
-		}
-
-		Shake(process_solution, S, R, op, max_to_remove);
-
-	}
-	validate(best_solution.m_walks, op.mTravelTimes);
-	std::cout << "Best score: " << best_score << std::endl;
-	std::cout << "Visits: " << best_solution.getVisits() << std::endl;
-	std::cout << std::endl;
-}
-
 void ILS::Shake(CustomSolution& sol, int& S, int& R, OP& op, const int& max_to_remove) {
 	int minWalkSize = sol.getMinWalkSize();
 	//std::cout << "maxToRemove: " << max_to_remove << "\t";
@@ -461,7 +461,6 @@ void ILS::SplitSearch(std::vector<CustomSolution>& solutions, const std::vector<
 	const int min_size = 3;
 
 	for (size_t i = 0; i < solutions.size(); ++i) {
-		std::cout << "checking solution " << i << std::endl;
 		if (i == 0) { //first solution
 			for (size_t j = 0; j < solutions[i].m_walks.size(); ++j) { //foreach walk
 				if (solutions[i].m_walks[j].empty()) { // if empty
@@ -528,10 +527,8 @@ void ILS::SplitSearch(std::vector<CustomSolution>& solutions, const std::vector<
 		}
 		
 		std::vector<std::string> ids = construct(solutions[i], op.mTravelTimes);
-		std::cout << "inserted the tas:";
 		for (auto& id : ids) {
 			registry[id].buckets[i].inSolution++;
-			std::cout << id << "\t";
 		}
 
 		if (i > 0) {
