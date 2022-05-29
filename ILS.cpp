@@ -226,13 +226,22 @@ void ILS::SolveNew(OP& op) {
 	std::vector<double> cuts = Preprocessing(op.mAttractions, buckets_num, op.mEndDepot->timeWindow.closeTime);
 	std::map<std::string, Activity> registry = initializeRegistry(unvisited, cuts);
 	CustomSolution process_solution{ *op.mStartDepot, *op.mEndDepot, unvisited, op.mStartDepot->timeWindow.openTime, op.mEndDepot->timeWindow.closeTime, op.m_walks_num }, best_solution{};
+	
+
+	std::vector<Bin> bins;
+	for (std::vector<double>::const_iterator cut_it = cuts.begin(); cut_it != cuts.end() - 1; ++cut_it) {
+		Bin bin{ .tw{*cut_it, *(cut_it + 1)} };
+		bins.push_back(bin);
+	}
 
 	int counter{}, S{ 1 }, R{ 1 }, times_not_improved{ 0 }, best_score{ INT_MIN };
 
 	while (times_not_improved < MAX_TIMES_NOT_IMPROVED) {
 		counter++;
-
+		
+		//splitUnvisited(process_solution.m_unvisited, bins, registry);
 		std::vector<CustomSolution> process_solutions = splitSolution(process_solution, cuts, registry);
+		//std::vector<CustomSolution> process_solutions;
 		SplitSearch(process_solutions, cuts, op, registry);
 		process_solution = connectSolutions(process_solutions, op.m_walks_num);
 		int score = process_solution.getScores();
@@ -273,7 +282,6 @@ std::vector<double> ILS::Preprocessing(std::vector<TA*> unvisited, int bins_num,
 		if (remainder > 0) {
 			std::vector<TA*> slice(unvisited.begin() + offset, unvisited.begin() + offset + bucketSize + 1);
 			Bin b;
-			b.unvisited.reserve(slice.size());
 			for (auto& p : slice) b.unvisited.push_back(*p);
 			bins.push_back(b);
 			offset += bucketSize + 1;
@@ -282,7 +290,6 @@ std::vector<double> ILS::Preprocessing(std::vector<TA*> unvisited, int bins_num,
 		else {
 			std::vector<TA*> slice(unvisited.begin() + offset, unvisited.begin() + offset + bucketSize);
 			Bin b;
-			b.unvisited.reserve(slice.size());
 			for (auto& p : slice) b.unvisited.push_back(*p);
 			offset += bucketSize;
 			bins.push_back(b);
@@ -307,6 +314,33 @@ std::vector<double> ILS::Preprocessing(std::vector<TA*> unvisited, int bins_num,
 	}
 
 	return cuts;
+}
+
+std::vector<ILS::Bin> ILS::splitUnvisited(CustomList<TA>& unvisited, std::map<std::string, Activity>& registry) {
+	std::vector<ILS::Bin> bins;
+	std::cout << "Splitting unvisited" << std::endl;
+	//Split Unvisited
+	for (auto& ta : unvisited) {
+		const double total_duration{ ta.timeWindow.closeTime - ta.timeWindow.openTime };
+		double max_score{ -1 };
+		std::vector<Bucket>::iterator best_b{ registry[ta.id].buckets.end() };
+		for (std::vector<Bucket>::iterator b = registry[ta.id].buckets.begin(); b != registry[ta.id].buckets.end(); ++b) {
+			double score = (b->duration / total_duration) * (b->inSolution / b->inBucket);
+			if (score > max_score) {
+				max_score = score;
+				best_b = b;
+			}
+		}
+		if (best_b == registry[ta.id].buckets.end()) {
+			std::cerr << "invalid bucket" << std::endl;
+			std::exit(1);
+		}
+
+		const int index = best_b - registry[ta.id].buckets.begin();
+		bins[index].unvisited.push_back(ta);
+		best_b->inBucket++;
+	}
+	return bins;
 }
 
 std::vector<CustomSolution> ILS::splitSolution(CustomSolution& sol, const std::vector<double>& cuts, std::map<std::string, Activity>& registry) {
@@ -344,7 +378,9 @@ std::vector<CustomSolution> ILS::splitSolution(CustomSolution& sol, const std::v
 		}
 	}
 	
+	//Remove endDepot from each walk
 	for (Walks::iterator walk_it = sol.m_walks.begin(); walk_it != sol.m_walks.end(); ++walk_it) {
+		if (walk_it->back().id == DEPOT_ID) walk_it->pop_back();
 		if (walk_it->size() == 2) continue;
 		for (CustomList<TA>::iterator ta_it = walk_it->begin(); ta_it != walk_it->end(); ++ta_it) {
 			for (std::vector<double>::const_iterator left = cuts.begin(), right = cuts.begin() + 1; right != cuts.end(); ++left, ++right) {
@@ -456,40 +492,83 @@ Point ILS::getWeightedCentroid(const CustomList<TA>::iterator& first, const Cust
 	
 }
 
+void ILS::SplitSearch2(CustomSolution& sol, const std::vector<double>& cuts, OP& op, std::map<std::string, Activity>& registry) {
+	//Step 1: Split unvisited nodes
+	std::vector<Bin> bins = splitUnvisited(sol.m_unvisited, registry);
+
+	//Step 2: Scan solution's walk for the last node smaller than cuts[i]
+	for (std::vector<double>::const_iterator cut_it = cuts.begin(); cut_it != cuts.end(); ++cut_it) {
+		const int index = cut_it - cuts.begin();
+		CustomSolution tempSol(bins[index].unvisited);
+		for (std::vector<CustomList<TA>>::iterator walk_it = sol.m_walks.begin(); walk_it != sol.m_walks.end(); ++walk_it) {
+			CustomList<TA>::iterator curr = walk_it->begin();
+			CustomList<TA> walk;
+			while (curr.iter->data.depTime >= *cut_it && curr.iter->data.depTime < *(cut_it + 1)) {
+				walk.push_back(*curr);
+			}
+
+
+		}
+	}
+}
+
 void ILS::SplitSearch(std::vector<CustomSolution>& solutions, const std::vector<double>& cuts, OP& op, std::map<std::string, Activity>& registry) {
 
 	const int min_size = 3;
 
+	//go to each walk of last solution and add an endDepot
+	for (Walks::iterator walk_it = solutions.back().m_walks; walk_it != solutions.back().m_walks.end(); ++walk_it) {
+		
+	}
+
 	for (size_t i = 0; i < solutions.size(); ++i) {
+		if (solutions[i].m_unvisited.empty()) continue;
 		if (i == 0) { //first solution
 			for (size_t j = 0; j < solutions[i].m_walks.size(); ++j) { //foreach walk
+
+				//calc start point
 				if (solutions[i].m_walks[j].empty()) { // if empty
 					solutions[i].m_walks[j].push_front(*op.mStartDepot); //start point
 				}
+				
+				//calc end point
+				//calc end point
+				int next_index = i + 1;
+				while (solutions[next_index].m_walks[j].size() < min_size && solutions[next_index].m_unvisited.empty()) {
+					if (++next_index == solutions.size() - 1) {
+						break;
+					}
+				}
 
-				Point cnext;
-				if (solutions[i + 1].m_walks[j].size() > min_size) {
-					const CustomList<TA>& next_solution_walk = solutions[i + 1].m_walks[j];
-					cnext = getWeightedCentroid(next_solution_walk.at(0), next_solution_walk.at(min_size));
+				if (next_index == solutions.size() - 1) {
+					solutions[i].m_walks[j].push_back(*op.mEndDepot);
 				}
 				else {
-					cnext = getWeightedCentroid(solutions[i + 1].m_unvisited.begin(), solutions[i + 1].m_unvisited.end());
+					Point cnext;
+					if (solutions[i + 1].m_walks[j].size() > min_size) {
+						const CustomList<TA>& next_solution_walk = solutions[next_index].m_walks[j];
+						cnext = getWeightedCentroid(next_solution_walk.at(0), next_solution_walk.at(min_size));
+					}
+					else {
+						cnext = getWeightedCentroid(solutions[i + 1].m_unvisited.begin(), solutions[i + 1].m_unvisited.end());
+					}
+					op.AddPointToGraph(cnext);
+					TA endDepot = TA(DEPOT_ID, cnext); //todo: delete endDepot
+					endDepot.timeWindow.closeTime = cuts[i + 1];
+					//endDepot->maxShift = endDepot->timeWindow.closeTime - endDepot->depTime;
+					solutions[i].m_walks[j].push_back(endDepot);
 				}
-				op.AddPointToGraph(cnext);
-				TA endDepot = TA(DEPOT_ID, cnext); //todo: delete endDepot
-				endDepot.timeWindow.closeTime = cuts[i + 1];
-				//endDepot->maxShift = endDepot->timeWindow.closeTime - endDepot->depTime;
-				solutions[i].m_walks[j].push_back(endDepot);
-				
 			}
 
 		} 
 		else if (i == solutions.size() - 1) {
 			for (size_t j = 0; j < solutions[i].m_walks.size(); ++j) { //foreach walk
+				//calc end point
 				if (solutions[i].m_walks[j].empty()) { // if empty
 					solutions[i].m_walks[j].push_back(*op.mEndDepot); //start point
 				}
 
+				//calc start point
 				int prev_index = i-1;
 				while (solutions[prev_index].m_walks[j].empty()) prev_index--;
 
@@ -499,26 +578,46 @@ void ILS::SplitSearch(std::vector<CustomSolution>& solutions, const std::vector<
 		}
 		else {
 			for (size_t j = 0; j < solutions[i].m_walks.size(); ++j) { //foreach walk
-				//start depot
+				//calc start point
 				int prev_index = i - 1;
 				while (solutions[prev_index].m_walks[j].empty()) prev_index--;
 
 				TA prev_ta = solutions[prev_index].m_walks[j].back();
 				solutions[i].m_walks[j].push_front(prev_ta);
 
-				//end depot
-				Point cnext;
-				if (solutions[i + 1].m_walks[j].size() > min_size) {
-					const CustomList<TA>& next_solution_walk = solutions[i + 1].m_walks[j];
-					cnext = getWeightedCentroid(next_solution_walk.at(0), next_solution_walk.at(min_size));
+				//calc end point
+				bool found = true;
+				int next_index = i + 1;
+				for (int next_index = i + 1; solutions[next_index].m_walks[j].size() < min_size && solutions[next_index].m_unvisited.empty(); ++next_index) {
+					if (next_index == solutions.size() - 1) {
+						found = false;
+						break;
+					}
+				}
+				//while (solutions[next_index].m_walks[j].size() < min_size && solutions[next_index].m_unvisited.empty()) { 
+				//	if (++next_index == solutions.size() - 1) {
+				//		break;
+				//	}
+				//}
+
+				if (!found) {
+					solutions[i].m_walks[j].push_back(*op.mEndDepot);
 				}
 				else {
-					cnext = getWeightedCentroid(solutions[i + 1].m_unvisited.begin(), solutions[i + 1].m_unvisited.end());
+					Point cnext;
+					if (solutions[i + 1].m_walks[j].size() > min_size) {
+						const CustomList<TA>& next_solution_walk = solutions[next_index].m_walks[j];
+						cnext = getWeightedCentroid(next_solution_walk.at(0), next_solution_walk.at(min_size));
+					}
+					else {
+						cnext = getWeightedCentroid(solutions[i + 1].m_unvisited.begin(), solutions[i + 1].m_unvisited.end());
+					}
+					op.AddPointToGraph(cnext);
+					TA endDepot = TA(DEPOT_ID, cnext); //todo: delete endDepot
+					endDepot.timeWindow.closeTime = cuts[i + 1];
+					solutions[i].m_walks[j].push_back(endDepot);
 				}
-				op.AddPointToGraph(cnext);
-				TA endDepot = TA(DEPOT_ID, cnext); //todo: delete endDepot
-				endDepot.timeWindow.closeTime = cuts[i + 1];
-				solutions[i].m_walks[j].push_back(endDepot);
+				
 			}
 		}
 

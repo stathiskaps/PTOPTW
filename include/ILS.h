@@ -30,19 +30,20 @@ using MapOfActivities = std::map<std::string, Activity>;
 class ILS{
 private:
 	struct Bin{
-		std::vector<TA> unvisited;
+		CustomList<TA> unvisited;
 		TimeWindow tw;
 	};
 
 	//std::map<std::string, std::vector<ActivityInBucket>> registry;
 
 	int mBucketsNum;
-
 	bool compareTimeWindowCenter(const CustomList<TA>::iterator&, const CustomList<TA>::iterator&);
 	virtual std::tuple<CustomList<TA>::iterator, double, int, int> getBestPos(const TA&, const CustomList<TA>&, const Vector2D<double>&);
 	virtual std::tuple<Walks::iterator, CustomList<TA>::iterator, double, int, int> getBestPos(const TA&, Walks&, const Vector2D<double>&);
 	virtual void updateTimes(CustomList<TA>&, const CustomList<TA>::iterator&, const bool, const Vector2D<double>&);
 	void SplitSearch(std::vector<CustomSolution>&, const std::vector<double>&, OP&, std::map<std::string, Activity>&);
+	void SplitSearch2(CustomSolution&, const std::vector<double>&, OP&, std::map<std::string, Activity>&);
+	std::vector<Bin> splitUnvisited(CustomList<TA>&, std::map<std::string, Activity>&);
 	std::vector<CustomSolution> splitSolution(CustomSolution&, const std::vector<double>&, std::map<std::string, Activity>&);
 	inline Point getWeightedCentroid(const CustomList<TA>::iterator& first, const CustomList<TA>::iterator& last);
 	void Shake(CustomSolution&, int&, int&, OP&, const int&);

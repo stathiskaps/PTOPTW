@@ -11,6 +11,9 @@ class CustomSolution {
 	std::vector<CustomList<TA>> m_walks;
 public:
 	CustomSolution() {}
+
+	CustomSolution(CustomList<TA> unvisited): m_unvisited(unvisited) {}
+
 	//todo: check what explicit is
 	CustomSolution(TA start, TA end, CustomList<TA> unvisited, double startTime, double endTime, int walksNum) : m_unvisited(unvisited) {
 		for (int i = 0; i < walksNum; ++i) {
