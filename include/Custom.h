@@ -102,7 +102,7 @@ public:
 
     // Capacity -----------------------
     inline size_t size() const { return numberOfElements; }
-    inline bool empty() { return size() == 0; }
+    inline bool empty() const { return size() == 0; }
 
     // Modifiers ----------------------
     CustomList& disc(iterator& first, iterator& last) {

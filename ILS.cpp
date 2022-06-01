@@ -239,14 +239,11 @@ void ILS::SolveNew(OP& op) {
 	while (times_not_improved < MAX_TIMES_NOT_IMPROVED) {
 		counter++;
 		
-		//splitUnvisited(process_solution.m_unvisited, bins, registry);
 		std::vector<CustomSolution> process_solutions = splitSolution(process_solution, cuts, registry);
-		//std::vector<CustomSolution> process_solutions;
 		SplitSearch(process_solutions, cuts, op, registry);
 		process_solution = connectSolutions(process_solutions, op.m_walks_num);
 		int score = process_solution.getScores();
 		//construct(process_solution, op.mTravelTimes);
-		//int score = process_solution.getScores();
 		if (score > best_score) {
 			best_score = score;
 			//best_solution.reset();
@@ -346,7 +343,6 @@ std::vector<ILS::Bin> ILS::splitUnvisited(CustomList<TA>& unvisited, std::map<st
 std::vector<CustomSolution> ILS::splitSolution(CustomSolution& sol, const std::vector<double>& cuts, std::map<std::string, Activity>& registry) {
 	std::vector<CustomSolution> solutions(cuts.size() - 1, CustomSolution());
 	
-	std::cout << "Splitting unvisited" << std::endl;
 	//Split Unvisited
 	for (auto& ta : sol.m_unvisited) {
 		const double total_duration{ ta.timeWindow.closeTime - ta.timeWindow.openTime };
@@ -512,40 +508,51 @@ void ILS::SplitSearch2(CustomSolution& sol, const std::vector<double>& cuts, OP&
 	}
 }
 
+bool ILS::hasWeightedCentroid(const CustomSolution& sol, const int walk_index, const int min_walk_size) {
+	return sol.m_walks[walk_index].size() >= min_walk_size || !sol.m_unvisited.empty();
+}
+
 void ILS::SplitSearch(std::vector<CustomSolution>& solutions, const std::vector<double>& cuts, OP& op, std::map<std::string, Activity>& registry) {
 
 	const int min_size = 3;
+	const size_t solutions_size = solutions.size();
+
+	//go to each walk of start solution and add an startDepot if it doesn't exist
+	for (std::vector<CustomList<TA>>::iterator walk_it = solutions.front().m_walks.begin(); walk_it != solutions.front().m_walks.end(); ++walk_it) {
+		if (walk_it->front().id != DEPOT_ID) {
+			walk_it->push_back(*op.mStartDepot);
+		}
+		//updateTimes(*walk_it, walk_it->begin(), false, op.mTravelTimes);
+	}
 
 	//go to each walk of last solution and add an endDepot
-	for (Walks::iterator walk_it = solutions.back().m_walks; walk_it != solutions.back().m_walks.end(); ++walk_it) {
-		
+	for (std::vector<CustomList<TA>>::iterator walk_it = solutions.back().m_walks.begin(); walk_it != solutions.back().m_walks.end(); ++walk_it) {
+		if (walk_it->back().id == DEPOT_ID) {
+			std::cerr << "found end depot while i shouldn't have" << std::endl;
+			std::exit(1);
+		}
+		walk_it->push_back(*op.mEndDepot);
+		//updateTimes(*walk_it, walk_it->begin(), false, op.mTravelTimes);
 	}
 
 	for (size_t i = 0; i < solutions.size(); ++i) {
-		if (solutions[i].m_unvisited.empty()) continue;
+		//if (solutions[i].m_unvisited.empty()) continue;
 		if (i == 0) { //first solution
 			for (size_t j = 0; j < solutions[i].m_walks.size(); ++j) { //foreach walk
 
-				//calc start point
-				if (solutions[i].m_walks[j].empty()) { // if empty
-					solutions[i].m_walks[j].push_front(*op.mStartDepot); //start point
-				}
-				
-				//calc end point
-				//calc end point
+				//add endpoint
 				int next_index = i + 1;
-				while (solutions[next_index].m_walks[j].size() < min_size && solutions[next_index].m_unvisited.empty()) {
-					if (++next_index == solutions.size() - 1) {
-						break;
-					}
+				while (next_index < solutions.size() && !hasWeightedCentroid(solutions[next_index], j, min_size)) {
+					next_index++;
 				}
 
-				if (next_index == solutions.size() - 1) {
+				if (next_index == solutions.size()) {
 					solutions[i].m_walks[j].push_back(*op.mEndDepot);
+					solutions[i].m_walks[j].back().timeWindow.closeTime = cuts[i + 1];
 				}
 				else {
 					Point cnext;
-					if (solutions[i + 1].m_walks[j].size() > min_size) {
+					if (solutions[i + 1].m_walks[j].size() >= min_size) {
 						const CustomList<TA>& next_solution_walk = solutions[next_index].m_walks[j];
 						cnext = getWeightedCentroid(next_solution_walk.at(0), next_solution_walk.at(min_size));
 					}
@@ -559,14 +566,9 @@ void ILS::SplitSearch(std::vector<CustomSolution>& solutions, const std::vector<
 					solutions[i].m_walks[j].push_back(endDepot);
 				}
 			}
-
 		} 
 		else if (i == solutions.size() - 1) {
 			for (size_t j = 0; j < solutions[i].m_walks.size(); ++j) { //foreach walk
-				//calc end point
-				if (solutions[i].m_walks[j].empty()) { // if empty
-					solutions[i].m_walks[j].push_back(*op.mEndDepot); //start point
-				}
 
 				//calc start point
 				int prev_index = i-1;
@@ -585,23 +587,15 @@ void ILS::SplitSearch(std::vector<CustomSolution>& solutions, const std::vector<
 				TA prev_ta = solutions[prev_index].m_walks[j].back();
 				solutions[i].m_walks[j].push_front(prev_ta);
 
-				//calc end point
-				bool found = true;
+				//add endpoint
 				int next_index = i + 1;
-				for (int next_index = i + 1; solutions[next_index].m_walks[j].size() < min_size && solutions[next_index].m_unvisited.empty(); ++next_index) {
-					if (next_index == solutions.size() - 1) {
-						found = false;
-						break;
-					}
+				while (next_index < solutions.size() && !hasWeightedCentroid(solutions[next_index], j, min_size)) {
+					next_index++;
 				}
-				//while (solutions[next_index].m_walks[j].size() < min_size && solutions[next_index].m_unvisited.empty()) { 
-				//	if (++next_index == solutions.size() - 1) {
-				//		break;
-				//	}
-				//}
 
-				if (!found) {
+				if (next_index == solutions.size()) {
 					solutions[i].m_walks[j].push_back(*op.mEndDepot);
+					solutions[i].m_walks[j].back().timeWindow.closeTime = cuts[i + 1];
 				}
 				else {
 					Point cnext;
@@ -617,7 +611,6 @@ void ILS::SplitSearch(std::vector<CustomSolution>& solutions, const std::vector<
 					endDepot.timeWindow.closeTime = cuts[i + 1];
 					solutions[i].m_walks[j].push_back(endDepot);
 				}
-				
 			}
 		}
 
@@ -1023,12 +1016,12 @@ void ILS_TOPTW::validate(const CustomList<TA>& walk, const Vector2D<double>& tra
 	CustomList<TA>::iterator next{};
 	for (CustomList<TA>::iterator it = { walk.begin() }; it != walk.end(); ++it) {
 		if (it.iter->data.startOfVisitTime != it.iter->data.arrTime + it.iter->data.waitDuration) {
-			msg = "StartOfVisitTime("
+			msg = "["+it.iter->data.id+"]StartOfVisitTime("
 				+ std::to_string(it.iter->data.startOfVisitTime)
-				+ ") != arrTime("
+				+ ") != ["+it.iter->data.id+"]arrTime("
 				+ std::to_string(it.iter->data.arrTime)
 				+ ")"
-				+ " + waitDuration("
+				+ "+ ["+it.iter->data.id+"]waitDuration("
 				+ std::to_string(it.iter->data.waitDuration)
 				+ ")";
 			valid = false;
@@ -1036,11 +1029,11 @@ void ILS_TOPTW::validate(const CustomList<TA>& walk, const Vector2D<double>& tra
 		}
 
 		if (it.iter->data.depTime != it.iter->data.startOfVisitTime + it.iter->data.visitDuration) {
-			msg = "depTime("
+			msg = "["+it.iter->data.id+"]depTime("
 				+ std::to_string(it.iter->data.depTime)
-				+ ") != startOfVisitTime("
+				+ ") != "+it.iter->data.id+"startOfVisitTime("
 				+ std::to_string(it.iter->data.startOfVisitTime)
-				+ ") + visitDuration("
+				+ ") + ["+it.iter->data.id+"]visitDuration("
 				+ std::to_string(it.iter->data.visitDuration)
 				+ ")";
 			valid = false;
@@ -1048,9 +1041,9 @@ void ILS_TOPTW::validate(const CustomList<TA>& walk, const Vector2D<double>& tra
 		}
 
 		if (it.iter->data.depTime > it.iter->data.timeWindow.closeTime) {
-			msg = "depTime("
+			msg = "["+it.iter->data.id+"]depTime("
 				+ std::to_string(it.iter->data.depTime)
-				+ ") > closeTime("
+				+ ") > ["+it.iter->data.id+"]closeTime("
 				+ std::to_string(it.iter->data.timeWindow.closeTime)
 				+ ")";
 			valid = false;
@@ -1060,9 +1053,9 @@ void ILS_TOPTW::validate(const CustomList<TA>& walk, const Vector2D<double>& tra
 		next = it + 1;
 		if (next != walk.end()) {
 			if (next.iter->data.arrTime != it.iter->data.depTime + travel_times[it.iter->data.depPointId][next.iter->data.arrPointId]) {
-				msg = "next->arrTime("
+				msg = "["+it.iter->data.id+"]next->arrTime("
 					+ std::to_string(next.iter->data.arrTime)
-					+ ") != depTime("
+					+ ") != ["+it.iter->data.id+"]depTime("
 					+ std::to_string(it.iter->data.depTime)
 					+ ") + timeTravel["
 					+ std::to_string(it.iter->data.depPointId)

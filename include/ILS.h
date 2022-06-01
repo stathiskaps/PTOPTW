@@ -44,6 +44,7 @@ private:
 	void SplitSearch(std::vector<CustomSolution>&, const std::vector<double>&, OP&, std::map<std::string, Activity>&);
 	void SplitSearch2(CustomSolution&, const std::vector<double>&, OP&, std::map<std::string, Activity>&);
 	std::vector<Bin> splitUnvisited(CustomList<TA>&, std::map<std::string, Activity>&);
+	bool hasWeightedCentroid(const CustomSolution& sol, const int, const int);
 	std::vector<CustomSolution> splitSolution(CustomSolution&, const std::vector<double>&, std::map<std::string, Activity>&);
 	inline Point getWeightedCentroid(const CustomList<TA>::iterator& first, const CustomList<TA>::iterator& last);
 	void Shake(CustomSolution&, int&, int&, OP&, const int&);
