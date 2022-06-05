@@ -10,24 +10,6 @@
 
 #define DEFAULT_ID "d"
 
-//struct Point {
-//    double lat;
-//    double lon;
-//
-//    Point() {}
-//    Point(double lat, double lon) : lat(lat), lon(lon) {}
-//};
-//
-//typedef struct TouristAttraction {
-//    std::string id;
-//    Point p;
-//    TouristAttraction() : p(0, 0) {}
-//    TouristAttraction(std::string id, Point p) : id(id), p(p) {}
-//} TA;
-
-// ------------------------------------------------------------------------------------------------
-// This would be in a header file -----------------------------------------------------------------
-
 // Type trait helper to identify iterators --------------------------------------------------------
 template<typename T, typename = void>
 struct is_iterator { static constexpr bool value = false; };
@@ -36,9 +18,9 @@ struct is_iterator<T, typename std::enable_if<!std::is_same<typename std::iterat
     static constexpr bool value = true;
 };
 
-// The CustomList class ---------------------------------------------------------------------------------
+// The List class ---------------------------------------------------------------------------------
 template <typename T>
-class CustomList {
+class List {
     // Sub class for a Node -----------
     struct Node {
         T data{};
@@ -61,27 +43,27 @@ public:
     struct iterator;    // Forward declaration
 
     // Constructor --------------------
-    CustomList() { init(); }
-    explicit CustomList(const size_t count) { init(); insert(begin(), count); }
-    explicit CustomList(const size_t count, const T& value) { init(); insert(begin(), count, value); };
-    explicit CustomList(const std::vector<T> v) { init(); insert(begin(), v.begin(), v.end()); }
-    explicit CustomList(const std::vector<T*> v) { init(); for (auto& i : v) push_back(*i); }
+    List() { init(); }
+    explicit List(const size_t count) { init(); insert(begin(), count); }
+    explicit List(const size_t count, const T& value) { init(); insert(begin(), count, value); };
+    explicit List(const std::vector<T> v) { init(); insert(begin(), v.begin(), v.end()); }
+    explicit List(const std::vector<T*> v) { init(); for (auto& i : v) push_back(*i); }
     template <typename Iter>
-    CustomList(const Iter& first, const Iter& last) { init(); insert(begin(), first, last); }
-    CustomList(const CustomList& other) { init(), insert(begin(), other.begin(), other.end()); };
+    List(const Iter& first, const Iter& last) { init(); insert(begin(), first, last); }
+    List(const List& other) { init(), insert(begin(), other.begin(), other.end()); };
 
-    CustomList(CustomList&& other) : head(other.head), numberOfElements(other.numberOfElements) { other.init(); }
-    CustomList(const std::initializer_list<T>& il) { init(); insert(begin(), il.begin(), il.end()); }
-    template <int N> CustomList(T(&other)[N]) { init(); insert(begin(), std::begin(other), std::end(other)); }
-    template <int N> CustomList(const T(&other)[N]) { init(); insert(begin(), std::begin(other), std::end(other)); }
+    List(List&& other) : head(other.head), numberOfElements(other.numberOfElements) { other.init(); }
+    List(const std::initializer_list<T>& il) { init(); insert(begin(), il.begin(), il.end()); }
+    template <int N> List(T(&other)[N]) { init(); insert(begin(), std::begin(other), std::end(other)); }
+    template <int N> List(const T(&other)[N]) { init(); insert(begin(), std::begin(other), std::end(other)); }
 
 
     // Assignment ---------------------
-    CustomList& operator =(const CustomList& other) { clear(); insert(begin(), other.begin(), other.end()); return *this; }
-    CustomList& operator =(CustomList&& other) { clear(); head = other.head; numberOfElements = other.numberOfElements; other.init(); return *this; }
-    CustomList& operator =(const std::initializer_list<T>& il) { clear(); insert(begin(), il.begin(), il.end()); return *this; }
-    template <int N> CustomList& operator =(const T(&other)[N]) { clear(); insert(begin(), std::begin(other), std::end(other)); return *this; }
-    template <int N> CustomList& operator =(T(&other)[N]) { clear(); insert(begin(), std::begin(other), std::end(other)); return *this; }
+    List& operator =(const List& other) { clear(); insert(begin(), other.begin(), other.end()); return *this; }
+    List& operator =(List&& other) { clear(); head = other.head; numberOfElements = other.numberOfElements; other.init(); return *this; }
+    List& operator =(const std::initializer_list<T>& il) { clear(); insert(begin(), il.begin(), il.end()); return *this; }
+    template <int N> List& operator =(const T(&other)[N]) { clear(); insert(begin(), std::begin(other), std::end(other)); return *this; }
+    template <int N> List& operator =(T(&other)[N]) { clear(); insert(begin(), std::begin(other), std::end(other)); return *this; }
 
     template <typename Iter> void assign(const Iter& first, const Iter& last) { clear(); insert(begin(), first, last); }
     template <int N> void assign(const T(&other)[N]) { clear(); insert(begin(), std::begin(other), std::end(other)); }
@@ -90,7 +72,7 @@ public:
     void assign(const std::initializer_list<T>& il) { clear(); insert(begin(), il.begin(), il.end()); }
 
     // Destructor ---------------------
-    ~CustomList() { clear(); }
+    ~List() { clear(); }
 
     // Element Access -----------------
     T& front() { return *begin(); }
@@ -105,7 +87,7 @@ public:
     inline bool empty() const { return size() == 0; }
 
     // Modifiers ----------------------
-    CustomList& disc(iterator& first, iterator& last) {
+    List& disc(iterator& first, iterator& last) {
         if (head == first) {
             head = last->next;
         } 
@@ -202,8 +184,8 @@ public:
 
 
 
-    CustomList<T> copy_part(iterator& first, const iterator& last) {
-        CustomList<T> part;
+    List<T> copy_part(iterator& first, const iterator& last) {
+        List<T> part;
         while (first != last) {
             part.push_back(first.iter->data);
             first++;
@@ -211,12 +193,12 @@ public:
         return part;
     }
 
-    CustomList<T> copy_part(int index_first, int index_last) {
+    List<T> copy_part(int index_first, int index_last) {
         return copy_part(begin() + index_first, begin() + index_last);
     }
 
-    CustomList<T> grab_part(iterator& first, const iterator& last) {
-        CustomList<T> part;
+    List<T> grab_part(iterator& first, const iterator& last) {
+        List<T> part;
         while (first != last) {
             part.push_back(first.iter->data);
             first = erase(first);
@@ -250,13 +232,13 @@ public:
     }
 
     //this can be improved by implementing a vector's emplace_back function
-    void append(const CustomList<T>& li) {
-        for (CustomList<T>::iterator it = li.begin(); it != li.end(); ++it) {
+    void append(const List<T>& li) {
+        for (List<T>::iterator it = li.begin(); it != li.end(); ++it) {
             push_back(it.iter->data);
         }
     }
 
-    void swap(CustomList& other) { std::swap(head, other.head); std::swap(numberOfElements, other.numberOfElements); }
+    void swap(List& other) { std::swap(head, other.head); std::swap(numberOfElements, other.numberOfElements); }
 
     // Operations --------------------
     void reverse() {

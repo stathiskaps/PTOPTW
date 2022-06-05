@@ -27,6 +27,9 @@
         "stdexcept": "cpp",
         "tuple": "cpp",
         "type_traits": "cpp",
-        "unordered_map": "cpp"
-    }
+        "unordered_map": "cpp",
+        "map": "cpp",
+        "set": "cpp"
+    },
+    "C_Cpp.errorSquiggles": "Disabled"
 }

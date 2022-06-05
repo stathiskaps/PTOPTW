@@ -2,7 +2,6 @@
 #include <csignal>
 #include <thread>
 #include "Divider.h"
-#include "Processor.h"
 #include "TaskManager.h"
 
 #ifndef CONTROLLER_H

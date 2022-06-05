@@ -126,8 +126,6 @@ void init(std::string filename, int numRoutes) {
 	OP op = OP(touristAttractions, points, depot, depot, numRoutes);
 
 	ILS_TOPTW ilstoptw = ILS_TOPTW(numRoutes);
-
-	ListTA attractions = ListTA(touristAttractions);
 	ilstoptw.SolveNew(op);
 
 	/*OPTW optw(touristAttractions, ttMatrix, depot, OPEN_DAY_TIME, CLOSE_DAY_TIME);
