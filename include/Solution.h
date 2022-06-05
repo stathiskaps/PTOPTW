@@ -1,5 +1,6 @@
 #pragma once
 #include <stdexcept>
+#include <climits>
 #include "List.h"
 #include "Custom.h"
 
