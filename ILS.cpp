@@ -145,7 +145,7 @@ std::vector<Solution> ILS::splitSolution(Solution& sol, const std::vector<double
 		double max_score{ -1 };
 		std::vector<Bucket>::iterator best_b{ registry[ta.id].buckets.end()};
 		for (std::vector<Bucket>::iterator b = registry[ta.id].buckets.begin(); b != registry[ta.id].buckets.end(); ++b) {
-			double score = (b->duration / total_duration) * (b->inSolution / b->inBucket);
+			double score = (b->duration / (double)total_duration) * (b->inSolution / (double)b->inBucket);
 			if (score > max_score) {
 				max_score = score;
 				best_b = b;
@@ -204,8 +204,6 @@ Solution ILS::connectSolutions(std::vector<Solution>& sols, const size_t walks_n
 		}
 		solution.m_walks.push_back(walk);
 	}
-
-	//registry.clear();
 
 	return solution;
 }
@@ -471,6 +469,7 @@ std::vector<std::string> ILS::construct(Solution& sol, const Vector2D<double>& t
 
 
 		inserted_it = best_walk_it->insert(best_pos, insert_it.iter->data);
+		inserted_it.iter->data.walk = best_walk_it - sol.m_walks.begin();
 		inserted_ids.push_back(inserted_it.iter->data.id);
 		inserted_it.iter->data.arrPointId = best_arr_point_id;
 		inserted_it.iter->data.depPointId = best_dep_point_id;

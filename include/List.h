@@ -97,6 +97,7 @@ typedef struct TouristAttraction {
 	const sightCategory category;
 	const double visitDuration;
 	const int profit;
+	int walk;
 	double arrTime, waitDuration, startOfVisitTime, depTime, shift, maxShift;
 	int route, cluster;
 	double minDist;  // default infinite dist to nearest cluster
@@ -118,6 +119,7 @@ typedef struct TouristAttraction {
 		shift(.0),
 		maxShift(.0),
 		route(-1),
+		walk(UNDEFINED),
 		cluster(UNDEFINED),
 		minDist(DBL_MAX),
 		arrPointId(DEFAULT_POINT_ID),
@@ -140,6 +142,7 @@ typedef struct TouristAttraction {
 		shift(.0),
 		maxShift(.0),
 		route(-1),
+		walk(UNDEFINED),
 		cluster(UNDEFINED),
 		minDist(DBL_MAX),
 		arrPointId(p.id),
@@ -166,6 +169,7 @@ typedef struct TouristAttraction {
 		shift(.0),
 		maxShift(.0),
 		route(-1),
+		walk(UNDEFINED),
 		cluster(UNDEFINED),
 		minDist(DBL_MAX),
 		arrPointId(p.id),
@@ -189,6 +193,7 @@ typedef struct TouristAttraction {
 		shift(.0),
 		maxShift(.0),
 		route(-1),
+		walk(UNDEFINED),
 		cluster(UNDEFINED),
 		minDist(DBL_MAX),
 		arrPointId(p.id),

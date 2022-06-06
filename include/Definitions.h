@@ -19,6 +19,7 @@
 #define DEFAULT_POINT_ID -1
 #define DEFAULT_CLUSTER_ID -2
 #define DEFAULT_POS -1
+#define DEFAULT_WALK_ID -1
 
 #define LEAF -1
 #define NOISE -2
