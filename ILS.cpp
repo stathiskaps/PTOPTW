@@ -7,6 +7,7 @@ ILS::ILS(int bucketsNum) : mBucketsNum(bucketsNum) {}
 ILS::~ILS() {}
 
 void ILS::SolveNew(OP& op) {
+	auto start = std::chrono::steady_clock::now();
 	std::cout.clear();
 
 	//todo: for pr13 and buckets_num 4 got invalid bucket error
@@ -38,8 +39,9 @@ void ILS::SolveNew(OP& op) {
 		std::vector<Solution> process_solutions = splitSolution(process_solution, cuts, registry);
 		SplitSearch(process_solutions, cuts, op, registry);
 		process_solution = connectSolutions(process_solutions, op.m_walks_num);
+		validate(process_solution.m_walks, op.mTravelTimes);
+		// construct(process_solution, op.mTravelTimes);
 		int score = process_solution.getScores();
-		//construct(process_solution, op.mTravelTimes);
 		if (score > best_score) {
 			best_score = score;
 			//best_solution.reset();
@@ -54,9 +56,13 @@ void ILS::SolveNew(OP& op) {
 		Shake(process_solution, S, R, op, max_to_remove);
 
 	}
+	auto end = std::chrono::steady_clock::now();
+	auto diff = end - start;
+
 	validate(best_solution.m_walks, op.mTravelTimes);
 	std::cout << "Best score: " << best_score << std::endl;
 	std::cout << "Visits: " << best_solution.getVisits() << std::endl;
+	std::cout << "Executime time: " << std::chrono::duration <double, std::milli> (diff).count() << " ms" << std::endl;
 	std::cout << std::endl;
 }
 
@@ -286,6 +292,100 @@ bool ILS::hasWeightedCentroid(const Solution& sol, const int walk_index, const i
 	return sol.m_walks[walk_index].size() >= min_walk_size || !sol.m_unvisited.empty();
 }
 
+void ILS::AddStartDepots(std::vector<Solution>& solutions, const int sol_index, const OP& op){
+	for (size_t j = 0; j < solutions[sol_index].m_walks.size(); ++j) {
+		int prev_sol_index = sol_index-1;
+		const TA* first_ta = &solutions[sol_index].m_walks[j].front();
+		List<TA>::iterator node_to_insert = solutions[sol_index].m_walks[j].end();
+		while(prev_sol_index >= 0){
+			if(solutions[prev_sol_index].m_walks[j].empty()){
+				prev_sol_index--;
+				continue;
+			}
+
+			List<TA>::iterator curr = solutions[prev_sol_index].m_walks[j].end() - 1;
+			while(curr != solutions[prev_sol_index].m_walks[j].end()){
+				if(curr.iter->data.depTime + op.mTravelTimes[curr.iter->data.depPointId][first_ta->arrPointId] < first_ta->maxShift){ //update maxShifts at start of function
+					curr = solutions[prev_sol_index].m_walks[j].erase(curr);
+					
+				} else {
+					node_to_insert = curr;
+					break;
+				}
+				curr--;
+			}
+			if(node_to_insert != solutions[sol_index].m_walks[j].end()){
+				break;
+			}
+		}
+		if(node_to_insert == solutions[sol_index].m_walks[j].end()){
+			std::cerr << "Previous valid TA wasn't found to add as startDepot" << std::endl;
+			std::exit(1);
+		}
+		solutions[sol_index].m_walks[j].push_back(node_to_insert.iter->data);
+	}
+}
+
+void ILS::AddEndDepots(std::vector<Solution>& solutions, const std::vector<double>& cuts, const int sol_index, OP& op){
+	const int min_size = 3;
+	for (size_t j = 0; j < solutions[sol_index].m_walks.size(); ++j) {
+		//add endpoint
+		int next_sol_index = sol_index + 1;
+		while (next_sol_index < solutions.size() && !hasWeightedCentroid(solutions[next_sol_index], j, min_size)) {
+			next_sol_index++;
+		}
+
+		if (next_sol_index == solutions.size()) {
+			solutions[sol_index].m_walks[j].push_back(*op.mEndDepot);
+			solutions[sol_index].m_walks[j].back().timeWindow.closeTime = cuts[sol_index + 1];
+		}
+		else {
+			Point cnext;
+			if (solutions[sol_index + 1].m_walks[j].size() > min_size) {
+				const List<TA>& next_solution_walk = solutions[next_sol_index].m_walks[j];
+				cnext = getWeightedCentroid(next_solution_walk.at(0), next_solution_walk.at(min_size));
+			}
+			else {
+				cnext = getWeightedCentroid(solutions[sol_index + 1].m_unvisited.begin(), solutions[sol_index + 1].m_unvisited.end());
+			}
+			op.AddPointToGraph(cnext);
+			TA endDepot = TA(DEPOT_ID, cnext); //todo: delete endDepot
+			endDepot.timeWindow.closeTime = cuts[sol_index + 1];
+			solutions[sol_index].m_walks[j].push_back(endDepot);
+		}
+	}
+}
+
+List<TA>::iterator ILS::calcStartDepot(std::vector<Solution>& solutions, const int sol_index, const int walk_index, const OP& op){
+	int prev_sol_index = sol_index-1;
+	const TA* first_ta = &solutions[sol_index].m_walks[walk_index].front();
+	List<TA>::iterator node_to_insert = solutions[sol_index].m_walks[walk_index].end();
+	while(prev_sol_index >= 0){
+		if(solutions[prev_sol_index].m_walks[walk_index].empty()){
+			continue;
+		}
+
+		List<TA>::iterator curr = solutions[prev_sol_index].m_walks[walk_index].end() - 1;
+		while(curr != solutions[prev_sol_index].m_walks[walk_index].end()){
+			if(curr.iter->data.depTime + op.mTravelTimes[curr.iter->data.depPointId][first_ta->arrPointId] < first_ta->maxShift){ //update maxShifts at start of function
+				curr = solutions[prev_sol_index].m_walks[walk_index].erase(curr);
+				curr--;
+			} else {
+				node_to_insert = curr;
+			}
+			
+		}
+		if(node_to_insert != solutions[sol_index].m_walks[walk_index].end()){
+			break;
+		}
+	}
+	if(node_to_insert != solutions[sol_index].m_walks[walk_index].end()){
+		std::cerr << "Previous valid TA wasn't found to add as startDepot" << std::endl;
+		std::exit(1);
+	}
+	return node_to_insert;
+}
+
 void ILS::SplitSearch(std::vector<Solution>& solutions, const std::vector<double>& cuts, OP& op, std::map<std::string, Activity>& registry) {
 
 	const int min_size = 3;
@@ -312,80 +412,88 @@ void ILS::SplitSearch(std::vector<Solution>& solutions, const std::vector<double
 	for (size_t i = 0; i < solutions.size(); ++i) {
 		//if (solutions[i].m_unvisited.empty()) continue;
 		if (i == 0) { //first solution
-			for (size_t j = 0; j < solutions[i].m_walks.size(); ++j) { //foreach walk
+			AddEndDepots(solutions, cuts, i, op);
+			// for (size_t j = 0; j < solutions[i].m_walks.size(); ++j) { //foreach walk
 
-				//add endpoint
-				int next_index = i + 1;
-				while (next_index < solutions.size() && !hasWeightedCentroid(solutions[next_index], j, min_size)) {
-					next_index++;
-				}
+			// 	//add endpoint
+			// 	int next_index = i + 1;
+			// 	while (next_index < solutions.size() && !hasWeightedCentroid(solutions[next_index], j, min_size)) {
+			// 		next_index++;
+			// 	}
 
-				if (next_index == solutions.size()) {
-					solutions[i].m_walks[j].push_back(*op.mEndDepot);
-					solutions[i].m_walks[j].back().timeWindow.closeTime = cuts[i + 1];
-				}
-				else {
-					Point cnext;
-					if (solutions[i + 1].m_walks[j].size() >= min_size) {
-						const List<TA>& next_solution_walk = solutions[next_index].m_walks[j];
-						cnext = getWeightedCentroid(next_solution_walk.at(0), next_solution_walk.at(min_size));
-					}
-					else {
-						cnext = getWeightedCentroid(solutions[i + 1].m_unvisited.begin(), solutions[i + 1].m_unvisited.end());
-					}
-					op.AddPointToGraph(cnext);
-					TA endDepot = TA(DEPOT_ID, cnext); //todo: delete endDepot
-					endDepot.timeWindow.closeTime = cuts[i + 1];
-					//endDepot->maxShift = endDepot->timeWindow.closeTime - endDepot->depTime;
-					solutions[i].m_walks[j].push_back(endDepot);
-				}
-			}
+			// 	if (next_index == solutions.size()) {
+			// 		solutions[i].m_walks[j].push_back(*op.mEndDepot);
+			// 		solutions[i].m_walks[j].back().timeWindow.closeTime = cuts[i + 1];
+			// 	}
+			// 	else {
+			// 		Point cnext;
+			// 		if (solutions[i + 1].m_walks[j].size() >= min_size) {
+			// 			const List<TA>& next_solution_walk = solutions[next_index].m_walks[j];
+			// 			cnext = getWeightedCentroid(next_solution_walk.at(0), next_solution_walk.at(min_size));
+			// 		}
+			// 		else {
+			// 			cnext = getWeightedCentroid(solutions[i + 1].m_unvisited.begin(), solutions[i + 1].m_unvisited.end());
+			// 		}
+			// 		op.AddPointToGraph(cnext);
+			// 		TA endDepot = TA(DEPOT_ID, cnext); //todo: delete endDepot
+			// 		endDepot.timeWindow.closeTime = cuts[i + 1];
+			// 		//endDepot->maxShift = endDepot->timeWindow.closeTime - endDepot->depTime;
+			// 		solutions[i].m_walks[j].push_back(endDepot);
+			// 	}
+			// }
 		} 
 		else if (i == solutions.size() - 1) {
-			for (size_t j = 0; j < solutions[i].m_walks.size(); ++j) { //foreach walk
+			AddStartDepots(solutions, i, op);
+			// for (size_t j = 0; j < solutions[i].m_walks.size(); ++j) { //foreach walk
+			// 	//calc start point
+			// 	if(solutions[i].m_walks[j].empty() || (solutions[i].m_walks[j].size() == 1 && solutions[i].m_walks[j].front().id == DEPOT_ID)){
+			// 		int prev_index = i-1;
+			// 		while (solutions[prev_index].m_walks[j].empty()) prev_index--;
 
-				//calc start point
-				int prev_index = i-1;
-				while (solutions[prev_index].m_walks[j].empty()) prev_index--;
-
-				TA prev_ta = solutions[prev_index].m_walks[j].back();
-				solutions[i].m_walks[j].push_front(prev_ta);
-			}
+			// 		TA prev_ta = solutions[prev_index].m_walks[j].back();
+			// 		solutions[i].m_walks[j].push_front(prev_ta);
+				
+			// 	}
+			// }
 		}
 		else {
-			for (size_t j = 0; j < solutions[i].m_walks.size(); ++j) { //foreach walk
-				//calc start point
-				int prev_index = i - 1;
-				while (solutions[prev_index].m_walks[j].empty()) prev_index--;
+			AddStartDepots(solutions, i, op);
+			AddEndDepots(solutions, cuts, i, op);
+			// for (size_t j = 0; j < solutions[i].m_walks.size(); ++j) { //foreach walk
+			// 	//calc start point
+			// 	if(solutions[i].m_walks[j].empty() || (solutions[i].m_walks[j].size() == 1 && solutions[i].m_walks[j].front().id == DEPOT_ID)){
+			// 		int prev_index = i - 1;
+			// 		while (solutions[prev_index].m_walks[j].empty()) prev_index--;
 
-				TA prev_ta = solutions[prev_index].m_walks[j].back();
-				solutions[i].m_walks[j].push_front(prev_ta);
+			// 		TA prev_ta = solutions[prev_index].m_walks[j].back();
+			// 		solutions[i].m_walks[j].push_front(prev_ta);
+			// 	}
 
-				//add endpoint
-				int next_index = i + 1;
-				while (next_index < solutions.size() && !hasWeightedCentroid(solutions[next_index], j, min_size)) {
-					next_index++;
-				}
+			// 	//add endpoint
+			// 	int next_index = i + 1;
+			// 	while (next_index < solutions.size() && !hasWeightedCentroid(solutions[next_index], j, min_size)) {
+			// 		next_index++;
+			// 	}
 
-				if (next_index == solutions.size()) {
-					solutions[i].m_walks[j].push_back(*op.mEndDepot);
-					solutions[i].m_walks[j].back().timeWindow.closeTime = cuts[i + 1];
-				}
-				else {
-					Point cnext;
-					if (solutions[i + 1].m_walks[j].size() > min_size) {
-						const List<TA>& next_solution_walk = solutions[next_index].m_walks[j];
-						cnext = getWeightedCentroid(next_solution_walk.at(0), next_solution_walk.at(min_size));
-					}
-					else {
-						cnext = getWeightedCentroid(solutions[i + 1].m_unvisited.begin(), solutions[i + 1].m_unvisited.end());
-					}
-					op.AddPointToGraph(cnext);
-					TA endDepot = TA(DEPOT_ID, cnext); //todo: delete endDepot
-					endDepot.timeWindow.closeTime = cuts[i + 1];
-					solutions[i].m_walks[j].push_back(endDepot);
-				}
-			}
+			// 	if (next_index == solutions.size()) {
+			// 		solutions[i].m_walks[j].push_back(*op.mEndDepot);
+			// 		solutions[i].m_walks[j].back().timeWindow.closeTime = cuts[i + 1];
+			// 	}
+			// 	else {
+			// 		Point cnext;
+			// 		if (solutions[i + 1].m_walks[j].size() > min_size) {
+			// 			const List<TA>& next_solution_walk = solutions[next_index].m_walks[j];
+			// 			cnext = getWeightedCentroid(next_solution_walk.at(0), next_solution_walk.at(min_size));
+			// 		}
+			// 		else {
+			// 			cnext = getWeightedCentroid(solutions[i + 1].m_unvisited.begin(), solutions[i + 1].m_unvisited.end());
+			// 		}
+			// 		op.AddPointToGraph(cnext);
+			// 		TA endDepot = TA(DEPOT_ID, cnext); //todo: delete endDepot
+			// 		endDepot.timeWindow.closeTime = cuts[i + 1];
+			// 		solutions[i].m_walks[j].push_back(endDepot);
+			// 	}
+			// }
 		}
 
 		for (size_t j = 0; j < solutions[i].m_walks.size(); ++j) { //foreach walk
@@ -398,18 +506,19 @@ void ILS::SplitSearch(std::vector<Solution>& solutions, const std::vector<double
 		}
 
 		if (i > 0) {
-			for (auto& walk : solutions[i].m_walks) {
-				if(!walk.empty())
-					walk.pop_front();
+			for(std::vector<List<TA>>::iterator walk_it = solutions[i].m_walks.begin(); walk_it != solutions[i].m_walks.end(); ++walk_it){
+				int walk_index = walk_it - solutions[i].m_walks.begin();
+				// if(walk_it->front().id == solutions[i-1].m_walks[walk_index].back().id){
+					walk_it->pop_front();
+				// }
 			}
-				
 		}
 
 		if (i < solutions.size() - 1) {
 			for (auto& walk : solutions[i].m_walks) {
-				if (!walk.empty()) {
+				// if (!walk.empty()) {
 					walk.pop_back();
-				}
+				// }
 			} 
 		}
 	}

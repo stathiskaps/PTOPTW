@@ -10,6 +10,7 @@
 #include <numeric>
 #include <signal.h>
 #include <fmt/ranges.h>
+#include <chrono>
 #include <plog/Log.h> // Step1: include the headers
 #include "plog/Initializers/RollingFileInitializer.h"
 #include "List.h"
@@ -37,6 +38,9 @@ private:
 	//std::map<std::string, std::vector<ActivityInBucket>> registry;
 
 	int mBucketsNum;
+	List<TA>::iterator calcStartDepot(std::vector<Solution>&, const int, const int, const OP&);
+	void AddStartDepots(std::vector<Solution>&, const int, const OP&);
+	void AddEndDepots(std::vector<Solution>&, const std::vector<double>&, const int, OP&);
 	bool compareTimeWindowCenter(const List<TA>::iterator&, const List<TA>::iterator&);
 	virtual std::tuple<List<TA>::iterator, double, int, int> getBestPos(const TA&, const List<TA>&, const Vector2D<double>&);
 	virtual std::tuple<Walks::iterator, List<TA>::iterator, double, int, int> getBestPos(const TA&, Walks&, const Vector2D<double>&);
