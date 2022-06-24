@@ -36,11 +36,11 @@ void ILS::SolveNew(OP& op) {
 	while (times_not_improved < MAX_TIMES_NOT_IMPROVED) {
 		counter++;
 		
-		std::vector<Solution> process_solutions = splitSolution(process_solution, cuts, registry);
-		SplitSearch(process_solutions, cuts, op, registry);
-		process_solution = connectSolutions(process_solutions, op.m_walks_num);
-		validate(process_solution.m_walks, op.mTravelTimes);
-		// construct(process_solution, op.mTravelTimes);
+		// std::vector<Solution> process_solutions = splitSolution(process_solution, cuts, registry);
+		// SplitSearch(process_solutions, cuts, op, registry);
+		// process_solution = connectSolutions(process_solutions, op.m_walks_num);
+		// validate(process_solution.m_walks, op.mTravelTimes);
+		construct(process_solution, op.mTravelTimes);
 		int score = process_solution.getScores();
 		if (score > best_score) {
 			best_score = score;
@@ -356,36 +356,6 @@ void ILS::AddEndDepots(std::vector<Solution>& solutions, const std::vector<doubl
 	}
 }
 
-List<TA>::iterator ILS::calcStartDepot(std::vector<Solution>& solutions, const int sol_index, const int walk_index, const OP& op){
-	int prev_sol_index = sol_index-1;
-	const TA* first_ta = &solutions[sol_index].m_walks[walk_index].front();
-	List<TA>::iterator node_to_insert = solutions[sol_index].m_walks[walk_index].end();
-	while(prev_sol_index >= 0){
-		if(solutions[prev_sol_index].m_walks[walk_index].empty()){
-			continue;
-		}
-
-		List<TA>::iterator curr = solutions[prev_sol_index].m_walks[walk_index].end() - 1;
-		while(curr != solutions[prev_sol_index].m_walks[walk_index].end()){
-			if(curr.iter->data.depTime + op.mTravelTimes[curr.iter->data.depPointId][first_ta->arrPointId] < first_ta->maxShift){ //update maxShifts at start of function
-				curr = solutions[prev_sol_index].m_walks[walk_index].erase(curr);
-				curr--;
-			} else {
-				node_to_insert = curr;
-			}
-			
-		}
-		if(node_to_insert != solutions[sol_index].m_walks[walk_index].end()){
-			break;
-		}
-	}
-	if(node_to_insert != solutions[sol_index].m_walks[walk_index].end()){
-		std::cerr << "Previous valid TA wasn't found to add as startDepot" << std::endl;
-		std::exit(1);
-	}
-	return node_to_insert;
-}
-
 void ILS::SplitSearch(std::vector<Solution>& solutions, const std::vector<double>& cuts, OP& op, std::map<std::string, Activity>& registry) {
 
 	const int min_size = 3;
@@ -413,87 +383,13 @@ void ILS::SplitSearch(std::vector<Solution>& solutions, const std::vector<double
 		//if (solutions[i].m_unvisited.empty()) continue;
 		if (i == 0) { //first solution
 			AddEndDepots(solutions, cuts, i, op);
-			// for (size_t j = 0; j < solutions[i].m_walks.size(); ++j) { //foreach walk
-
-			// 	//add endpoint
-			// 	int next_index = i + 1;
-			// 	while (next_index < solutions.size() && !hasWeightedCentroid(solutions[next_index], j, min_size)) {
-			// 		next_index++;
-			// 	}
-
-			// 	if (next_index == solutions.size()) {
-			// 		solutions[i].m_walks[j].push_back(*op.mEndDepot);
-			// 		solutions[i].m_walks[j].back().timeWindow.closeTime = cuts[i + 1];
-			// 	}
-			// 	else {
-			// 		Point cnext;
-			// 		if (solutions[i + 1].m_walks[j].size() >= min_size) {
-			// 			const List<TA>& next_solution_walk = solutions[next_index].m_walks[j];
-			// 			cnext = getWeightedCentroid(next_solution_walk.at(0), next_solution_walk.at(min_size));
-			// 		}
-			// 		else {
-			// 			cnext = getWeightedCentroid(solutions[i + 1].m_unvisited.begin(), solutions[i + 1].m_unvisited.end());
-			// 		}
-			// 		op.AddPointToGraph(cnext);
-			// 		TA endDepot = TA(DEPOT_ID, cnext); //todo: delete endDepot
-			// 		endDepot.timeWindow.closeTime = cuts[i + 1];
-			// 		//endDepot->maxShift = endDepot->timeWindow.closeTime - endDepot->depTime;
-			// 		solutions[i].m_walks[j].push_back(endDepot);
-			// 	}
-			// }
 		} 
 		else if (i == solutions.size() - 1) {
 			AddStartDepots(solutions, i, op);
-			// for (size_t j = 0; j < solutions[i].m_walks.size(); ++j) { //foreach walk
-			// 	//calc start point
-			// 	if(solutions[i].m_walks[j].empty() || (solutions[i].m_walks[j].size() == 1 && solutions[i].m_walks[j].front().id == DEPOT_ID)){
-			// 		int prev_index = i-1;
-			// 		while (solutions[prev_index].m_walks[j].empty()) prev_index--;
-
-			// 		TA prev_ta = solutions[prev_index].m_walks[j].back();
-			// 		solutions[i].m_walks[j].push_front(prev_ta);
-				
-			// 	}
-			// }
 		}
 		else {
 			AddStartDepots(solutions, i, op);
 			AddEndDepots(solutions, cuts, i, op);
-			// for (size_t j = 0; j < solutions[i].m_walks.size(); ++j) { //foreach walk
-			// 	//calc start point
-			// 	if(solutions[i].m_walks[j].empty() || (solutions[i].m_walks[j].size() == 1 && solutions[i].m_walks[j].front().id == DEPOT_ID)){
-			// 		int prev_index = i - 1;
-			// 		while (solutions[prev_index].m_walks[j].empty()) prev_index--;
-
-			// 		TA prev_ta = solutions[prev_index].m_walks[j].back();
-			// 		solutions[i].m_walks[j].push_front(prev_ta);
-			// 	}
-
-			// 	//add endpoint
-			// 	int next_index = i + 1;
-			// 	while (next_index < solutions.size() && !hasWeightedCentroid(solutions[next_index], j, min_size)) {
-			// 		next_index++;
-			// 	}
-
-			// 	if (next_index == solutions.size()) {
-			// 		solutions[i].m_walks[j].push_back(*op.mEndDepot);
-			// 		solutions[i].m_walks[j].back().timeWindow.closeTime = cuts[i + 1];
-			// 	}
-			// 	else {
-			// 		Point cnext;
-			// 		if (solutions[i + 1].m_walks[j].size() > min_size) {
-			// 			const List<TA>& next_solution_walk = solutions[next_index].m_walks[j];
-			// 			cnext = getWeightedCentroid(next_solution_walk.at(0), next_solution_walk.at(min_size));
-			// 		}
-			// 		else {
-			// 			cnext = getWeightedCentroid(solutions[i + 1].m_unvisited.begin(), solutions[i + 1].m_unvisited.end());
-			// 		}
-			// 		op.AddPointToGraph(cnext);
-			// 		TA endDepot = TA(DEPOT_ID, cnext); //todo: delete endDepot
-			// 		endDepot.timeWindow.closeTime = cuts[i + 1];
-			// 		solutions[i].m_walks[j].push_back(endDepot);
-			// 	}
-			// }
 		}
 
 		for (size_t j = 0; j < solutions[i].m_walks.size(); ++j) { //foreach walk
@@ -507,18 +403,13 @@ void ILS::SplitSearch(std::vector<Solution>& solutions, const std::vector<double
 
 		if (i > 0) {
 			for(std::vector<List<TA>>::iterator walk_it = solutions[i].m_walks.begin(); walk_it != solutions[i].m_walks.end(); ++walk_it){
-				int walk_index = walk_it - solutions[i].m_walks.begin();
-				// if(walk_it->front().id == solutions[i-1].m_walks[walk_index].back().id){
-					walk_it->pop_front();
-				// }
+				walk_it->pop_front();
 			}
 		}
 
 		if (i < solutions.size() - 1) {
 			for (auto& walk : solutions[i].m_walks) {
-				// if (!walk.empty()) {
-					walk.pop_back();
-				// }
+				walk.pop_back();
 			} 
 		}
 	}

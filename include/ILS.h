@@ -38,7 +38,6 @@ private:
 	//std::map<std::string, std::vector<ActivityInBucket>> registry;
 
 	int mBucketsNum;
-	List<TA>::iterator calcStartDepot(std::vector<Solution>&, const int, const int, const OP&);
 	void AddStartDepots(std::vector<Solution>&, const int, const OP&);
 	void AddEndDepots(std::vector<Solution>&, const std::vector<double>&, const int, OP&);
 	bool compareTimeWindowCenter(const List<TA>::iterator&, const List<TA>::iterator&);
