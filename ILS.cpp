@@ -6,9 +6,110 @@ ILS::ILS(int bucketsNum) : mBucketsNum(bucketsNum) {}
 
 ILS::~ILS() {}
 
+void ILS::dbScan(OP& op){
+	typedef ClusteringDatum<2, double, 1, float, uint16_t> CDat_t;
+
+    constexpr size_t MaxElementsInANode = 6; // 16, 32, 128, 256, ... ?
+    typedef boost::geometry::index::rstar<MaxElementsInANode> RTreeParameter_t;
+    typedef boost::geometry::index::rtree<CDat_t,RTreeParameter_t> RTree_t;
+    typedef boost::geometry::model::box<CDat_t> Box_t;
+
+    RTree_t rtree;
+	double mean_travel_time = 0;
+	int n = 0;
+	std::vector<std::vector<int>>::const_iterator row; 
+    std::vector<int>::const_iterator col; 
+
+	for (std::vector<std::vector<double>>::iterator row = op.mTravelTimes.begin(); row != op.mTravelTimes.end(); ++row){
+		for(std::vector<double>::iterator col = row->begin(); col != row->end(); ++col){
+			mean_travel_time += *col;
+			n++;
+		}
+	}
+	mean_travel_time = mean_travel_time / n;
+	std::cout << "mean_travel_time: " << mean_travel_time << std::endl;
+
+	for(std::vector<TA*>::iterator ta_it = op.mAttractions.begin(); ta_it != op.mAttractions.end(); ++ta_it){
+		rtree.insert(CDat_t( { (*ta_it)->point.pos.lat, (*ta_it)->point.pos.lon }, {0.0f} ));
+	}
+
+    //const size_t MinPts = CDat_t::SpatialDimensionCount_*2;
+    //const SpatialQueryTechnique UsersSpatialQueryTechnique = SpatialQueryTechnique::UseWithin;
+    const double Eps = 10.0;
+    
+    DBSCAN<RTree_t,CDat_t>(rtree,Eps);
+
+	//Print out the points with cluster info.
+    if(true){
+        constexpr auto RTreeSpatialQueryGetAll = [](const CDat_t &) -> bool { return true; };
+        RTree_t::const_query_iterator it;
+        it = rtree.qbegin(boost::geometry::index::satisfies( RTreeSpatialQueryGetAll ));
+        for( ; it != rtree.qend(); ++it){
+            std::cout << "  Point: " << boost::geometry::wkt(*it)
+                      << "\t\t Attribute[0]: " << it->Attributes[0]
+                      << "\t\t ClusterID: " << it->CID.ToText()
+                      << std::endl;
+        }
+
+		std::cout << "finished" << std::endl;
+    }
+
+	if(true){
+        constexpr auto RTreeSpatialQueryGetAll = [](const CDat_t &) -> bool { return true; };
+        std::ofstream svg("Visualized.svg");
+        boost::geometry::svg_mapper<CDat_t> mapper(svg, 1280, 1024);
+
+        //Add the items to the map. The virtual bounds will be computed to accomodate.
+        // Also keep a record of the distinct clusters encountered.
+        std::set<typename CDat_t::ClusterIDType_> RawCIDs;
+
+        RTree_t::const_query_iterator it;
+        it = rtree.qbegin(boost::geometry::index::satisfies( RTreeSpatialQueryGetAll ));
+        for( ; it != rtree.qend(); ++it){
+            mapper.add(*it);
+            RawCIDs.insert( it->CID.Raw );
+        }
+        std::cout << RawCIDs.size() << " distinct ClusterIDs encountered." << std::endl;
+
+        //Create a mapping between the ClusterIDs and a pseudo-random RGB colour.
+        size_t ColourSeed = 9137;
+        std::mt19937 re(ColourSeed);
+        std::uniform_real_distribution<> rdC(0.0, 1.0);
+        std::uniform_int_distribution<> rdA( 50, 210);
+        std::uniform_int_distribution<> rdB( 20, 125);
+        std::map<typename CDat_t::ClusterIDType_, std::string> ColoursA, ColoursB;
+        for(const auto RawCID : RawCIDs){
+            ColoursA[RawCID] = std::to_string((rdC(re) > 0.33) ? rdA(re) : 230) + std::string(",")
+                             + std::to_string((rdC(re) > 0.33) ? rdA(re) : 230) + std::string(",")
+                             + std::to_string((rdC(re) > 0.33) ? rdA(re) : 230);
+            ColoursB[RawCID] = std::to_string((rdC(re) > 0.33) ? rdB(re) :  10) + std::string(",")
+                             + std::to_string((rdC(re) > 0.33) ? rdB(re) :  10) + std::string(",")
+                             + std::to_string((rdC(re) > 0.33) ? rdB(re) :  10);
+        }
+
+        //Actually draw the items.
+        it = rtree.qbegin(boost::geometry::index::satisfies( RTreeSpatialQueryGetAll ));
+        for( ; it != rtree.qend(); ++it){
+            std::stringstream ss;
+            ss << "fill-opacity:0.80; "
+               << "fill:rgb(" << ColoursA[it->CID.Raw] << "); "
+               << "stroke-opacity:0.90; "
+               << "stroke:rgb(" << ColoursB[it->CID.Raw] << "); "
+               << "stroke-width:1";
+            //mapper.map(*it, "fill-opacity:0.75; fill:rgb(75,100,0); stroke:rgb(30,40,0); stroke-width:2", 5);
+            mapper.map(*it, ss.str(), 6);
+        }
+    }
+}
+
 void ILS::SolveNew(OP& op) {
-	auto start = std::chrono::steady_clock::now();
+
 	std::cout.clear();
+
+	// dbScan(op);
+	// return;
+
+	auto start = std::chrono::steady_clock::now();
 
 	//todo: for pr13 and buckets_num 4 got invalid bucket error
 	const int num_locations = op.mAttractions.size();
@@ -36,11 +137,11 @@ void ILS::SolveNew(OP& op) {
 	while (times_not_improved < MAX_TIMES_NOT_IMPROVED) {
 		counter++;
 		
-		// std::vector<Solution> process_solutions = splitSolution(process_solution, cuts, registry);
-		// SplitSearch(process_solutions, cuts, op, registry);
-		// process_solution = connectSolutions(process_solutions, op.m_walks_num);
-		// validate(process_solution.m_walks, op.mTravelTimes);
-		construct(process_solution, op.mTravelTimes);
+		std::vector<Solution> process_solutions = splitSolution(process_solution, cuts, registry);
+		SplitSearch(process_solutions, cuts, op, registry);
+		process_solution = connectSolutions(process_solutions, op.m_walks_num);
+		validate(process_solution.m_walks, op.mTravelTimes);
+		// construct(process_solution, op.mTravelTimes);
 		int score = process_solution.getScores();
 		if (score > best_score) {
 			best_score = score;
@@ -295,8 +396,14 @@ bool ILS::hasWeightedCentroid(const Solution& sol, const int walk_index, const i
 void ILS::AddStartDepots(std::vector<Solution>& solutions, const int sol_index, const OP& op){
 	for (size_t j = 0; j < solutions[sol_index].m_walks.size(); ++j) {
 		int prev_sol_index = sol_index-1;
+		List<TA>::iterator node_to_insert = solutions[prev_sol_index].m_walks[j].end() - 1;
+
+		if(solutions[sol_index].m_walks[j].empty()) {
+			solutions[sol_index].m_walks[j].push_front(node_to_insert.iter->data); //TODO: ok but what happens if previous is empty too?
+			return;
+		}
+
 		const TA* first_ta = &solutions[sol_index].m_walks[j].front();
-		List<TA>::iterator node_to_insert = solutions[sol_index].m_walks[j].end();
 		while(prev_sol_index >= 0){
 			if(solutions[prev_sol_index].m_walks[j].empty()){
 				prev_sol_index--;
@@ -305,14 +412,13 @@ void ILS::AddStartDepots(std::vector<Solution>& solutions, const int sol_index, 
 
 			List<TA>::iterator curr = solutions[prev_sol_index].m_walks[j].end() - 1;
 			while(curr != solutions[prev_sol_index].m_walks[j].end()){
-				if(curr.iter->data.depTime + op.mTravelTimes[curr.iter->data.depPointId][first_ta->arrPointId] < first_ta->maxShift){ //update maxShifts at start of function
+				if(curr.iter->data.depTime + op.mTravelTimes[curr.iter->data.depPointId][first_ta->arrPointId] > first_ta->depTime + first_ta->maxShift){ //update maxShifts at start of function
 					curr = solutions[prev_sol_index].m_walks[j].erase(curr);
-					
 				} else {
-					node_to_insert = curr;
 					break;
 				}
 				curr--;
+				node_to_insert = curr;
 			}
 			if(node_to_insert != solutions[sol_index].m_walks[j].end()){
 				break;
@@ -322,7 +428,7 @@ void ILS::AddStartDepots(std::vector<Solution>& solutions, const int sol_index, 
 			std::cerr << "Previous valid TA wasn't found to add as startDepot" << std::endl;
 			std::exit(1);
 		}
-		solutions[sol_index].m_walks[j].push_back(node_to_insert.iter->data);
+		solutions[sol_index].m_walks[j].push_front(node_to_insert.iter->data);
 	}
 }
 
@@ -349,7 +455,7 @@ void ILS::AddEndDepots(std::vector<Solution>& solutions, const std::vector<doubl
 				cnext = getWeightedCentroid(solutions[sol_index + 1].m_unvisited.begin(), solutions[sol_index + 1].m_unvisited.end());
 			}
 			op.AddPointToGraph(cnext);
-			TA endDepot = TA(DEPOT_ID, cnext); //todo: delete endDepot
+			TA endDepot = TA(CNEXT_ID, cnext); //todo: delete endDepot
 			endDepot.timeWindow.closeTime = cuts[sol_index + 1];
 			solutions[sol_index].m_walks[j].push_back(endDepot);
 		}
@@ -741,7 +847,6 @@ std::tuple<List<TA>::iterator, double, int, int> ILS_TOPTW::getBestPos(const TA&
 void ILS_TOPTW::updateTimes(List<TA>& walk, const List<TA>::iterator& start_pos, const bool smart, const Vector2D<double>& travel_times) {
 	//update times first
 	List<TA>::iterator it{ start_pos };
-
 	if (it == walk.begin()) {
 		it.iter->data.waitDuration = std::max(0.0, it.iter->data.timeWindow.openTime - it.iter->data.arrTime);
 		it.iter->data.startOfVisitTime = it.iter->data.arrTime + it.iter->data.waitDuration;

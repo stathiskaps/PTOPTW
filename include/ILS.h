@@ -19,7 +19,7 @@
 #include "OP.h"
 #include "Custom.h"
 //#include "boost/geometry.hpp"
-//#include "ygor/YgorClustering.hpp"
+#include "ygor/YgorClustering.hpp"
 
 template <typename T>
 using Vector2D = std::vector<std::vector<T>>;
@@ -38,6 +38,7 @@ private:
 	//std::map<std::string, std::vector<ActivityInBucket>> registry;
 
 	int mBucketsNum;
+	void dbScan(OP& op);
 	void AddStartDepots(std::vector<Solution>&, const int, const OP&);
 	void AddEndDepots(std::vector<Solution>&, const std::vector<double>&, const int, OP&);
 	bool compareTimeWindowCenter(const List<TA>::iterator&, const List<TA>::iterator&);
