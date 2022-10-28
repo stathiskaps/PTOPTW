@@ -171,6 +171,11 @@ void ILS::SolveNew(OP& op) {
 	std::cout << std::endl;
 }
 
+std::vector<Interval> ILS::getIntervals(std::vector<TA*> unvisited, int intervals_num, double day_start_time, double day_close_time){
+	std::vector<Interval> intervals;
+
+}
+
 std::vector<double> ILS::Preprocessing(std::vector<TA*> unvisited, int bins_num, double day_close_time) {
 	std::vector<double> cuts;
 	cuts.reserve(bins_num + 1);

@@ -35,6 +35,11 @@ private:
 		TimeWindow tw;
 	};
 
+	struct Interval {
+		double start_time;
+		double end_time;
+	};
+
 	//std::map<std::string, std::vector<ActivityInBucket>> registry;
 
 	int mBucketsNum;
