@@ -102,14 +102,17 @@ void ILS::dbScan(OP& op){
     }
 }
 
+
 void ILS::SolveNew(OP& op) {
 
-	std::cout.clear();
 
+	// std::cout.setstate(std::ios_base::failbit);
 	// dbScan(op);
 	// return;
 
 	auto start = std::chrono::steady_clock::now();
+
+	std::cout << "Come on, do something" << std::endl;
 
 	//todo: for pr13 and buckets_num 4 got invalid bucket error
 	const int num_locations = op.mAttractions.size();
@@ -140,7 +143,7 @@ void ILS::SolveNew(OP& op) {
 		std::vector<Solution> process_solutions = splitSolution(process_solution, cuts, registry);
 		SplitSearch(process_solutions, cuts, op, registry);
 		process_solution = connectSolutions(process_solutions, op.m_walks_num);
-		validate(process_solution.m_walks, op.mTravelTimes);
+		validate(process_solution.m_walks, op.mTravelT imes);
 		// construct(process_solution, op.mTravelTimes);
 		int score = process_solution.getScores();
 		if (score > best_score) {
@@ -160,6 +163,7 @@ void ILS::SolveNew(OP& op) {
 	auto end = std::chrono::steady_clock::now();
 	auto diff = end - start;
 
+	std::cout.clear();
 	validate(best_solution.m_walks, op.mTravelTimes);
 	std::cout << "Best score: " << best_score << std::endl;
 	std::cout << "Visits: " << best_solution.getVisits() << std::endl;
@@ -398,12 +402,12 @@ void ILS::AddStartDepots(std::vector<Solution>& solutions, const int sol_index, 
 		int prev_sol_index = sol_index-1;
 		List<TA>::iterator node_to_insert = solutions[prev_sol_index].m_walks[j].end() - 1;
 
-		if(solutions[sol_index].m_walks[j].empty()) {
-			solutions[sol_index].m_walks[j].push_front(node_to_insert.iter->data); //TODO: ok but what happens if previous is empty too?
-			return;
-		}
+		// if(solutions[sol_index].m_walks[j].empty()) {
+		// 	solutions[sol_index].m_walks[j].push_front(node_to_insert.iter->data); //TODO: ok but what happens if previous is empty too?
+		// 	return;
+		// }
 
-		const TA* first_ta = &solutions[sol_index].m_walks[j].front();
+		const List<TA>::iterator first_ta = solutions[sol_index].m_walks[j].begin();
 		while(prev_sol_index >= 0){
 			if(solutions[prev_sol_index].m_walks[j].empty()){
 				prev_sol_index--;
@@ -411,8 +415,13 @@ void ILS::AddStartDepots(std::vector<Solution>& solutions, const int sol_index, 
 			}
 
 			List<TA>::iterator curr = solutions[prev_sol_index].m_walks[j].end() - 1;
+			if(solutions[sol_index].m_walks[j].empty()) {
+				node_to_insert = curr;
+				break;	
+			}
 			while(curr != solutions[prev_sol_index].m_walks[j].end()){
-				if(curr.iter->data.depTime + op.mTravelTimes[curr.iter->data.depPointId][first_ta->arrPointId] > first_ta->depTime + first_ta->maxShift){ //update maxShifts at start of function
+
+				if(curr.iter->data.depTime + op.mTravelTimes[curr.iter->data.depPointId][first_ta.iter->data.arrPointId] > first_ta.iter->data.depTime + first_ta.iter->data.maxShift){ //update maxShifts at start of function
 					curr = solutions[prev_sol_index].m_walks[j].erase(curr);
 				} else {
 					break;
@@ -420,7 +429,7 @@ void ILS::AddStartDepots(std::vector<Solution>& solutions, const int sol_index, 
 				curr--;
 				node_to_insert = curr;
 			}
-			if(node_to_insert != solutions[sol_index].m_walks[j].end()){
+			if(node_to_insert != solutions[prev_sol_index].m_walks[j].end() - 1){
 				break;
 			}
 		}
