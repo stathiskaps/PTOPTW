@@ -143,7 +143,7 @@ void ILS::SolveNew(OP& op) {
 		std::vector<Solution> process_solutions = splitSolution(process_solution, cuts, registry);
 		SplitSearch(process_solutions, cuts, op, registry);
 		process_solution = connectSolutions(process_solutions, op.m_walks_num);
-		validate(process_solution.m_walks, op.mTravelT imes);
+		validate(process_solution.m_walks, op.mTravelTimes);
 		// construct(process_solution, op.mTravelTimes);
 		int score = process_solution.getScores();
 		if (score > best_score) {
