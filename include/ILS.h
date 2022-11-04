@@ -3,6 +3,7 @@
 #include <iostream>
 #include <vector>
 #include <map>
+#include <unordered_map>
 #include <stdexcept>
 #include <tuple>
 #include <chrono>
@@ -24,12 +25,30 @@
 template <typename T>
 using Vector2D = std::vector<std::vector<T>>;
 
+template <typename T>
+void printVector2D(Vector2D<T> v){
+	for(auto &i : v){
+		for(auto &j : i){
+			std::cout << j << " ";
+		}
+		std::cout << std::endl;
+	}
+}
+
 using Walks = std::vector<List<TA>>;
 
 using MapOfActivities = std::map<std::string, Activity>;
 
 class ILS{
 private:
+	struct Usage{
+		u_int16_t imported;
+		u_int16_t solved;
+		u_int16_t improved;
+
+		Usage() : imported(1), solved(1), improved(1) {}
+	};
+
 	struct Bin{
 		List<TA> unvisited;
 		TimeWindow tw;
@@ -38,6 +57,7 @@ private:
 	struct Interval {
 		double start_time;
 		double end_time;
+		List<TA> unvisited;
 	};
 
 	//std::map<std::string, std::vector<ActivityInBucket>> registry;
@@ -47,12 +67,19 @@ private:
 	void AddStartDepots(std::vector<Solution>&, const int, const OP&);
 	void AddEndDepots(std::vector<Solution>&, const std::vector<double>&, const int, OP&);
 	bool compareTimeWindowCenter(const List<TA>::iterator&, const List<TA>::iterator&);
+
+
+
 	virtual std::tuple<List<TA>::iterator, double, int, int> getBestPos(const TA&, const List<TA>&, const Vector2D<double>&);
 	virtual std::tuple<Walks::iterator, List<TA>::iterator, double, int, int> getBestPos(const TA&, Walks&, const Vector2D<double>&);
 	virtual void updateTimes(List<TA>&, const List<TA>::iterator&, const bool, const Vector2D<double>&);
+	std::map<std::string, std::vector<Usage>> initRegistry(List<TA>&, std::vector<ILS::Interval>);
+	std::map<std::string, std::vector<double>> getActivities(List<TA>&, std::vector<ILS::Interval>);
+	std::vector<Interval> getIntervals(std::vector<TA*>, int, double, double);
 	void SplitSearch(std::vector<Solution>&, const std::vector<double>&, OP&, std::map<std::string, Activity>&);
 	void SplitSearch2(Solution&, const std::vector<double>&, OP&, std::map<std::string, Activity>&);
 	std::vector<Bin> splitUnvisited(List<TA>&, std::map<std::string, Activity>&);
+	std::vector<List<TA>> splitUnvisitedList(List<TA>&, int, std::map<std::string, std::vector<ILS::Usage>>&, std::map<std::string, std::vector<double>>);
 	bool hasWeightedCentroid(const Solution& sol, const int, const int);
 	std::vector<Solution> splitSolution(Solution&, const std::vector<double>&, std::map<std::string, Activity>&);
 	inline Point getWeightedCentroid(const List<TA>::iterator& first, const List<TA>::iterator& last);

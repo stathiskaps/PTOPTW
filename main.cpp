@@ -118,7 +118,6 @@ void init(std::string filename, int numRoutes) {
 
 #if 1
 	std::cout << std::endl;
-	std::cout.setstate(std::ios_base::failbit);
 	TA* depot = touristAttractions[0];
 	touristAttractions.erase(touristAttractions.begin());
 

@@ -102,6 +102,50 @@ void ILS::dbScan(OP& op){
     }
 }
 
+std::map<std::string, std::vector<double>> ILS::getActivities(List<TA>& unvisited, std::vector<ILS::Interval> intervals){
+	std::map<std::string, std::vector<double>> activities;
+	for(auto& n : unvisited) {
+		std::vector<double> durations;
+		for(auto& i : intervals) {
+			double active_dur = std::min(i.end_time, n.timeWindow.closeTime) - std::max(i.start_time, n.timeWindow.openTime);
+			if (active_dur < 0) active_dur = 0;
+			durations.push_back(active_dur/(n.timeWindow.closeTime-n.timeWindow.openTime));
+		}
+		activities.insert({n.id, durations});
+	}
+	return activities;
+}
+
+std::vector<ILS::Interval> ILS::getIntervals(std::vector<TA*> unvisited, int intervals_num, double day_start_time, double day_close_time){
+	std::vector<ILS::Interval> intervals;
+	double diff = day_close_time - day_start_time;
+	double dur = diff/intervals_num;
+
+	double start = day_start_time;
+	double end = day_start_time + dur;
+
+	for(size_t i = 0; i < intervals_num; ++i){
+		intervals.push_back(ILS::Interval{start, end});
+		start+=dur;
+		end+=dur;
+	}
+
+	return intervals;
+}
+
+std::map<std::string, std::vector<ILS::Usage>> ILS::initRegistry(List<TA>& unvisited, std::vector<ILS::Interval> intervals) {
+	std::map<std::string, std::vector<ILS::Usage>> reg;
+
+	for(auto& n : unvisited){
+		std::vector<ILS::Usage> usages;
+		for(auto &i : intervals){
+			usages.push_back(Usage());
+		}
+		reg.insert({n.id, usages});
+	}
+	return reg;
+}
+
 
 void ILS::SolveNew(OP& op) {
 
@@ -124,10 +168,18 @@ void ILS::SolveNew(OP& op) {
 		unvisited.push_back(*ta);
 	}
 
+	std::vector<ILS::Interval> intervals = getIntervals(op.mAttractions, buckets_num, op.mStartDepot->timeWindow.openTime, op.mEndDepot->timeWindow.closeTime);
+	const std::map<std::string, std::vector<double>> activities = getActivities(unvisited, intervals);
+	std::map<std::string, std::vector<ILS::Usage>> reg = initRegistry(unvisited, intervals); 
 	std::vector<double> cuts = Preprocessing(op.mAttractions, buckets_num, op.mEndDepot->timeWindow.closeTime);
 	std::map<std::string, Activity> registry = initializeRegistry(unvisited, cuts);
 	Solution process_solution{ *op.mStartDepot, *op.mEndDepot, unvisited, op.mStartDepot->timeWindow.openTime, op.mEndDepot->timeWindow.closeTime, op.m_walks_num }, best_solution{};
 	
+	std::vector<List<TA>> lists = splitUnvisitedList(unvisited, buckets_num, reg, activities);
+	std::vector<Solution> proc_solutions(buckets_num, Solution());
+	for(size_t i = 0; i < buckets_num; ++i){
+		proc_solutions[i].m_unvisited = lists[i];
+	}
 
 	std::vector<Bin> bins;
 	for (std::vector<double>::const_iterator cut_it = cuts.begin(); cut_it != cuts.end() - 1; ++cut_it) {
@@ -139,25 +191,27 @@ void ILS::SolveNew(OP& op) {
 
 	while (times_not_improved < MAX_TIMES_NOT_IMPROVED) {
 		counter++;
-		
-		std::vector<Solution> process_solutions = splitSolution(process_solution, cuts, registry);
-		SplitSearch(process_solutions, cuts, op, registry);
-		process_solution = connectSolutions(process_solutions, op.m_walks_num);
-		validate(process_solution.m_walks, op.mTravelTimes);
-		// construct(process_solution, op.mTravelTimes);
-		int score = process_solution.getScores();
-		if (score > best_score) {
-			best_score = score;
-			//best_solution.reset();
-			best_solution = process_solution;
-			R = 1;
-			times_not_improved = 0;
-		}
-		else {
-			times_not_improved++;
-		}
 
-		Shake(process_solution, S, R, op, max_to_remove);
+		SplitSearchSolutions(proc_solutions, intervals, op, reg);
+		
+		// std::vector<Solution> process_solutions = splitSolution(process_solution, cuts, registry);
+		// SplitSearch(process_solutions, cuts, op, registry);
+		// process_solution = connectSolutions(process_solutions, op.m_walks_num);
+		// validate(process_solution.m_walks, op.mTravelTimes);
+		// // construct(process_solution, op.mTravelTimes);
+		// int score = process_solution.getScores();
+		// if (score > best_score) {
+		// 	best_score = score;
+		// 	//best_solution.reset();
+		// 	best_solution = process_solution;
+		// 	R = 1;
+		// 	times_not_improved = 0;
+		// }
+		// else {
+		// 	times_not_improved++;
+		// }
+
+		// Shake(process_solution, S, R, op, max_to_remove);
 
 	}
 	auto end = std::chrono::steady_clock::now();
@@ -169,11 +223,6 @@ void ILS::SolveNew(OP& op) {
 	std::cout << "Visits: " << best_solution.getVisits() << std::endl;
 	std::cout << "Executime time: " << std::chrono::duration <double, std::milli> (diff).count() << " ms" << std::endl;
 	std::cout << std::endl;
-}
-
-std::vector<Interval> ILS::getIntervals(std::vector<TA*> unvisited, int intervals_num, double day_start_time, double day_close_time){
-	std::vector<Interval> intervals;
-
 }
 
 std::vector<double> ILS::Preprocessing(std::vector<TA*> unvisited, int bins_num, double day_close_time) {
@@ -225,6 +274,8 @@ std::vector<double> ILS::Preprocessing(std::vector<TA*> unvisited, int bins_num,
 	return cuts;
 }
 
+
+
 std::vector<ILS::Bin> ILS::splitUnvisited(List<TA>& unvisited, std::map<std::string, Activity>& registry) {
 	std::vector<ILS::Bin> bins;
 	std::cout << "Splitting unvisited" << std::endl;
@@ -250,6 +301,43 @@ std::vector<ILS::Bin> ILS::splitUnvisited(List<TA>& unvisited, std::map<std::str
 		best_b->inBucket++;
 	}
 	return bins;
+}
+
+std::vector<List<TA>> ILS::splitUnvisitedList(List<TA>& unvisited, int intervals_num, std::map<std::string, std::vector<ILS::Usage>>& reg, std::map<std::string, std::vector<double>> activities) {
+	std::vector<List<TA>> lists(intervals_num, List<TA>());
+	//Split Unvisited
+	for (auto& ta : unvisited) {
+		const double total_duration{ ta.timeWindow.closeTime - ta.timeWindow.openTime };
+		double max_score{ -1 };
+
+		if(reg[ta.id].size() != activities[ta.id].size()){
+			throw std::runtime_error("vectors are not of equal size");
+		}
+
+		double best_score = DBL_MIN;
+		std::vector<ILS::Usage>::iterator best_it{ reg[ta.id].end() };
+		std::vector<ILS::Usage>::iterator usage_it;
+		std::vector<double>::iterator duratio_it;
+		for(usage_it = reg[ta.id].begin(), duratio_it = activities[ta.id].begin(); usage_it != reg[ta.id].end() ; ++usage_it, ++duratio_it){
+			double score = *duratio_it * (usage_it->solved / usage_it->imported);
+			if (score>best_score){
+				best_score = score;
+				best_it = usage_it;
+			}
+		}
+		if(best_it == reg[ta.id].end()){
+			throw std::runtime_error("didn't find a good interval for node " + ta.id);
+		}
+
+		const int index = best_it - reg[ta.id].begin();
+		lists[index].push_back(ta);
+		reg[ta.id].at(index).imported += 1;
+		std::cout << "Imported node " << ta.id << " to interval " << index << std::endl;
+	}
+
+	unvisited.clear();
+
+	return lists;
 }
 
 std::vector<Solution> ILS::splitSolution(Solution& sol, const std::vector<double>& cuts, std::map<std::string, Activity>& registry) {
