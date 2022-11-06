@@ -146,6 +146,22 @@ std::map<std::string, std::vector<ILS::Usage>> ILS::initRegistry(List<TA>& unvis
 	return reg;
 }
 
+void ILS::LocalSearch(Solution& sol, ILS::Interval interval, OP& op, std::map<std::string, std::vector<ILS::Usage>>& reg){
+	std::cout << "local search" << std::endl;
+}
+
+void ILS::Controller(std::vector<Solution>& proc_solutions, std::vector<ILS::Interval> intervals, OP& op, std::map<std::string, std::vector<ILS::Usage>>& reg){
+	if(proc_solutions.size() != intervals.size()){
+		throw std::runtime_error("vectors are not of equal size");
+	}
+	std::vector<Solution>::iterator sol_it;
+	std::vector<ILS::Interval>::iterator int_it;
+	for(sol_it = proc_solutions.begin(), int_it = intervals.begin(); sol_it != proc_solutions.end(); ++sol_it, ++int_it){
+
+		LocalSearch(*sol_it, *int_it, op, reg);
+	}
+}
+
 
 void ILS::SolveNew(OP& op) {
 
@@ -188,30 +204,31 @@ void ILS::SolveNew(OP& op) {
 	}
 
 	int counter{}, S{ 1 }, R{ 1 }, times_not_improved{ 0 }, best_score{ INT_MIN };
+	std::vector<Solution> process_solutions = splitSolution(process_solution, cuts, registry);
+
 
 	while (times_not_improved < MAX_TIMES_NOT_IMPROVED) {
 		counter++;
 
-		SplitSearchSolutions(proc_solutions, intervals, op, reg);
+		// Controller(proc_solutions, intervals, op, reg);
 		
-		// std::vector<Solution> process_solutions = splitSolution(process_solution, cuts, registry);
-		// SplitSearch(process_solutions, cuts, op, registry);
+		SplitSearch(process_solutions, intervals, op, registry);
 		// process_solution = connectSolutions(process_solutions, op.m_walks_num);
-		// validate(process_solution.m_walks, op.mTravelTimes);
-		// // construct(process_solution, op.mTravelTimes);
-		// int score = process_solution.getScores();
-		// if (score > best_score) {
-		// 	best_score = score;
-		// 	//best_solution.reset();
-		// 	best_solution = process_solution;
-		// 	R = 1;
-		// 	times_not_improved = 0;
-		// }
-		// else {
-		// 	times_not_improved++;
-		// }
+		validate(process_solution.m_walks, op.mTravelTimes);
+		// construct(process_solution, op.mTravelTimes);
+		int score = process_solution.getScores();
+		if (score > best_score) {
+			best_score = score;
+			//best_solution.reset();
+			best_solution = process_solution;
+			R = 1;
+			times_not_improved = 0;
+		}
+		else {
+			times_not_improved++;
+		}
 
-		// Shake(process_solution, S, R, op, max_to_remove);
+		Shake(process_solution, S, R, op, max_to_remove);
 
 	}
 	auto end = std::chrono::steady_clock::now();
@@ -490,25 +507,87 @@ bool ILS::hasWeightedCentroid(const Solution& sol, const int walk_index, const i
 	return sol.m_walks[walk_index].size() >= min_walk_size || !sol.m_unvisited.empty();
 }
 
-void ILS::AddStartDepots(std::vector<Solution>& solutions, const int sol_index, const OP& op){
-	for (size_t j = 0; j < solutions[sol_index].m_walks.size(); ++j) {
-		int prev_sol_index = sol_index-1;
+// double ILS::getShift(const List<TA>::iterator left, const List<TA>::iterator ins, const List<TA>::iterator right, const Vector2D<double>& travel_times){
+// 	double start_time = left.iter->data
+// 	double shift = travel_times[left.iter->data.depPointId][ins.point.id]
+// 				+ ins.waitDuration
+// 				+ ins.visitDuration
+// 				+ travel_times[ins.point.id][right.iter->data.arrPointId]
+// 				- travel_times[left.iter->data.depPointId][right.iter->data.arrPointId];
+
+// 	return shift;
+// }
+
+// bool ILS::TrimLeft(TA ta, List<TA> walk){
+// 	List<TA>::iterator curr = walk.begin();
+// 	for(List<TA>::iterator curr = walk.begin(); curr!=walk)
+// }
+
+void ILS::AddStartDepots(std::vector<Solution>& solutions, const std::vector<ILS::Interval>& intervals, const int i, const OP& op){
+	for (size_t j = 0; j < solutions[i].m_walks.size(); ++j) {
+		int prev_sol_index = i-1;
 		List<TA>::iterator node_to_insert = solutions[prev_sol_index].m_walks[j].end() - 1;
 
 		// if(solutions[sol_index].m_walks[j].empty()) {
 		// 	solutions[sol_index].m_walks[j].push_front(node_to_insert.iter->data); //TODO: ok but what happens if previous is empty too?
 		// 	return;
 		// }
+		
 
-		const List<TA>::iterator first_ta = solutions[sol_index].m_walks[j].begin();
+		//todo: trim nodes of current solution that are not compatible with the previous solution
+
+		if(first_solution){
+			solutions[i].m_walks[j].push_front(*op.mStartDepot);
+			solutions[i].m_walks[j].front().depTime = intervals[i].start_time;
+		} else {
+			while(solutions[prev_sol_index--].m_walks[j].empty() && prev_sol_index >= 0){
+				continue;
+			}
+
+			if(prev_sol_index == -1){
+				throw std::runtime_error("didn't find a valid previous walk to get a startDepot");
+			}
+
+			List<TA>::iterator prev_it = solutions[prev_sol_index].m_walks[j].end() - 1;
+			if(!solutions[i].m_walks[j].empty()) { //trim walk
+				List<TA>::iterator curr = solutions[i].m_walks[j].begin();
+				while(curr != solutions[i].m_walks[j].end()){
+					if(false){
+						curr = solutions[i].m_walks[j].erase(curr);
+					}
+				}
+			}
+
+
+			// while(curr != solutions[prev_sol_index].m_walks[j].end()){
+
+			// 	if(curr.iter->data.depTime + op.mTravelTimes[curr.iter->data.depPointId][first_ta.iter->data.arrPointId] > first_ta.iter->data.depTime + first_ta.iter->data.maxShift){ //update maxShifts at start of function
+			// 		curr = solutions[prev_sol_index].m_walks[j].erase(curr);
+			// 	} else {
+			// 		break;
+			// 	}
+			// 	curr--;
+			// 	node_to_insert = curr;
+			// }
+			// if(node_to_insert != solutions[prev_sol_index].m_walks[j].end() - 1){
+			// 	break;
+			// }
+
+
+		}
+		
+
+		const List<TA>::iterator first_ta = solutions[i].m_walks[j].begin();
 		while(prev_sol_index >= 0){
 			if(solutions[prev_sol_index].m_walks[j].empty()){
 				prev_sol_index--;
 				continue;
 			}
 
+
+
 			List<TA>::iterator curr = solutions[prev_sol_index].m_walks[j].end() - 1;
-			if(solutions[sol_index].m_walks[j].empty()) {
+			if(solutions[i].m_walks[j].empty()) {
 				node_to_insert = curr;
 				break;	
 			}
@@ -526,51 +605,51 @@ void ILS::AddStartDepots(std::vector<Solution>& solutions, const int sol_index, 
 				break;
 			}
 		}
-		if(node_to_insert == solutions[sol_index].m_walks[j].end()){
+		if(node_to_insert == solutions[i].m_walks[j].end()){
 			std::cerr << "Previous valid TA wasn't found to add as startDepot" << std::endl;
 			std::exit(1);
 		}
-		solutions[sol_index].m_walks[j].push_front(node_to_insert.iter->data);
+		solutions[i].m_walks[j].push_front(node_to_insert.iter->data);
 	}
 }
 
-void ILS::AddEndDepots(std::vector<Solution>& solutions, const std::vector<double>& cuts, const int sol_index, OP& op){
+void ILS::AddEndDepots(std::vector<Solution>& solutions, const std::vector<ILS::Interval>& intervals, const int i, OP& op){
 	const int min_size = 3;
-	for (size_t j = 0; j < solutions[sol_index].m_walks.size(); ++j) {
+	for (size_t j = 0; j < solutions[i].m_walks.size(); ++j) {
 		//add endpoint
-		int next_sol_index = sol_index + 1;
+		int next_sol_index = i + 1;
 		while (next_sol_index < solutions.size() && !hasWeightedCentroid(solutions[next_sol_index], j, min_size)) {
 			next_sol_index++;
 		}
 
-		if (next_sol_index == solutions.size()) {
-			solutions[sol_index].m_walks[j].push_back(*op.mEndDepot);
-			solutions[sol_index].m_walks[j].back().timeWindow.closeTime = cuts[sol_index + 1];
+		if (last_solution) {
+			solutions[i].m_walks[j].push_back(*op.mEndDepot);
+			solutions[i].m_walks[j].back().timeWindow.closeTime = intervals[i].end_time;
 		}
 		else {
 			Point cnext;
-			if (solutions[sol_index + 1].m_walks[j].size() > min_size) {
+			if (solutions[next_sol_index].m_walks[j].size() > min_size) {
 				const List<TA>& next_solution_walk = solutions[next_sol_index].m_walks[j];
 				cnext = getWeightedCentroid(next_solution_walk.at(0), next_solution_walk.at(min_size));
 			}
 			else {
-				cnext = getWeightedCentroid(solutions[sol_index + 1].m_unvisited.begin(), solutions[sol_index + 1].m_unvisited.end());
+				cnext = getWeightedCentroid(solutions[next_sol_index].m_unvisited.begin(), solutions[next_sol_index].m_unvisited.end());
 			}
 			op.AddPointToGraph(cnext);
 			TA endDepot = TA(CNEXT_ID, cnext); //todo: delete endDepot
-			endDepot.timeWindow.closeTime = cuts[sol_index + 1];
-			solutions[sol_index].m_walks[j].push_back(endDepot);
+			endDepot.timeWindow.closeTime = intervals[i].end_time;
+			solutions[i].m_walks[j].push_back(endDepot);
 		}
 	}
 }
 
-void ILS::SplitSearch(std::vector<Solution>& solutions, const std::vector<double>& cuts, OP& op, std::map<std::string, Activity>& registry) {
+void ILS::SplitSearch(std::vector<Solution>& solutions, const std::vector<ILS::Interval>& intervals, OP& op, std::map<std::string, Activity>& registry) {
 
 	const int min_size = 3;
 	const size_t solutions_size = solutions.size();
 
 	//go to each walk of start solution and add an startDepot if it doesn't exist
-	for (std::vector<List<TA>>::iterator walk_it = solutions.front().m_walks.begin(); walk_it != solutions.front().m_walks.end(); ++walk_it) {
+	for (auto walk_it = solutions.front().m_walks.begin(); walk_it != solutions.front().m_walks.end(); ++walk_it) {
 		if (walk_it->front().id != DEPOT_ID) {
 			walk_it->push_back(*op.mStartDepot);
 		}
@@ -578,7 +657,7 @@ void ILS::SplitSearch(std::vector<Solution>& solutions, const std::vector<double
 	}
 
 	//go to each walk of last solution and add an endDepot
-	for (std::vector<List<TA>>::iterator walk_it = solutions.back().m_walks.begin(); walk_it != solutions.back().m_walks.end(); ++walk_it) {
+	for (auto walk_it = solutions.back().m_walks.begin(); walk_it != solutions.back().m_walks.end(); ++walk_it) {
 		if (walk_it->back().id == DEPOT_ID) {
 			std::cerr << "found end depot while i shouldn't have" << std::endl;
 			std::exit(1);
@@ -589,15 +668,15 @@ void ILS::SplitSearch(std::vector<Solution>& solutions, const std::vector<double
 
 	for (size_t i = 0; i < solutions.size(); ++i) {
 		//if (solutions[i].m_unvisited.empty()) continue;
-		if (i == 0) { //first solution
-			AddEndDepots(solutions, cuts, i, op);
+		if (first_solution) {
+			AddEndDepots(solutions, intervals, i, op);
 		} 
-		else if (i == solutions.size() - 1) {
-			AddStartDepots(solutions, i, op);
+		else if (last_solution) {
+			AddStartDepots(solutions, intervals, i, op);
 		}
-		else {
-			AddStartDepots(solutions, i, op);
-			AddEndDepots(solutions, cuts, i, op);
+		else if (middle_solution){
+			AddStartDepots(solutions, intervals, i, op);
+			AddEndDepots(solutions, intervals, i, op);
 		}
 
 		for (size_t j = 0; j < solutions[i].m_walks.size(); ++j) { //foreach walk

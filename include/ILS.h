@@ -22,6 +22,10 @@
 //#include "boost/geometry.hpp"
 #include "ygor/YgorClustering.hpp"
 
+#define last_solution i==solutions.size()-1
+#define first_solution i==0
+#define middle_solution i>0 && i<solutions.size()-1
+
 template <typename T>
 using Vector2D = std::vector<std::vector<T>>;
 
@@ -36,11 +40,13 @@ void printVector2D(Vector2D<T> v){
 }
 
 using Walks = std::vector<List<TA>>;
+using Walk = List<TA>;
 
 using MapOfActivities = std::map<std::string, Activity>;
 
 class ILS{
 private:
+	Walk walk;
 	struct Usage{
 		u_int16_t imported;
 		u_int16_t solved;
@@ -64,8 +70,8 @@ private:
 
 	int mBucketsNum;
 	void dbScan(OP& op);
-	void AddStartDepots(std::vector<Solution>&, const int, const OP&);
-	void AddEndDepots(std::vector<Solution>&, const std::vector<double>&, const int, OP&);
+	void AddStartDepots(std::vector<Solution>&, const std::vector<ILS::Interval>&, const int, const OP&);
+	void AddEndDepots(std::vector<Solution>&, const std::vector<Interval>&, const int, OP&);
 	bool compareTimeWindowCenter(const List<TA>::iterator&, const List<TA>::iterator&);
 
 
@@ -73,13 +79,16 @@ private:
 	virtual std::tuple<List<TA>::iterator, double, int, int> getBestPos(const TA&, const List<TA>&, const Vector2D<double>&);
 	virtual std::tuple<Walks::iterator, List<TA>::iterator, double, int, int> getBestPos(const TA&, Walks&, const Vector2D<double>&);
 	virtual void updateTimes(List<TA>&, const List<TA>::iterator&, const bool, const Vector2D<double>&);
+	// double ILS::getShift(const TA&, const TA&, const TA&, const Vector2D<double>&);
 	std::map<std::string, std::vector<Usage>> initRegistry(List<TA>&, std::vector<ILS::Interval>);
 	std::map<std::string, std::vector<double>> getActivities(List<TA>&, std::vector<ILS::Interval>);
 	std::vector<Interval> getIntervals(std::vector<TA*>, int, double, double);
-	void SplitSearch(std::vector<Solution>&, const std::vector<double>&, OP&, std::map<std::string, Activity>&);
+	void SplitSearch(std::vector<Solution>&, const std::vector<Interval>&, OP&, std::map<std::string, Activity>&);
 	void SplitSearch2(Solution&, const std::vector<double>&, OP&, std::map<std::string, Activity>&);
 	std::vector<Bin> splitUnvisited(List<TA>&, std::map<std::string, Activity>&);
 	std::vector<List<TA>> splitUnvisitedList(List<TA>&, int, std::map<std::string, std::vector<ILS::Usage>>&, std::map<std::string, std::vector<double>>);
+	void LocalSearch(Solution&, ILS::Interval, OP&, std::map<std::string, std::vector<ILS::Usage>>&);
+	void Controller(std::vector<Solution>&, std::vector<ILS::Interval>, OP&, std::map<std::string, std::vector<ILS::Usage>>&);
 	bool hasWeightedCentroid(const Solution& sol, const int, const int);
 	std::vector<Solution> splitSolution(Solution&, const std::vector<double>&, std::map<std::string, Activity>&);
 	inline Point getWeightedCentroid(const List<TA>::iterator& first, const List<TA>::iterator& last);
