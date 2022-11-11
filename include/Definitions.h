@@ -14,7 +14,7 @@
 //#define DEPOT_ID  -2
 
 #define DEFAULT_CENTROID_ID "c"
-#define DEFAULT_TA_ID ""
+#define DEFAULT_TA_ID "default"
 #define DEPOT_ID "depot"
 #define DUMMY_ID "dummy"
 #define CNEXT_ID "cnext"
