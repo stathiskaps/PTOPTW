@@ -83,7 +83,7 @@ private:
 
 	// virtual std::tuple<List<TA>::iterator, double, int, int> getBestPos(const TA&, const List<TA>&, const Vector2D<double>&);
 	virtual std::tuple<Walks::iterator, List<TA>::iterator, double, int, int> getBestPos(const TA&, Walks&, const Vector2D<double>&);
-	virtual void updateTimes(List<TA>&, const List<TA>::iterator&, const bool, const Vector2D<double>&);
+	virtual void updateTimes(List<TA>&, const List<TA>::iterator&, const double, const bool, const Vector2D<double>&);
 	virtual std::tuple<bool, double> insertionIsValid(const TA&, const TA&, const TA&, const Vector2D<double>&);
 	virtual std::tuple<bool, double> insertionIsValid(const TA& , const TA&, const Vector2D<double>&);
 	std::map<std::string, std::vector<Usage>> initRegistry(List<TA>&, std::vector<ILS::Interval>);
@@ -108,7 +108,8 @@ private:
 	std::vector<double> Preprocessing(std::vector<TA*>, int, double);
 	inline int collectProfit (const List<TA>::iterator&, const List<TA>::iterator&) const;
 	inline std::map<std::string, Activity> initializeRegistry(const List<TA>&, const std::vector<double>&);
-
+	void printSolution(const Solution& sol);
+	void printSolutions(const std::vector<Solution>& sols);
 
 	
 public:
@@ -121,13 +122,14 @@ public:
 	inline void print(const List<TA>&);
 	void SolveNew(OP&);
 
+
 };
 
 class ILS_TOPTW : public ILS {
 private:
 	// std::tuple<List<TA>::iterator, double, int, int> getBestPos(const TA&, const List<TA>&, const Vector2D<double>&) override;
 	std::tuple<Walks::iterator, List<TA>::iterator, double, int, int> getBestPos(const TA&, Walks&, const Vector2D<double>&) override;
-	void updateTimes(List<TA>&, const List<TA>::iterator&, const bool, const Vector2D<double>&) override;
+	void updateTimes(List<TA>&, const List<TA>::iterator&, const double, const bool, const Vector2D<double>&) override;
 	void updateMaxShifts(const List<TA>&, const Vector2D<double>&) override;
 	std::tuple<bool, double> insertionIsValid(const TA&, const TA&, const TA&, const Vector2D<double>&) override;
 	std::tuple<bool, double> insertionIsValid(const TA& , const TA&, const Vector2D<double>&) override;

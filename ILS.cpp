@@ -162,6 +162,28 @@ void ILS::Controller(std::vector<Solution>& proc_solutions, std::vector<ILS::Int
 	}
 }
 
+void ILS::printSolution(const Solution& sol){
+	std::cout << "\nUnvisited:";
+	print(sol.m_unvisited);
+	for(std::vector<List<TA>>::const_iterator walk_it = sol.m_walks.begin(); walk_it != sol.m_walks.end(); ++walk_it){
+		const int index = walk_it - sol.m_walks.begin();
+		std::cout << "Walk " << index << ":";
+		print(*walk_it);
+	}
+	
+}
+
+
+void ILS::printSolutions(const std::vector<Solution>& sols){
+	for(std::vector<Solution>::const_iterator sol_it = sols.begin(); sol_it != sols.end(); ++sol_it){
+		const int index = sol_it - sols.begin();
+		std::cout << "===================================================" << std::endl;
+		std::cout << "Solution [" << index << "]: "; printSolution(*sol_it);
+		std::cout << "===================================================" << std::endl;
+		std::cout << std::endl;
+	}
+}
+
 
 void ILS::SolveNew(OP& op) {
 
@@ -225,6 +247,7 @@ void ILS::SolveNew(OP& op) {
 		// process_solution = connectSolutions(proc_solutions, op.m_walks_num);
 		// validate(process_solution.m_walks, op.mTravelTimes);
 		int score = collectScores(proc_solutions);
+		printSolutions(proc_solutions);
 		if (score > best_score) {
 			best_score = score;
 			//best_solution.reset();
@@ -374,7 +397,6 @@ std::vector<List<TA>> ILS::splitUnvisitedList(std::vector<Solution>& solutions, 
 		const int index = best_it - reg[ta.id].begin();
 		solutions.at(index).m_unvisited.push_back(ta);
 		reg[ta.id].at(index).imported += 1;
-		std::cout << "Imported node " << ta.id << " to interval " << index << std::endl;
 	}
 
 	//check if i can implement emplace back instead of creating new object
@@ -510,7 +532,7 @@ void ILS::Shake(Solution& sol, int& S, int& R, OP& op, const int& max_to_remove)
 		List<TA>::iterator next = walk.erase(start_it, end_it);
 		sol.m_unvisited.append(part);
 		part.clear();
-		updateTimes(walk, next, false, op.mTravelTimes);
+		updateTimes(walk, next, -1, false, op.mTravelTimes);
 	}
 	S += R;
 	R++;
@@ -559,7 +581,6 @@ bool ILS::hasWeightedCentroid(const Solution& sol, const int walk_index, const i
 void ILS::AddStartDepots(std::vector<Solution>& solutions, const std::vector<ILS::Interval>& intervals, const int i, const OP& op){
 	for (size_t j = 0; j < solutions[i].m_walks.size(); ++j) {
 		int prev_sol_index = i-1;
-		List<TA>::iterator node_to_insert = solutions[prev_sol_index].m_walks[j].end() - 1;
 		
 		if(first_solution){
 			solutions[i].m_walks[j].push_front(*op.mStartDepot);
@@ -581,12 +602,16 @@ void ILS::AddStartDepots(std::vector<Solution>& solutions, const std::vector<ILS
 				while(curr != solutions[i].m_walks[j].end()){ // left trim walk
 					auto [valid, _] = insertionIsValid(prev_it.iter->data, curr.iter->data, op.mTravelTimes);
 					if(!valid){
+						solutions[i].m_unvisited.push_back(curr.iter->data);
 						curr = solutions[i].m_walks[j].erase(curr);
+						updateTimes(solutions[i].m_walks[j], curr, intervals[i].start_time, false, op.mTravelTimes);
+					} else {
+						break;
 					}
 				}
 			}
 
-			solutions[i].m_walks[j].push_front(node_to_insert.iter->data);
+			solutions[i].m_walks[j].push_front(prev_it.iter->data);
 		}
 
 	}
@@ -631,8 +656,12 @@ void ILS::SplitSearch(std::vector<Solution>& solutions, const std::vector<ILS::I
 
 	//go to each walk of start solution and add an startDepot if it doesn't exist
 	for (auto walk_it = solutions.front().m_walks.begin(); walk_it != solutions.front().m_walks.end(); ++walk_it) {
-		if (walk_it->front().id != DEPOT_ID) {
+		if(walk_it->empty()){
 			walk_it->push_back(*op.mStartDepot);
+		} else {
+			if(walk_it->front().id != DEPOT_ID){
+				throw std::runtime_error("Found a starting node that is different than op start depot");
+			}
 		}
 		//updateTimes(*walk_it, walk_it->begin(), false, op.mTravelTimes);
 	}
@@ -663,7 +692,7 @@ void ILS::SplitSearch(std::vector<Solution>& solutions, const std::vector<ILS::I
 		}
 
 		for (size_t j = 0; j < solutions[i].m_walks.size(); ++j) { //foreach walk
-			updateTimes(solutions[i].m_walks[j], solutions[i].m_walks[j].begin(), false, op.mTravelTimes);
+			updateTimes(solutions[i].m_walks[j], solutions[i].m_walks[j].begin(), -1, false, op.mTravelTimes);
 		}
 		
 		std::vector<std::string> ids = construct(solutions[i], op.mTravelTimes);
@@ -753,7 +782,7 @@ std::vector<std::string> ILS::construct(Solution& sol, const Vector2D<double>& t
 		inserted_it.iter->data.arrPointId = best_arr_point_id;
 		inserted_it.iter->data.depPointId = best_dep_point_id;
 		sol.m_unvisited.erase(insert_it);
-		updateTimes(*best_walk_it, inserted_it, true, travel_times);
+		updateTimes(*best_walk_it, inserted_it, -1, true, travel_times);
 	}
 	return inserted_ids;
 }
@@ -810,7 +839,7 @@ std::tuple<Walks::iterator, List<TA>::iterator, double, int, int> ILS::getBestPo
 	return { best_walk, best_pos, min_shift, arr_point_id, dep_point_id };
 }
 
-void ILS::updateTimes(List<TA>& walk, const List<TA>::iterator& start_pos, const bool smart, const Vector2D<double>& travel_times) {
+void ILS::updateTimes(List<TA>& walk, const List<TA>::iterator& start_pos, const double start_arr_time, const bool smart, const Vector2D<double>& travel_times) {
 	//update times first
 	List<TA>::iterator it{ start_pos };
 
@@ -972,10 +1001,11 @@ std::tuple<Walks::iterator, List<TA>::iterator, double, int, int> ILS_TOPTW::get
 	return { best_walk, best_pos, min_shift, arr_point_id, dep_point_id };
 }
 
-void ILS_TOPTW::updateTimes(List<TA>& walk, const List<TA>::iterator& start_pos, const bool smart, const Vector2D<double>& travel_times) {
+void ILS_TOPTW::updateTimes(List<TA>& walk, const List<TA>::iterator& start_pos, const double start_arr_time, const bool smart, const Vector2D<double>& travel_times) {
 	//update times first
 	List<TA>::iterator it{ start_pos };
 	if (it == walk.begin()) {
+		if(start_arr_time >= 0){ it.iter->data.arrTime = start_arr_time; }
 		it.iter->data.waitDuration = std::max(0.0, it.iter->data.timeWindow.openTime - it.iter->data.arrTime);
 		it.iter->data.startOfVisitTime = it.iter->data.arrTime + it.iter->data.waitDuration;
 		it.iter->data.depTime = it.iter->data.startOfVisitTime + it.iter->data.visitDuration;
