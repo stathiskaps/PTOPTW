@@ -108,8 +108,11 @@ private:
 	std::vector<double> Preprocessing(std::vector<TA*>, int, double);
 	inline int collectProfit (const List<TA>::iterator&, const List<TA>::iterator&) const;
 	inline std::map<std::string, Activity> initializeRegistry(const List<TA>&, const std::vector<double>&);
-	void printSolution(const Solution& sol);
-	void printSolutions(const std::vector<Solution>& sols);
+	void printSolution(const std::string, const Solution& sol);
+	void printSolutions(const std::string, const std::vector<Solution>& sols);
+	void PrepareForShake(std::vector<Solution>&);
+	void RemoveDummyNodes(std::vector<Solution>&);
+	void InitSolutions(std::vector<Solution>&, const OP& op);
 
 	
 public:
@@ -119,9 +122,8 @@ public:
 	virtual void validate(const List<TA>&, const Vector2D<double>&);
 	virtual void validate(const Walks&, const Vector2D<double>&);
 	void validate(const std::vector<Solution>&, const Vector2D<double>&);
-	inline void print(const List<TA>&);
+	inline void print(const std::string, const List<TA>&);
 	void SolveNew(OP&);
-
 
 };
 

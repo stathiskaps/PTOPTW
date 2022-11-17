@@ -162,25 +162,41 @@ void ILS::Controller(std::vector<Solution>& proc_solutions, std::vector<ILS::Int
 	}
 }
 
-void ILS::printSolution(const Solution& sol){
-	std::cout << "\nUnvisited:";
-	print(sol.m_unvisited);
+void ILS::printSolution(const std::string tag, const Solution& sol){
+	std::cout << "===================================================" << std::endl;
+	std::cout << tag << std::endl;
+	print("Unvisited: ", sol.m_unvisited);
 	for(std::vector<List<TA>>::const_iterator walk_it = sol.m_walks.begin(); walk_it != sol.m_walks.end(); ++walk_it){
 		const int index = walk_it - sol.m_walks.begin();
-		std::cout << "Walk " << index << ":";
-		print(*walk_it);
+		print("Walk " + std::to_string(index) + ":", *walk_it);
 	}
-	
+	std::cout << "===================================================" << std::endl;
 }
 
 
-void ILS::printSolutions(const std::vector<Solution>& sols){
+void ILS::printSolutions(const std::string tag, const std::vector<Solution>& sols){
+	std::cout << tag << std::endl;
 	for(std::vector<Solution>::const_iterator sol_it = sols.begin(); sol_it != sols.end(); ++sol_it){
 		const int index = sol_it - sols.begin();
-		std::cout << "===================================================" << std::endl;
-		std::cout << "Solution [" << index << "]: "; printSolution(*sol_it);
-		std::cout << "===================================================" << std::endl;
+		const std::string tag = "Solution [" + std::to_string(index) + "]: ";
+		printSolution(tag, *sol_it);
 		std::cout << std::endl;
+	}
+}
+
+void ILS::InitSolutions(std::vector<Solution>& sols, const OP& op){
+	//go to each walk of last solution and add an endDepot
+	for (auto &walk : sols.front().m_walks) {
+		if (walk.front().id != DEPOT_ID) {
+			walk.push_front(*op.mStartDepot);
+		}
+	}
+
+	//go to each walk of last solution and add an endDepot
+	for (auto &walk : sols.back().m_walks) {
+		if (walk.back().id != DEPOT_ID) {
+			walk.push_back(*op.mEndDepot);
+		}
 	}
 }
 
@@ -229,40 +245,54 @@ void ILS::SolveNew(OP& op) {
 		shake_settings.push_back(ILS::SR{1, 1});
 	}
 
-	std::vector<Solution> proc_solutions(buckets_num, Solution());
+	std::vector<Solution> proc_solutions(buckets_num, Solution()), best_solutions;
 	//Initialize solutions
 	for (auto& s : proc_solutions) {
 		for (size_t i = 0; i < op.m_walks_num; ++i) {
 			s.m_walks.push_back(List<TA>());
 		}
 	}
+	InitSolutions(proc_solutions, op);
 	List<TA> pool = std::move(unvisited);
 
 
 	while (times_not_improved < MAX_TIMES_NOT_IMPROVED) {
 		counter++;
 
+		std::cout << "counter: " << counter << std::endl;
+
+		print("pool: ", pool);
+		
 		splitUnvisitedList(proc_solutions, pool, buckets_num, reg, activities);
 		SplitSearch(proc_solutions, intervals, op, reg);
 		// process_solution = connectSolutions(proc_solutions, op.m_walks_num);
 		// validate(process_solution.m_walks, op.mTravelTimes);
 		int score = collectScores(proc_solutions);
-		printSolutions(proc_solutions);
+
+		printSolutions("Solutions after split search", proc_solutions);
 		if (score > best_score) {
 			best_score = score;
+			best_solutions = proc_solutions;
 			//best_solution.reset();
-			best_solution = process_solution;
-			R = 1;
+			for(auto& sr : shake_settings){
+				sr.R = 1;
+			}
 			times_not_improved = 0;
 		}
 		else {
 			times_not_improved++;
 		}
 
-		SplitShake(proc_solutions, shake_settings, op, max_to_remove);
-		gatherUnvisited(proc_solutions, pool);
 
-		// Shake(process_solution, S, R, op, max_to_remove);
+		printSolutions("Solutions before split shake", proc_solutions);
+		SplitShake(proc_solutions, shake_settings, op, max_to_remove);
+		printSolutions("Solutions after split shake", proc_solutions);
+
+		gatherUnvisited(proc_solutions, pool);
+		print("pool: ", pool);
+		std::cout << std::endl;
+
+
 
 	}
 	auto end = std::chrono::steady_clock::now();
@@ -371,7 +401,6 @@ std::vector<List<TA>> ILS::splitUnvisitedList(std::vector<Solution>& solutions, 
 	std::vector<List<TA>> lists(intervals_num, List<TA>());
 	//Split Unvisited
 	for (auto& ta : pool) {
-		std::cout << "ta:" << ta.id << std::endl;
 		const double total_duration{ ta.timeWindow.closeTime - ta.timeWindow.openTime };
 		double max_score{ -1 };
 
@@ -500,23 +529,66 @@ std::map<std::string, Activity> ILS::initializeRegistry(const List<TA>& unvisite
 	return reg;
 }
 
-void ILS::SplitShake(std::vector<Solution>& sols, std::vector<ILS::SR>& shake_settings, OP& op, const int& max_to_remove){
-	for(auto sol_it = sols.begin(); sol_it != sols.end(); ++sol_it){
-		const int sol_index = sol_it - sols.begin();
-		Shake(*sol_it, shake_settings[sol_index].S, shake_settings[sol_index].R, op, max_to_remove);
+void ILS::PrepareForShake(std::vector<Solution>& sols){
+	for(std::vector<Solution>::iterator sol_it = sols.begin(); sol_it != sols.end(); ++sol_it){
+		if(sol_it == sols.begin()){
+			for(std::vector<List<TA>>::iterator walk_it = sol_it->m_walks.begin(); walk_it != sol_it->m_walks.end(); ++walk_it){
+				if(walk_it->empty()) continue;
+				walk_it->push_back(walk_it->back());
+				walk_it->back().id = DUMMY_ID;;
+			}
+		} else if (sol_it == sols.end() - 1){
+			for(std::vector<List<TA>>::iterator walk_it = sol_it->m_walks.begin(); walk_it != sol_it->m_walks.end(); ++walk_it){
+				if(walk_it->empty()) continue;
+				walk_it->push_front(walk_it->front());
+				walk_it->front().id = DUMMY_ID;
+			}
+		} else {
+			for(std::vector<List<TA>>::iterator walk_it = sol_it->m_walks.begin(); walk_it != sol_it->m_walks.end(); ++walk_it){
+				if(walk_it->empty()) continue;
+				walk_it->push_back(walk_it->back());
+				walk_it->back().id = DUMMY_ID;;
+
+				walk_it->push_front(walk_it->front());
+				walk_it->front().id = DUMMY_ID;
+			}
+		}
 	}
 }
 
-void ILS::Shake(Solution& sol, int& S, int& R, OP& op, const int& max_to_remove) {
+void ILS::RemoveDummyNodes(std::vector<Solution>& sols){
+	for(std::vector<Solution>::iterator sol_it = sols.begin(); sol_it != sols.end(); ++sol_it){
+		for(std::vector<List<TA>>::iterator walk_it = sol_it->m_walks.begin(); walk_it != sol_it->m_walks.end(); ++walk_it){
+			for(List<TA>::iterator ta_it = walk_it->begin(); ta_it != walk_it->end(); ++ta_it){
+				if(ta_it.iter->data.id == DUMMY_ID){
+					walk_it->erase(ta_it);
+				}
+			}
+		}
+	}
+}
 
+void ILS::SplitShake(std::vector<Solution>& sols, std::vector<ILS::SR>& shake_settings, OP& op, const int& max_to_remove){
+	PrepareForShake(sols);
+	printSolutions("Solutions after adding dummys", sols);
+	for(auto sol_it = sols.begin(); sol_it != sols.end(); ++sol_it){
+		print("Unvisited: ", sol_it->m_unvisited);
+		const int sol_index = sol_it - sols.begin();
+		Shake(*sol_it, shake_settings[sol_index].S, shake_settings[sol_index].R, op, max_to_remove);
+	}
+	RemoveDummyNodes(sols);
+}
+
+void ILS::Shake(Solution& sol, int& S, int& R, OP& op, const int& max_to_remove) {
 	int minWalkSize = sol.getMinWalkSize();
 	//std::cout << "maxToRemove: " << max_to_remove << "\t";
 	//std::cout << "minWalkSize: " << minWalkSize << "\t";
-	if (S >= minWalkSize) {
-		S -= minWalkSize;
+	while (S >= minWalkSize - 2) {
+		S -= (minWalkSize - 1);
 		R = 1;
-		if (S < 1) S = 1;
 	}
+
+	if (S < 1) S = 1;
 
 	if (R == max_to_remove) {
 		R = 1;
@@ -525,7 +597,7 @@ void ILS::Shake(Solution& sol, int& S, int& R, OP& op, const int& max_to_remove)
 	//std::cout << "R: " << R << "\t" << std::endl;
 
 	for (auto& walk : sol.m_walks) {
-		if(walk.empty()) continue;
+		if(walk.size() == 2) continue;
 		int start_pos{ S }, end_pos{ std::min(S + R, (int)walk.size() - 1) };
 		List<TA>::iterator start_it{ walk.begin() + start_pos }, end_it{ walk.begin() + end_pos };
 		List<TA> part(start_it, end_it);
@@ -654,28 +726,6 @@ void ILS::SplitSearch(std::vector<Solution>& solutions, const std::vector<ILS::I
 	const int min_size = 3;
 	const size_t solutions_size = solutions.size();
 
-	//go to each walk of start solution and add an startDepot if it doesn't exist
-	for (auto walk_it = solutions.front().m_walks.begin(); walk_it != solutions.front().m_walks.end(); ++walk_it) {
-		if(walk_it->empty()){
-			walk_it->push_back(*op.mStartDepot);
-		} else {
-			if(walk_it->front().id != DEPOT_ID){
-				throw std::runtime_error("Found a starting node that is different than op start depot");
-			}
-		}
-		//updateTimes(*walk_it, walk_it->begin(), false, op.mTravelTimes);
-	}
-
-	// //go to each walk of last solution and add an endDepot
-	// for (auto walk_it = solutions.back().m_walks.begin(); walk_it != solutions.back().m_walks.end(); ++walk_it) {
-	// 	if (walk_it->back().id == DEPOT_ID) {
-	// 		std::cerr << "found end depot while i shouldn't have" << std::endl;
-	// 		std::exit(1);
-	// 	}
-	// 	walk_it->push_back(*op.mEndDepot);
-	// 	//updateTimes(*walk_it, walk_it->begin(), false, op.mTravelTimes);
-	// }
-
 	for (size_t i = 0; i < solutions.size(); ++i) {
 
 		if (solutions[i].m_unvisited.empty()) continue;
@@ -713,14 +763,6 @@ void ILS::SplitSearch(std::vector<Solution>& solutions, const std::vector<ILS::I
 			} 
 		}
 	}
-
-	// //go to each walk of last solution and add an endDepot
-	// for (auto &walk : solutions.back().m_walks) {
-	// 	if (walk.back().id != DEPOT_ID) {
-	// 		walk.push_back(*op.mEndDepot);
-	// 		updateTimes(walk, walk.begin(), false, op.mTravelTimes);
-	// 	}
-	// }
 }
 
 
@@ -862,11 +904,12 @@ void ILS::updateMaxShifts(const List<TA>& li, const Vector2D<double>& travel_tim
 	} while (it-- != li.begin());
 }
 
-void ILS::print(const List<TA>& li) {
+void ILS::print(const std::string tag, const List<TA>& li) {
+	std::cout << tag;
 	for (auto it : li) {
 		std::cout << it.id << " ";
 	}
-	std::cout << std::endl;
+	std::cout << "(size: " << li.size() << ")" << std::endl;
 }
 
 void ILS::validate(const std::vector<Solution>& sols, const Vector2D<double>& travel_times){
@@ -884,7 +927,7 @@ void ILS::validate(const std::vector<List<TA>>& walks, const Vector2D<double>& t
 }
 
 void ILS::validate(const List<TA>& walk, const Vector2D<double>& travel_times) {
-	std::cout << "validating walk: "; print(walk);
+	print("validating walk: ", walk);
 	std::string msg{};
 	bool valid{ true };
 	List<TA>::iterator next{};
@@ -1048,7 +1091,7 @@ void ILS_TOPTW::validate(const List<List<TA>>& walks, const Vector2D<double>& tr
 /// <param name="walk">Holds the walk that gets examined</param>
 /// <param name="ttMatrix">Holds the travel times between the points of the problem</param>
 void ILS_TOPTW::validate(const List<TA>& walk, const Vector2D<double>& travel_times) {
-	std::cout << "validating walk: "; print(walk);
+	print("validating walk: ", walk);
 	std::string msg{};
 	bool valid{ true };
 	List<TA>::iterator next{};
