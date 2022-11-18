@@ -73,7 +73,7 @@ private:
 
 	//std::map<std::string, std::vector<ActivityInBucket>> registry;
 
-	int mBucketsNum;
+	int mBucketsNum, mIntervalsNum;
 	void dbScan(OP& op);
 	void AddStartDepots(std::vector<Solution>&, const std::vector<ILS::Interval>&, const int, const OP&);
 	void AddEndDepots(std::vector<Solution>&, const std::vector<Interval>&, const int, OP&);
@@ -117,7 +117,7 @@ private:
 	
 public:
     ILS();
-	ILS(int);
+	ILS(int, int);
     ~ILS();
 	virtual void validate(const List<TA>&, const Vector2D<double>&);
 	virtual void validate(const Walks&, const Vector2D<double>&);

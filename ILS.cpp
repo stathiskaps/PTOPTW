@@ -2,7 +2,7 @@
 
 ILS::ILS() : mBucketsNum(0) {}
 
-ILS::ILS(int bucketsNum) : mBucketsNum(bucketsNum) {}
+ILS::ILS(int bucketsNum, int intervalsNum) : mBucketsNum(bucketsNum), mIntervalsNum(intervalsNum) {}
 
 ILS::~ILS() {}
 
@@ -210,12 +210,12 @@ void ILS::SolveNew(OP& op) {
 
 	auto start = std::chrono::steady_clock::now();
 
-	std::cout << "Come on, do something" << std::endl;
+	std::cout << "Problem will be divided in " << mIntervalsNum << " intervals." << std::endl;
 
 	//todo: for pr13 and buckets_num 4 got invalid bucket error
 	const int num_locations = op.mAttractions.size();
 	const int max_to_remove = num_locations / (3 * op.m_walks_num);
-	const int buckets_num = 4;
+	const int buckets_num = mIntervalsNum;
 
 	List<TA> unvisited;
 	for (auto ta : op.mAttractions) {
@@ -259,9 +259,9 @@ void ILS::SolveNew(OP& op) {
 	while (times_not_improved < MAX_TIMES_NOT_IMPROVED) {
 		counter++;
 
-		std::cout << "counter: " << counter << std::endl;
+		// std::cout << "counter: " << counter << std::endl;
 
-		print("pool: ", pool);
+		// print("pool: ", pool);
 		
 		splitUnvisitedList(proc_solutions, pool, buckets_num, reg, activities);
 		SplitSearch(proc_solutions, intervals, op, reg);
@@ -269,7 +269,7 @@ void ILS::SolveNew(OP& op) {
 		// validate(process_solution.m_walks, op.mTravelTimes);
 		int score = collectScores(proc_solutions);
 
-		printSolutions("Solutions after split search", proc_solutions);
+		// printSolutions("Solutions after split search", proc_solutions);
 		if (score > best_score) {
 			best_score = score;
 			best_solutions = proc_solutions;
@@ -284,13 +284,13 @@ void ILS::SolveNew(OP& op) {
 		}
 
 
-		printSolutions("Solutions before split shake", proc_solutions);
+		// printSolutions("Solutions before split shake", proc_solutions);
 		SplitShake(proc_solutions, shake_settings, op, max_to_remove);
-		printSolutions("Solutions after split shake", proc_solutions);
+		// printSolutions("Solutions after split shake", proc_solutions);
 
 		gatherUnvisited(proc_solutions, pool);
-		print("pool: ", pool);
-		std::cout << std::endl;
+		// print("pool: ", pool);
+		// std::cout << std::endl;
 
 
 
@@ -299,6 +299,10 @@ void ILS::SolveNew(OP& op) {
 	auto diff = end - start;
 
 	std::cout.clear();
+	best_solution = connectSolutions(proc_solutions, op.m_walks_num);
+	for(auto& walk : best_solution.m_walks){
+		updateTimes(walk, walk.begin(), -1, false, op.mTravelTimes);
+	}
 	validate(best_solution.m_walks, op.mTravelTimes);
 	std::cout << "Best score: " << best_score << std::endl;
 	std::cout << "Visits: " << best_solution.getVisits() << std::endl;
@@ -491,8 +495,7 @@ Solution ILS::connectSolutions(std::vector<Solution>& sols, const size_t walks_n
 	Solution solution;
 	//Connect unvisited
 	for (auto& s : sols) {
-		solution.m_unvisited.append(s.m_unvisited);
-		s.m_unvisited.clear();
+		gatherUnvisited(sols, solution.m_unvisited);
 	}
 	for (size_t i = 0; i < walks_num; ++i) {
 		List<TA> walk;
@@ -533,19 +536,19 @@ void ILS::PrepareForShake(std::vector<Solution>& sols){
 	for(std::vector<Solution>::iterator sol_it = sols.begin(); sol_it != sols.end(); ++sol_it){
 		if(sol_it == sols.begin()){
 			for(std::vector<List<TA>>::iterator walk_it = sol_it->m_walks.begin(); walk_it != sol_it->m_walks.end(); ++walk_it){
-				if(walk_it->empty()) continue;
+				// if(walk_it->empty()) continue;
 				walk_it->push_back(walk_it->back());
 				walk_it->back().id = DUMMY_ID;;
 			}
 		} else if (sol_it == sols.end() - 1){
 			for(std::vector<List<TA>>::iterator walk_it = sol_it->m_walks.begin(); walk_it != sol_it->m_walks.end(); ++walk_it){
-				if(walk_it->empty()) continue;
+				// if(walk_it->empty()) continue;
 				walk_it->push_front(walk_it->front());
 				walk_it->front().id = DUMMY_ID;
 			}
 		} else {
 			for(std::vector<List<TA>>::iterator walk_it = sol_it->m_walks.begin(); walk_it != sol_it->m_walks.end(); ++walk_it){
-				if(walk_it->empty()) continue;
+				// if(walk_it->empty()) continue;
 				walk_it->push_back(walk_it->back());
 				walk_it->back().id = DUMMY_ID;;
 
@@ -570,9 +573,7 @@ void ILS::RemoveDummyNodes(std::vector<Solution>& sols){
 
 void ILS::SplitShake(std::vector<Solution>& sols, std::vector<ILS::SR>& shake_settings, OP& op, const int& max_to_remove){
 	PrepareForShake(sols);
-	printSolutions("Solutions after adding dummys", sols);
 	for(auto sol_it = sols.begin(); sol_it != sols.end(); ++sol_it){
-		print("Unvisited: ", sol_it->m_unvisited);
 		const int sol_index = sol_it - sols.begin();
 		Shake(*sol_it, shake_settings[sol_index].S, shake_settings[sol_index].R, op, max_to_remove);
 	}
@@ -583,12 +584,12 @@ void ILS::Shake(Solution& sol, int& S, int& R, OP& op, const int& max_to_remove)
 	int minWalkSize = sol.getMinWalkSize();
 	//std::cout << "maxToRemove: " << max_to_remove << "\t";
 	//std::cout << "minWalkSize: " << minWalkSize << "\t";
-	while (S >= minWalkSize - 2) {
-		S -= (minWalkSize - 1);
+	if (S >= minWalkSize - 2) {
+		S = 1;
 		R = 1;
 	}
 
-	if (S < 1) S = 1;
+	// if (S < 1) S = 1;
 
 	if (R == max_to_remove) {
 		R = 1;

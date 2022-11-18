@@ -41,7 +41,7 @@ double calcMeanVisitTime(std::vector<TA*> touristAttractions) {
 	return totalVisitDuration / (touristAttractions.size() - 1); //don't count the depot
 }
 
-void init(std::string filename, int numRoutes) {
+void init(std::string filename, int numRoutes, int numIntervals) {
 
 	std::vector<TA*> touristAttractions; //TODO:delete pointers
 	std::vector<Point> points;
@@ -124,7 +124,7 @@ void init(std::string filename, int numRoutes) {
 	depot->id = DEPOT_ID;
 	OP op = OP(touristAttractions, points, depot, depot, numRoutes);
 
-	ILS_TOPTW ilstoptw = ILS_TOPTW(numRoutes);
+	ILS_TOPTW ilstoptw = ILS_TOPTW(numRoutes, numIntervals);
 	ilstoptw.SolveNew(op);
 
 	/*OPTW optw(touristAttractions, ttMatrix, depot, OPEN_DAY_TIME, CLOSE_DAY_TIME);
@@ -150,7 +150,7 @@ void init(std::string filename, int numRoutes) {
 
 int main(int argc, char** argv)
 {
-	int k, numRoutes;
+	int k, numRoutes, numIntervals;
 	std::string filename;
 
 	std::cout << "Enter the file's name(without txt): ";
@@ -159,7 +159,10 @@ int main(int argc, char** argv)
 	std::cout << "Enter the number of the routes: ";
 	std::cin >> numRoutes;
 
-	init(filename, numRoutes);
+	std::cout << "Enter the number of intervals that the problem will be divided: ";
+	std::cin >> numIntervals;
+
+	init(filename, numRoutes, numIntervals);
 
 	std::cin >> k;
 
