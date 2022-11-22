@@ -11,8 +11,8 @@ OP::~OP() {
 OP::OP(std::vector<TA*> attractions, std::vector<Point> points, TA* startDepot, TA* endDepot, int walksNum) : mAttractions(attractions), mPoints(points), m_walks_num(walksNum) {
 	std::tuple<std::vector<std::vector<double>>, double> tuple = calcTravelTimes(points); //TODO: delete pointer
 	mTravelTimes = std::get<0>(tuple);
-	mStartDepot = startDepot->clone();
-	mEndDepot = endDepot->clone();
+	mStartDepot = startDepot;
+	mEndDepot = endDepot;
 }
 
 double OP::GetEuclideanDistance(int x1, int y1, int x2, int y2) {

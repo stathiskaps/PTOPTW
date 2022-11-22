@@ -119,10 +119,13 @@ void init(std::string filename, int numRoutes, int numIntervals) {
 #if 1
 	std::cout << std::endl;
 	TA* depot = touristAttractions[0];
+	TA* start_depot = depot->clone();
+	start_depot->id = START_DEPOT_ID;
+	TA* end_depot = depot->clone();
+	end_depot->id = END_DEPOT_ID;
 	touristAttractions.erase(touristAttractions.begin());
 
-	depot->id = DEPOT_ID;
-	OP op = OP(touristAttractions, points, depot, depot, numRoutes);
+	OP op = OP(touristAttractions, points, start_depot, end_depot, numRoutes);
 
 	ILS_TOPTW ilstoptw = ILS_TOPTW(numRoutes, numIntervals);
 	ilstoptw.SolveNew(op);
@@ -163,8 +166,6 @@ int main(int argc, char** argv)
 	std::cin >> numIntervals;
 
 	init(filename, numRoutes, numIntervals);
-
-	std::cin >> k;
 
 	return 0;
 }

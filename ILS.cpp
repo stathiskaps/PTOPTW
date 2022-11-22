@@ -165,10 +165,10 @@ void ILS::Controller(std::vector<Solution>& proc_solutions, std::vector<ILS::Int
 void ILS::printSolution(const std::string tag, const Solution& sol){
 	std::cout << "===================================================" << std::endl;
 	std::cout << tag << std::endl;
-	print("Unvisited: ", sol.m_unvisited);
+	sol.m_unvisited.print("Unvisited");
 	for(std::vector<List<TA>>::const_iterator walk_it = sol.m_walks.begin(); walk_it != sol.m_walks.end(); ++walk_it){
 		const int index = walk_it - sol.m_walks.begin();
-		print("Walk " + std::to_string(index) + ":", *walk_it);
+		walk_it->print("Walk " + std::to_string(index));
 	}
 	std::cout << "===================================================" << std::endl;
 }
@@ -187,14 +187,14 @@ void ILS::printSolutions(const std::string tag, const std::vector<Solution>& sol
 void ILS::InitSolutions(std::vector<Solution>& sols, const OP& op){
 	//go to each walk of last solution and add an endDepot
 	for (auto &walk : sols.front().m_walks) {
-		if (walk.front().id != DEPOT_ID) {
+		if (walk.front().id != START_DEPOT_ID) {
 			walk.push_front(*op.mStartDepot);
 		}
 	}
 
 	//go to each walk of last solution and add an endDepot
 	for (auto &walk : sols.back().m_walks) {
-		if (walk.back().id != DEPOT_ID) {
+		if (walk.back().id != END_DEPOT_ID) {
 			walk.push_back(*op.mEndDepot);
 		}
 	}
@@ -202,7 +202,6 @@ void ILS::InitSolutions(std::vector<Solution>& sols, const OP& op){
 
 
 void ILS::SolveNew(OP& op) {
-
 
 	// std::cout.setstate(std::ios_base::failbit);
 	// dbScan(op);
@@ -215,37 +214,25 @@ void ILS::SolveNew(OP& op) {
 	//todo: for pr13 and buckets_num 4 got invalid bucket error
 	const int num_locations = op.mAttractions.size();
 	const int max_to_remove = num_locations / (3 * op.m_walks_num);
-	const int buckets_num = mIntervalsNum;
 
 	List<TA> unvisited;
 	for (auto ta : op.mAttractions) {
 		unvisited.push_back(*ta);
 	}
 
-	std::vector<ILS::Interval> intervals = getIntervals(op.mAttractions, buckets_num, op.mStartDepot->timeWindow.openTime, op.mEndDepot->timeWindow.closeTime);
+	std::vector<ILS::Interval> intervals = getIntervals(op.mAttractions, mIntervalsNum, op.mStartDepot->timeWindow.openTime, op.mEndDepot->timeWindow.closeTime);
 	const std::map<std::string, std::vector<double>> activities = getActivities(unvisited, intervals);
 	std::map<std::string, std::vector<ILS::Usage>> reg = initRegistry(unvisited, intervals); 
-	std::vector<double> cuts = Preprocessing(op.mAttractions, buckets_num, op.mEndDepot->timeWindow.closeTime);
-	std::map<std::string, Activity> registry = initializeRegistry(unvisited, cuts);
-	Solution process_solution{ *op.mStartDepot, *op.mEndDepot, unvisited, op.mStartDepot->timeWindow.openTime, op.mEndDepot->timeWindow.closeTime, op.m_walks_num }, best_solution{};
-	
-
-
-	std::vector<Bin> bins;
-	for (std::vector<double>::const_iterator cut_it = cuts.begin(); cut_it != cuts.end() - 1; ++cut_it) {
-		Bin bin{ .tw{*cut_it, *(cut_it + 1)} };
-		bins.push_back(bin);
-	}
 
 	int counter{}, S{ 1 }, R{ 1 }, times_not_improved{ 0 }, best_score{ INT_MIN };
-	std::vector<Solution> process_solutions = splitSolution(process_solution, cuts, registry);
+	Solution best_solution;
 
 	std::vector<ILS::SR> shake_settings;
-	for(size_t i = 0; i < buckets_num; ++i){
+	for(size_t i = 0; i < mIntervalsNum; ++i){
 		shake_settings.push_back(ILS::SR{1, 1});
 	}
 
-	std::vector<Solution> proc_solutions(buckets_num, Solution()), best_solutions;
+	std::vector<Solution> proc_solutions(mIntervalsNum, Solution()), best_solutions;
 	//Initialize solutions
 	for (auto& s : proc_solutions) {
 		for (size_t i = 0; i < op.m_walks_num; ++i) {
@@ -258,22 +245,20 @@ void ILS::SolveNew(OP& op) {
 
 	while (times_not_improved < MAX_TIMES_NOT_IMPROVED) {
 		counter++;
-
-		// std::cout << "counter: " << counter << std::endl;
-
-		// print("pool: ", pool);
 		
-		splitUnvisitedList(proc_solutions, pool, buckets_num, reg, activities);
+		auto split_search_start = std::chrono::steady_clock::now();
+		splitUnvisitedList(proc_solutions, pool, mIntervalsNum, reg, activities);
 		SplitSearch(proc_solutions, intervals, op, reg);
-		// process_solution = connectSolutions(proc_solutions, op.m_walks_num);
-		// validate(process_solution.m_walks, op.mTravelTimes);
+		auto split_search_end = std::chrono::steady_clock::now();
+		auto split_search_diff = split_search_end - split_search_start;
+
+		// std::cout << "Split search execution time (rev " << std::to_string(counter) << "): " << std::chrono::duration <double, std::milli> (split_search_diff).count() << " ms" << std::endl;
+
 		int score = collectScores(proc_solutions);
 
-		// printSolutions("Solutions after split search", proc_solutions);
 		if (score > best_score) {
 			best_score = score;
 			best_solutions = proc_solutions;
-			//best_solution.reset();
 			for(auto& sr : shake_settings){
 				sr.R = 1;
 			}
@@ -283,16 +268,9 @@ void ILS::SolveNew(OP& op) {
 			times_not_improved++;
 		}
 
-
-		// printSolutions("Solutions before split shake", proc_solutions);
-		SplitShake(proc_solutions, shake_settings, op, max_to_remove);
-		// printSolutions("Solutions after split shake", proc_solutions);
-
+		int removed_counter = SplitShake(proc_solutions, shake_settings, op, max_to_remove);
+		// std::cout << "Removed " << removed_counter << " during split shake" << std::endl;
 		gatherUnvisited(proc_solutions, pool);
-		// print("pool: ", pool);
-		// std::cout << std::endl;
-
-
 
 	}
 	auto end = std::chrono::steady_clock::now();
@@ -306,7 +284,7 @@ void ILS::SolveNew(OP& op) {
 	validate(best_solution.m_walks, op.mTravelTimes);
 	std::cout << "Best score: " << best_score << std::endl;
 	std::cout << "Visits: " << best_solution.getVisits() << std::endl;
-	std::cout << "Executime time: " << std::chrono::duration <double, std::milli> (diff).count() << " ms" << std::endl;
+	std::cout << "Execution time: " << std::chrono::duration <double, std::milli> (diff).count() << " ms" << std::endl;
 	std::cout << std::endl;
 }
 
@@ -401,6 +379,7 @@ std::vector<List<TA>> ILS::splitUnvisitedList(std::vector<Solution>& solutions, 
 	if(solutions.size() != intervals_num){
 		throw std::runtime_error("solutions size is indifferent from intervals number");
 	}
+
 
 	std::vector<List<TA>> lists(intervals_num, List<TA>());
 	//Split Unvisited
@@ -571,17 +550,21 @@ void ILS::RemoveDummyNodes(std::vector<Solution>& sols){
 	}
 }
 
-void ILS::SplitShake(std::vector<Solution>& sols, std::vector<ILS::SR>& shake_settings, OP& op, const int& max_to_remove){
+int ILS::SplitShake(std::vector<Solution>& sols, std::vector<ILS::SR>& shake_settings, OP& op, const int& max_to_remove){
+	int removed_counter = 0;
 	PrepareForShake(sols);
 	for(auto sol_it = sols.begin(); sol_it != sols.end(); ++sol_it){
 		const int sol_index = sol_it - sols.begin();
-		Shake(*sol_it, shake_settings[sol_index].S, shake_settings[sol_index].R, op, max_to_remove);
+		int removed = Shake(*sol_it, shake_settings[sol_index].S, shake_settings[sol_index].R, op, max_to_remove);
+		removed_counter += removed;
 	}
 	RemoveDummyNodes(sols);
+	return removed_counter;
 }
 
-void ILS::Shake(Solution& sol, int& S, int& R, OP& op, const int& max_to_remove) {
+int ILS::Shake(Solution& sol, int& S, int& R, OP& op, const int& max_to_remove) {
 	int minWalkSize = sol.getMinWalkSize();
+	int removed_counter = 0;
 	//std::cout << "maxToRemove: " << max_to_remove << "\t";
 	//std::cout << "minWalkSize: " << minWalkSize << "\t";
 	if (S >= minWalkSize - 2) {
@@ -597,9 +580,12 @@ void ILS::Shake(Solution& sol, int& S, int& R, OP& op, const int& max_to_remove)
 	//std::cout << "S: " << S << "\t";
 	//std::cout << "R: " << R << "\t" << std::endl;
 
+	
+
 	for (auto& walk : sol.m_walks) {
 		if(walk.size() == 2) continue;
 		int start_pos{ S }, end_pos{ std::min(S + R, (int)walk.size() - 1) };
+		removed_counter += end_pos - start_pos;
 		List<TA>::iterator start_it{ walk.begin() + start_pos }, end_it{ walk.begin() + end_pos };
 		List<TA> part(start_it, end_it);
 		List<TA>::iterator next = walk.erase(start_it, end_it);
@@ -609,6 +595,8 @@ void ILS::Shake(Solution& sol, int& S, int& R, OP& op, const int& max_to_remove)
 	}
 	S += R;
 	R++;
+
+	return removed_counter;
 }
 
 int ILS::collectProfit(const List<TA>::iterator& first, const List<TA>::iterator& last) const {
@@ -905,14 +893,6 @@ void ILS::updateMaxShifts(const List<TA>& li, const Vector2D<double>& travel_tim
 	} while (it-- != li.begin());
 }
 
-void ILS::print(const std::string tag, const List<TA>& li) {
-	std::cout << tag;
-	for (auto it : li) {
-		std::cout << it.id << " ";
-	}
-	std::cout << "(size: " << li.size() << ")" << std::endl;
-}
-
 void ILS::validate(const std::vector<Solution>& sols, const Vector2D<double>& travel_times){
 	for(auto sol_it = sols.begin(); sol_it != sols.end(); ++sol_it){
 		const int index = sol_it - sols.begin();
@@ -928,7 +908,7 @@ void ILS::validate(const std::vector<List<TA>>& walks, const Vector2D<double>& t
 }
 
 void ILS::validate(const List<TA>& walk, const Vector2D<double>& travel_times) {
-	print("validating walk: ", walk);
+	walk.print("validating walk");
 	std::string msg{};
 	bool valid{ true };
 	List<TA>::iterator next{};
@@ -1092,7 +1072,7 @@ void ILS_TOPTW::validate(const List<List<TA>>& walks, const Vector2D<double>& tr
 /// <param name="walk">Holds the walk that gets examined</param>
 /// <param name="ttMatrix">Holds the travel times between the points of the problem</param>
 void ILS_TOPTW::validate(const List<TA>& walk, const Vector2D<double>& travel_times) {
-	print("validating walk: ", walk);
+	walk.print("validating walk");
 	std::string msg{};
 	bool valid{ true };
 	List<TA>::iterator next{};
