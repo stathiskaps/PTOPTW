@@ -42,8 +42,6 @@ void printVector2D(Vector2D<T> v){
 using Walks = std::vector<List<TA>>;
 using Walk = List<TA>;
 
-using MapOfActivities = std::map<std::string, Activity>;
-
 class ILS{
 private:
 	Walk walk;
@@ -100,7 +98,6 @@ private:
 	std::vector<std::string> construct(Solution&, const Vector2D<double>&);
 	int collectScores(std::vector<Solution>);
 	Solution connectSolutions(std::vector<Solution>&, const size_t);
-	std::vector<double> Preprocessing(std::vector<TA*>, int, double);
 	inline int collectProfit (const List<TA>::iterator&, const List<TA>::iterator&) const;
 	void printSolution(const std::string, const Solution& sol);
 	void printSolutions(const std::string, const std::vector<Solution>& sols);

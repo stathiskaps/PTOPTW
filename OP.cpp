@@ -5,9 +5,6 @@ OP::OP() {
 }
 
 OP::~OP() {
-	// for(auto &ta:mAttractions){
-	// 	delete ta;
-	// }
 	delete mStartDepot;
 	delete mEndDepot;
 }

@@ -65,30 +65,6 @@ struct TimeWindow {
 	}
 };
 
-struct Bucket {
-	int inBucket;
-	int inSolution;
-	double duration;
-	double ratio;
-};
-
-struct Activity {
-	double duration;
-	std::vector<Bucket> buckets;
-};
-
-
-struct ActivityInBucket {
-	int inBucket = 0;
-	int inWalk = 0;
-	double duration = 0;
-	double improvedSolution = 0;
-};
-
-struct Stats {
-	std::vector<ActivityInBucket> buckets;
-};
-
 typedef struct TouristAttraction {
 	std::string id;
 	Point point;
@@ -102,7 +78,6 @@ typedef struct TouristAttraction {
 	int route, cluster;
 	double minDist;  // default infinite dist to nearest cluster
 	int arrPointId, depPointId;
-	Stats stats;
 
 
 	//default constructor
@@ -229,11 +204,14 @@ typedef struct TouristAttraction {
 	}
 	
 
-	virtual ~TouristAttraction() {} //virtual destructor to ensure our subclasses are correctly dealocated
+	virtual ~TouristAttraction() {
+		std::cout << "TA destructor was called" << std::endl;
+	} //virtual destructor to ensure our subclasses are correctly dealocated
 } TA;
 
 struct Sight : TA {
 	using TouristAttraction::TouristAttraction;
+	
 
 	void print() override {
 		std::cout << "id: " << id

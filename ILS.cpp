@@ -274,55 +274,6 @@ void ILS::SolveNew(OP& op) {
 	std::cout << std::endl;
 }
 
-std::vector<double> ILS::Preprocessing(std::vector<TA*> unvisited, int bins_num, double day_close_time) {
-	std::vector<double> cuts;
-	cuts.reserve(bins_num + 1);
-	std::vector<Bin> bins;
-	bins.reserve(bins_num);
-	uint64_t remainder{ unvisited.size() % bins_num }, bucketSize{ unvisited.size() / bins_num };
-
-	std::sort(unvisited.begin(), unvisited.end(), [](const TA* left,const TA* right) -> bool {
-		return left->timeWindow.openTime + left->timeWindow.closeTime < right->timeWindow.openTime + right->timeWindow.closeTime;
-	});
-
-	for (int i = 0, offset = 0; i < bins_num; ++i) {
-		if (remainder > 0) {
-			std::vector<TA*> slice(unvisited.begin() + offset, unvisited.begin() + offset + bucketSize + 1);
-			Bin b;
-			for (auto& p : slice) b.unvisited.push_back(*p);
-			bins.push_back(b);
-			offset += bucketSize + 1;
-			remainder--;
-		}
-		else {
-			std::vector<TA*> slice(unvisited.begin() + offset, unvisited.begin() + offset + bucketSize);
-			Bin b;
-			for (auto& p : slice) b.unvisited.push_back(*p);
-			offset += bucketSize;
-			bins.push_back(b);
-		}
-	}
-
-	cuts.push_back(0);
-	for (std::vector<Bin>::iterator it = bins.begin() + 1; it != bins.end(); ++it) {
-		const TA &ta = it->unvisited.front();
-		cuts.push_back((ta.timeWindow.openTime + ta.timeWindow.closeTime) / 2 - 1);
-	}
-	cuts.push_back(day_close_time);
-	
-
-	for (std::vector<TA*>::iterator it = unvisited.begin(); it != unvisited.end(); ++it) {
-		for (std::vector<double>::iterator left = cuts.begin(), right = cuts.begin() + 1; right != cuts.end(); ++left, ++right) {
-			double duration = std::min((*it)->timeWindow.closeTime, * right) - std::max((*it)->timeWindow.openTime, *left);
-			if (duration < 0) duration = 0;
-			ActivityInBucket activity{ .inBucket = 1, .inWalk = 1, .duration = duration };
-			(*it)->stats.buckets.push_back(activity);
-		}
-	}
-
-	return cuts;
-}
-
 void ILS::gatherUnvisited(std::vector<Solution>& solutions, List<TA>& pool){
 	pool.clear();
 	for(auto& sol : solutions){
