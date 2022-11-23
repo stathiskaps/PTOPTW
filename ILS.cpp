@@ -146,22 +146,6 @@ std::map<std::string, std::vector<ILS::Usage>> ILS::initRegistry(List<TA>& unvis
 	return reg;
 }
 
-void ILS::LocalSearch(Solution& sol, ILS::Interval interval, OP& op, std::map<std::string, std::vector<ILS::Usage>>& reg){
-	std::cout << "local search" << std::endl;
-}
-
-void ILS::Controller(std::vector<Solution>& proc_solutions, std::vector<ILS::Interval> intervals, OP& op, std::map<std::string, std::vector<ILS::Usage>>& reg){
-	if(proc_solutions.size() != intervals.size()){
-		throw std::runtime_error("vectors are not of equal size");
-	}
-	std::vector<Solution>::iterator sol_it;
-	std::vector<ILS::Interval>::iterator int_it;
-	for(sol_it = proc_solutions.begin(), int_it = intervals.begin(); sol_it != proc_solutions.end(); ++sol_it, ++int_it){
-
-		LocalSearch(*sol_it, *int_it, op, reg);
-	}
-}
-
 void ILS::printSolution(const std::string tag, const Solution& sol){
 	std::cout << "===================================================" << std::endl;
 	std::cout << tag << std::endl;
@@ -339,35 +323,6 @@ std::vector<double> ILS::Preprocessing(std::vector<TA*> unvisited, int bins_num,
 	return cuts;
 }
 
-
-
-std::vector<ILS::Bin> ILS::splitUnvisited(List<TA>& unvisited, std::map<std::string, Activity>& registry) {
-	std::vector<ILS::Bin> bins;
-	std::cout << "Splitting unvisited" << std::endl;
-	//Split Unvisited
-	for (auto& ta : unvisited) {
-		const double total_duration{ ta.timeWindow.closeTime - ta.timeWindow.openTime };
-		double max_score{ -1 };
-		std::vector<Bucket>::iterator best_b{ registry[ta.id].buckets.end() };
-		for (std::vector<Bucket>::iterator b = registry[ta.id].buckets.begin(); b != registry[ta.id].buckets.end(); ++b) {
-			double score = (b->duration / total_duration) * (b->inSolution / b->inBucket);
-			if (score > max_score) {
-				max_score = score;
-				best_b = b;
-			}
-		}
-		if (best_b == registry[ta.id].buckets.end()) {
-			std::cerr << "invalid bucket" << std::endl;
-			std::exit(1);
-		}
-
-		const int index = best_b - registry[ta.id].buckets.begin();
-		bins[index].unvisited.push_back(ta);
-		best_b->inBucket++;
-	}
-	return bins;
-}
-
 void ILS::gatherUnvisited(std::vector<Solution>& solutions, List<TA>& pool){
 	pool.clear();
 	for(auto& sol : solutions){
@@ -419,59 +374,6 @@ std::vector<List<TA>> ILS::splitUnvisitedList(std::vector<Solution>& solutions, 
 	return lists;
 }
 
-std::vector<Solution> ILS::splitSolution(Solution& sol, const std::vector<double>& cuts, std::map<std::string, Activity>& registry) {
-	std::vector<Solution> solutions(cuts.size() - 1, Solution());
-	
-	//Split Unvisited
-	for (auto& ta : sol.m_unvisited) {
-		const double total_duration{ ta.timeWindow.closeTime - ta.timeWindow.openTime };
-		double max_score{ -1 };
-		std::vector<Bucket>::iterator best_b{ registry[ta.id].buckets.end()};
-		for (std::vector<Bucket>::iterator b = registry[ta.id].buckets.begin(); b != registry[ta.id].buckets.end(); ++b) {
-			double score = (b->duration / (double)total_duration) * (b->inSolution / (double)b->inBucket);
-			if (score > max_score) {
-				max_score = score;
-				best_b = b;
-			}
-		}
-		if (best_b == registry[ta.id].buckets.end()) {
-			std::cerr << "invalid bucket" << std::endl;
-			std::exit(1);
-		}
-
-		const int index = best_b - registry[ta.id].buckets.begin();
-		solutions[index].m_unvisited.push_back(ta);
-		best_b->inBucket++;
-	}
-
-	sol.m_unvisited.clear();
-
-	//Split Walks
-	for (auto& s : solutions) {
-		for (size_t i = 0; i < sol.m_walks.size(); ++i) {
-			s.m_walks.push_back(List<TA>());
-		}
-	}
-	
-	//Remove endDepot from each walk
-	for (Walks::iterator walk_it = sol.m_walks.begin(); walk_it != sol.m_walks.end(); ++walk_it) {
-		if (walk_it->back().id == DEPOT_ID) walk_it->pop_back();
-		if (walk_it->size() == 2) continue;
-		for (List<TA>::iterator ta_it = walk_it->begin(); ta_it != walk_it->end(); ++ta_it) {
-			for (std::vector<double>::const_iterator left = cuts.begin(), right = cuts.begin() + 1; right != cuts.end(); ++left, ++right) {
-				if (ta_it.iter->data.depTime >= *left && ta_it.iter->data.depTime < *right) {
-					int64_t sol_index{ left - cuts.begin() }, walk_index{walk_it - sol.m_walks.begin()};
-					solutions[sol_index].m_walks[walk_index].push_back(ta_it.iter->data);
-					break;
-				}
-			}
-		}
-		walk_it->clear();
-	}
-	
-	return solutions;
-}
-
 Solution ILS::connectSolutions(std::vector<Solution>& sols, const size_t walks_num) {
 	Solution solution;
 	//Connect unvisited
@@ -496,21 +398,6 @@ int ILS::collectScores(std::vector<Solution> sols) {
 		total_score += sol.getScores();
 	}
 	return total_score;
-}
-
-std::map<std::string, Activity> ILS::initializeRegistry(const List<TA>& unvisited, const std::vector<double>& cuts) {
-	std::map<std::string, Activity> reg;
-	for (List<TA>::iterator ta_it = unvisited.begin(); ta_it != unvisited.end(); ++ta_it) {
-		double total_duration = ta_it.iter->data.timeWindow.closeTime - ta_it.iter->data.timeWindow.openTime;
-		reg[ta_it.iter->data.id] = Activity{ .duration = ta_it.iter->data.timeWindow.closeTime - ta_it.iter->data.timeWindow.openTime, .buckets = std::vector<Bucket>() };
-		for (std::vector<double>::const_iterator left = cuts.begin(), right = cuts.begin() + 1; right != cuts.end(); ++left, ++right) {
-			double duration = std::min(ta_it.iter->data.timeWindow.closeTime, *right) - std::max(ta_it.iter->data.timeWindow.openTime, *left);
-			if (duration < 0) duration = 0;
-			Bucket b{ .inBucket = 1, .inSolution = 1, .duration = duration, .ratio = duration/total_duration };
-			reg[ta_it.iter->data.id].buckets.push_back(b);
-		}
-	}
-	return reg;
 }
 
 void ILS::PrepareForShake(std::vector<Solution>& sols){

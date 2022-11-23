@@ -5,7 +5,11 @@ OP::OP() {
 }
 
 OP::~OP() {
-	
+	// for(auto &ta:mAttractions){
+	// 	delete ta;
+	// }
+	delete mStartDepot;
+	delete mEndDepot;
 }
 
 OP::OP(std::vector<TA*> attractions, std::vector<Point> points, TA* startDepot, TA* endDepot, int walksNum) : mAttractions(attractions), mPoints(points), m_walks_num(walksNum) {

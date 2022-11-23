@@ -90,14 +90,9 @@ private:
 	std::map<std::string, std::vector<double>> getActivities(List<TA>&, std::vector<ILS::Interval>);
 	std::vector<Interval> getIntervals(std::vector<TA*>, int, double, double);
 	void SplitSearch(std::vector<Solution>&, const std::vector<Interval>&, OP&, std::map<std::string, std::vector<Usage>>&);
-	void SplitSearch2(Solution&, const std::vector<double>&, OP&, std::map<std::string, Activity>&);
-	std::vector<Bin> splitUnvisited(List<TA>&, std::map<std::string, Activity>&);
 	void gatherUnvisited(std::vector<Solution>&, List<TA>&);
 	std::vector<List<TA>> splitUnvisitedList(std::vector<Solution>&, List<TA>&, int, std::map<std::string, std::vector<ILS::Usage>>&, std::map<std::string, std::vector<double>>);
-	void LocalSearch(Solution&, ILS::Interval, OP&, std::map<std::string, std::vector<ILS::Usage>>&);
-	void Controller(std::vector<Solution>&, std::vector<ILS::Interval>, OP&, std::map<std::string, std::vector<ILS::Usage>>&);
 	bool hasWeightedCentroid(const Solution& sol, const int, const int);
-	std::vector<Solution> splitSolution(Solution&, const std::vector<double>&, std::map<std::string, Activity>&);
 	inline Point getWeightedCentroid(const List<TA>::iterator& first, const List<TA>::iterator& last);
 	int SplitShake(std::vector<Solution>&, std::vector<ILS::SR>&, OP&, const int&);
 	int Shake(Solution&, int&, int&, OP&, const int&);
@@ -107,7 +102,6 @@ private:
 	Solution connectSolutions(std::vector<Solution>&, const size_t);
 	std::vector<double> Preprocessing(std::vector<TA*>, int, double);
 	inline int collectProfit (const List<TA>::iterator&, const List<TA>::iterator&) const;
-	inline std::map<std::string, Activity> initializeRegistry(const List<TA>&, const std::vector<double>&);
 	void printSolution(const std::string, const Solution& sol);
 	void printSolutions(const std::string, const std::vector<Solution>& sols);
 	void PrepareForShake(std::vector<Solution>&);
