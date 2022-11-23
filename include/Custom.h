@@ -21,6 +21,7 @@ struct is_iterator<T, typename std::enable_if<!std::is_same<typename std::iterat
 // The List class ---------------------------------------------------------------------------------
 template <typename T>
 class List {
+
     // Sub class for a Node -----------
     struct Node {
         T data{};
@@ -29,7 +30,13 @@ class List {
         Node() {}
         Node(Node* const n, Node* const p) : next(n), previous(p) {}
         Node(Node* const n, Node* const p, const T& d) : next(n), previous(p), data(d) {}
+
+        void print(){
+            std::cout << data.id << " ";
+        }
     };
+
+    
 
     // Protected CustomList data and functions --------
     Node* head{};
@@ -72,7 +79,7 @@ public:
     void assign(const std::initializer_list<T>& il) { clear(); insert(begin(), il.begin(), il.end()); }
 
     // Destructor ---------------------
-    ~List() { clear(); }
+    ~List() { destroy(); }
 
     // Element Access -----------------
     T& front() { return *begin(); }
@@ -97,12 +104,30 @@ public:
         last->next = nullptr;
     }
 
+    void print(std::string tag) const{
+        std::cout << tag << ":\t";
+        iterator first = begin();
+        while(first++ != end()){
+            first.iter->print();
+        }
+        std::cout << "(size: " << size() << ")" << std::endl;
+    }
+
     void clear() {
         for (Node* nextNode{}, * currentNode(head->next); currentNode != head; currentNode = nextNode) {
             nextNode = currentNode->next;
             delete currentNode;
         }
+        delete head;
         init();
+    }
+
+    void destroy() {
+        for (Node* nextNode{}, * currentNode(head->next); currentNode != head; currentNode = nextNode) {
+            nextNode = currentNode->next;
+            delete currentNode;
+        }
+        delete head;
     }
 
     iterator insert(const iterator& insertBeforePosition, const T& value) {

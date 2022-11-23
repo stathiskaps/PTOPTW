@@ -16,6 +16,8 @@
 #define DEFAULT_CENTROID_ID "c"
 #define DEFAULT_TA_ID "default"
 #define DEPOT_ID "depot"
+#define START_DEPOT_ID "start_depot"
+#define END_DEPOT_ID "end_depot"
 #define DUMMY_ID "dummy"
 #define CNEXT_ID "cnext"
 #define DEFAULT_POINT_ID -1

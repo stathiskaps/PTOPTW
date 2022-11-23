@@ -12,6 +12,12 @@ class Solution {
 	std::vector<List<TA>> m_walks;
 public:
 	Solution() {}
+	~Solution() {
+		m_unvisited.clear();
+		for(auto& walk:m_walks){
+			walk.clear();
+		}
+	}
 
 	Solution(List<TA> unvisited): m_unvisited(unvisited) {}
 

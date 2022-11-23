@@ -130,6 +130,9 @@ void init(std::string filename, int numRoutes, int numIntervals) {
 	ILS_TOPTW ilstoptw = ILS_TOPTW(numRoutes, numIntervals);
 	ilstoptw.SolveNew(op);
 
+	delete start_depot;
+	delete end_depot;
+
 	/*OPTW optw(touristAttractions, ttMatrix, depot, OPEN_DAY_TIME, CLOSE_DAY_TIME);
 	Solution sol = optw.solve();
 	bool valid = optw.validate();

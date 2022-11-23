@@ -245,6 +245,8 @@ void ILS::SolveNew(OP& op) {
 
 	while (times_not_improved < MAX_TIMES_NOT_IMPROVED) {
 		counter++;
+
+		// std::cout << "Revision " << counter << std::endl;
 		
 		auto split_search_start = std::chrono::steady_clock::now();
 		splitUnvisitedList(proc_solutions, pool, mIntervalsNum, reg, activities);
@@ -541,9 +543,11 @@ void ILS::PrepareForShake(std::vector<Solution>& sols){
 void ILS::RemoveDummyNodes(std::vector<Solution>& sols){
 	for(std::vector<Solution>::iterator sol_it = sols.begin(); sol_it != sols.end(); ++sol_it){
 		for(std::vector<List<TA>>::iterator walk_it = sol_it->m_walks.begin(); walk_it != sol_it->m_walks.end(); ++walk_it){
-			for(List<TA>::iterator ta_it = walk_it->begin(); ta_it != walk_it->end(); ++ta_it){
+			for(List<TA>::iterator ta_it = walk_it->begin(); ta_it != walk_it->end();){
 				if(ta_it.iter->data.id == DUMMY_ID){
-					walk_it->erase(ta_it);
+					ta_it = walk_it->erase(ta_it);
+				} else {
+					ta_it++;
 				}
 			}
 		}

@@ -99,8 +99,8 @@ private:
 	bool hasWeightedCentroid(const Solution& sol, const int, const int);
 	std::vector<Solution> splitSolution(Solution&, const std::vector<double>&, std::map<std::string, Activity>&);
 	inline Point getWeightedCentroid(const List<TA>::iterator& first, const List<TA>::iterator& last);
-	void SplitShake(std::vector<Solution>&, std::vector<ILS::SR>&, OP&, const int&);
-	void Shake(Solution&, int&, int&, OP&, const int&);
+	int SplitShake(std::vector<Solution>&, std::vector<ILS::SR>&, OP&, const int&);
+	int Shake(Solution&, int&, int&, OP&, const int&);
 	virtual void updateMaxShifts(const List<TA>&, const Vector2D<double>&);
 	std::vector<std::string> construct(Solution&, const Vector2D<double>&);
 	int collectScores(std::vector<Solution>);
@@ -122,7 +122,6 @@ public:
 	virtual void validate(const List<TA>&, const Vector2D<double>&);
 	virtual void validate(const Walks&, const Vector2D<double>&);
 	void validate(const std::vector<Solution>&, const Vector2D<double>&);
-	inline void print(const std::string, const List<TA>&);
 	void SolveNew(OP&);
 
 };

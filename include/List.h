@@ -216,7 +216,6 @@ typedef struct TouristAttraction {
 	}
 
 	virtual TouristAttraction* clone() const {
-		std::cout << "default ta clone" << std::endl;
 		return new TouristAttraction(*this);
 	};
 
