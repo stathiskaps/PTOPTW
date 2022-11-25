@@ -16,15 +16,6 @@ OP::OP(std::vector<TA*> attractions, std::vector<Point> points, TA* startDepot, 
 	mEndDepot = endDepot;
 }
 
-double OP::GetEuclideanDistance(int x1, int y1, int x2, int y2) {
-	double eu_dist;
-	double nearest;
-	eu_dist = pow(x2 - x1, 2) + pow(y2 - y1, 2);
-	eu_dist = sqrt(eu_dist);
-	nearest = (double)roundf(eu_dist * 100) / 100;
-	return nearest;
-}
-
 std::tuple<std::vector<std::vector<double>>, double> OP::calcTravelTimes(std::vector<Point>& points)
 {
 	size_t pointsSize = points.size();

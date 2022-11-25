@@ -16,7 +16,6 @@ private:
 	int m_walks_num;
 
 	std::tuple<std::vector<std::vector<double>>, double> calcTravelTimes(std::vector<Point>& points);
-	double GetEuclideanDistance(int x1, int y1, int x2, int y2);	//returns euclidean distance
 
 public:
 	OP();

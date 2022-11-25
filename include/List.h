@@ -69,10 +69,10 @@ typedef struct TouristAttraction {
 	std::string id;
 	Point point;
 	TimeWindow timeWindow;
-	const touristAttractionType type;
-	const sightCategory category;
-	const double visitDuration;
-	const int profit;
+	touristAttractionType type;
+	sightCategory category;
+	double visitDuration;
+	int profit;
 	int walk;
 	double arrTime, waitDuration, startOfVisitTime, depTime, shift, maxShift;
 	int route, cluster;
@@ -204,9 +204,7 @@ typedef struct TouristAttraction {
 	}
 	
 
-	virtual ~TouristAttraction() {
-		std::cout << "TA destructor was called" << std::endl;
-	} //virtual destructor to ensure our subclasses are correctly dealocated
+	virtual ~TouristAttraction() {} //virtual destructor to ensure our subclasses are correctly dealocated
 } TA;
 
 struct Sight : TA {

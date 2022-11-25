@@ -8,7 +8,6 @@
 #include <cmath>
 #include <variant>
 #include <cassert>
-#include "Controller.h"
 #include "Definitions.h"
 #include "ILS.h"
 #include "OP.h"

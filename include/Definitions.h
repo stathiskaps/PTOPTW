@@ -79,6 +79,7 @@ public:
 
 bool contains(std::list<std::string>&, std::string);
 bool contains(const std::vector<std::string>&, std::string);
+double GetEuclideanDistance(int x1, int y1, int x2, int y2);
 #ifndef ID_H
 #define ID_H
 

@@ -21,16 +21,6 @@ Controller::~Controller() {
 	std::cout << "Desconstructed controller component" << std::endl;
 }
 
-double GetEuclideanDistance(int x1, int y1, int x2, int y2)	//returns euclidean distance
-{
-	double eu_dist;
-	double nearest;
-	eu_dist = pow(x2 - x1, 2) + pow(y2 - y1, 2);
-	eu_dist = sqrt(eu_dist);
-	nearest = (double)roundf(eu_dist * 100) / 100;
-	return nearest;
-}
-
 std::tuple<std::vector<std::vector<double>>, double> calcTravelTimesMatrix(std::vector<Point>& points)
 {
 	int pointsSize = points.size();

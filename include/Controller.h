@@ -3,6 +3,7 @@
 #include <thread>
 #include "Divider.h"
 #include "TaskManager.h"
+#include "Definitions.h"
 
 #ifndef CONTROLLER_H
 #define CONTROLLER_H

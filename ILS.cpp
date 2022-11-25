@@ -230,7 +230,7 @@ void ILS::SolveNew(OP& op) {
 	while (times_not_improved < MAX_TIMES_NOT_IMPROVED) {
 		counter++;
 
-		// std::cout << "Revision " << counter << std::endl;
+		std::cout << "Revision " << counter << std::endl;
 		
 		auto split_search_start = std::chrono::steady_clock::now();
 		splitUnvisitedList(proc_solutions, pool, mIntervalsNum, reg, activities);
@@ -503,7 +503,7 @@ void ILS::AddStartDepots(std::vector<Solution>& solutions, const std::vector<ILS
 			if(!solutions[i].m_walks[j].empty()) { 
 				List<TA>::iterator curr = solutions[i].m_walks[j].begin();
 				while(curr != solutions[i].m_walks[j].end()){ // left trim walk
-					auto [valid, _] = insertionIsValid(prev_it.iter->data, curr.iter->data, op.mTravelTimes);
+					auto [valid, _] = insertionBeforeIsValid(prev_it.iter->data, curr.iter->data, intervals[i].start_time, op.mTravelTimes);
 					if(!valid){
 						solutions[i].m_unvisited.push_back(curr.iter->data);
 						curr = solutions[i].m_walks[j].erase(curr);
@@ -537,6 +537,7 @@ void ILS::AddEndDepots(std::vector<Solution>& solutions, const std::vector<ILS::
 		}
 		else {
 			Point cnext;
+			TA endDepot;
 			if (solutions[next_sol_index].m_walks[j].size() > min_size) {
 				const List<TA>& next_solution_walk = solutions[next_sol_index].m_walks[j];
 				cnext = getWeightedCentroid(next_solution_walk.at(0), next_solution_walk.at(min_size));
@@ -545,7 +546,18 @@ void ILS::AddEndDepots(std::vector<Solution>& solutions, const std::vector<ILS::
 				cnext = getWeightedCentroid(solutions[next_sol_index].m_unvisited.begin(), solutions[next_sol_index].m_unvisited.end());
 			}
 			op.AddPointToGraph(cnext);
-			TA endDepot = TA(CNEXT_ID, cnext); //todo: delete endDepot
+
+			TA last = solutions[i].m_walks[j].back();
+			const double distance = GetEuclideanDistance(last.point.pos.lat, last.point.pos.lon, cnext.pos.lat, cnext.pos.lon);
+			if ((last.depTime + distance) > intervals[i].end_time) {
+				std::cout << std::endl;
+			} else {
+				endDepot = TA(CNEXT_ID, cnext);
+			}
+			// TA new_last = TA(cnext);
+			// auto [valid, _] = insertionAfterIsValid(last, new_last, intervals[i].end_time, op.mTravelTimes);
+			
+
 			endDepot.timeWindow.closeTime = intervals[i].end_time;
 			solutions[i].m_walks[j].push_back(endDepot);
 		}
@@ -575,6 +587,8 @@ void ILS::SplitSearch(std::vector<Solution>& solutions, const std::vector<ILS::I
 		for (size_t j = 0; j < solutions[i].m_walks.size(); ++j) { //foreach walk
 			updateTimes(solutions[i].m_walks[j], solutions[i].m_walks[j].begin(), -1, false, op.mTravelTimes);
 		}
+
+		validate(solutions[i].m_walks, op.mTravelTimes);
 		
 		std::vector<std::string> ids = construct(solutions[i], op.mTravelTimes);
 		for (auto& id : ids) {
@@ -660,7 +674,7 @@ std::vector<std::string> ILS::construct(Solution& sol, const Vector2D<double>& t
 	return inserted_ids;
 }
 
-std::tuple<bool, double> ILS::insertionIsValid(const TA& left, const TA& ta, const TA& right, const Vector2D<double>& travel_times){
+std::tuple<bool, double> ILS::insertionBetweenIsValid(const TA& left, const TA& ta, const TA& right, const Vector2D<double>& travel_times){
 	double shift = travel_times[left.depPointId][ta.point.id]
 		+ ta.visitDuration
 		+ travel_times[ta.point.id][right.arrPointId]
@@ -668,10 +682,22 @@ std::tuple<bool, double> ILS::insertionIsValid(const TA& left, const TA& ta, con
 	return { shift <= right.maxShift, shift };
 }
 
-std::tuple<bool, double> ILS::insertionIsValid(const TA& ta, const TA& right, const Vector2D<double>& travel_times){
+//Check if inserting ta before node K is valid
+std::tuple<bool, double> ILS::insertionBeforeIsValid(const TA& ta, const TA& right, const double start_time, const Vector2D<double>& travel_times){
 	double shift = ta.visitDuration
 		+ travel_times[ta.point.id][right.arrPointId];
 	return { shift <= right.maxShift, shift };
+}
+
+//Check if inserting ta after node K is valid. Close time of route is needed.
+std::tuple<bool, double> ILS::insertionAfterIsValid(const TA& left, const TA& ta, const double close_time, const Vector2D<double>& travel_times){
+	double shift = travel_times[left.depPointId][ta.point.id]
+		+ ta.visitDuration;
+
+	double arr_time = left.depTime + travel_times[left.depPointId][ta.point.id];
+	double dep_time = arr_time + ta.visitDuration;
+
+	return { dep_time < close_time, shift };
 }
 
 std::tuple<Walks::iterator, List<TA>::iterator, double, int, int> ILS::getBestPos(const TA& ta, Walks& walks, const Vector2D<double>& travel_times) {
@@ -693,7 +719,7 @@ std::tuple<Walks::iterator, List<TA>::iterator, double, int, int> ILS::getBestPo
 		int temp_arr_point_id{ DEFAULT_POINT_ID }, temp_dep_point_id{ DEFAULT_POINT_ID };
 
 		while (right != walk_it->end()) {
-			auto [valid, shift] = insertionIsValid(left.iter->data, ta, right.iter->data, travel_times);
+			auto [valid, shift] = insertionBetweenIsValid(left.iter->data, ta, right.iter->data, travel_times);
 			if(valid){
 				if (shift < min_shift) {
 					best_walk = walk_it;
@@ -807,9 +833,8 @@ void ILS::validate(const List<TA>& walk, const Vector2D<double>& travel_times) {
 	}
 }
 
-std::tuple<bool, double> ILS_TOPTW::insertionIsValid(const TA& left, const TA& ta, const TA& right, const Vector2D<double>& travel_times){
+std::tuple<bool, double> ILS_TOPTW::insertionBetweenIsValid(const TA& left, const TA& ta, const TA& right, const Vector2D<double>& travel_times){
 	double arr_time{}, wait_dur{}, start_of_visit_time{}, dep_time{}, shift{};
-
 	arr_time = left.depTime + travel_times[left.depPointId][ta.point.id];
 	wait_dur = std::max(0.0, ta.timeWindow.openTime - arr_time);
 	start_of_visit_time = arr_time + wait_dur;
@@ -823,13 +848,32 @@ std::tuple<bool, double> ILS_TOPTW::insertionIsValid(const TA& left, const TA& t
 	return { dep_time <= ta.timeWindow.closeTime && shift <= right.maxShift, shift };
 }
 
-std::tuple<bool, double> ILS_TOPTW::insertionIsValid(const TA& ta, const TA& right, const Vector2D<double>& travel_times){
-	double arr_time{}, wait_dur{}, start_of_visit_time{}, dep_time{}, shift{};
-	shift = ta.visitDuration
+//Check if inserting ta before route is valid. The start_time of the route is needed.
+std::tuple<bool, double> ILS_TOPTW::insertionBeforeIsValid(const TA& ta, const TA& right, const double start_time, const Vector2D<double>& travel_times){
+	double wait_dur = std::max(0.0, ta.timeWindow.openTime - start_time);
+	double start_of_visit_time = start_time + wait_dur;
+	double dep_time = start_of_visit_time + ta.visitDuration;
+	double shift = wait_dur
+		+ ta.visitDuration
 		+ travel_times[ta.point.id][right.arrPointId];
 
-	return { shift <= right.maxShift, shift };
+	return { dep_time <= ta.timeWindow.closeTime && shift <= right.maxShift, shift };
 }
+
+//Check if inserting ta after left is valid. The close time of route is needed.
+std::tuple<bool, double> ILS_TOPTW::insertionAfterIsValid(const TA& left, const TA& ta, const double close_time, const Vector2D<double>& travel_times){
+	double arr_time = left.depTime + travel_times[left.depPointId][ta.point.id];
+	double wait_duration = std::max(0.0, ta.timeWindow.openTime - arr_time);
+	double start_of_visit_time = arr_time + wait_duration;
+	double dep_time = start_of_visit_time + ta.visitDuration;
+
+	double shift = travel_times[left.depPointId][ta.point.id]
+	+ ta.waitDuration
+	+ ta.visitDuration;
+
+	return { dep_time <= close_time, shift };
+}
+
 
 std::tuple<Walks::iterator, List<TA>::iterator, double, int, int> ILS_TOPTW::getBestPos(const TA& ta, Walks& walks, const Vector2D<double>& travel_times) {
 
@@ -849,7 +893,7 @@ std::tuple<Walks::iterator, List<TA>::iterator, double, int, int> ILS_TOPTW::get
 		int temp_arr_point_id{ DEFAULT_POINT_ID }, temp_dep_point_id{ DEFAULT_POINT_ID };
 
 		while (right != walk_it->end()) {
-			auto [valid, shift] = insertionIsValid(left.iter->data, ta, right.iter->data, travel_times);
+			auto [valid, shift] = insertionBetweenIsValid(left.iter->data, ta, right.iter->data, travel_times);
 			if (valid) {	//check if insertion is possible
 				if (shift < min_shift) {
 					best_walk = walk_it; 

@@ -82,8 +82,9 @@ private:
 	// virtual std::tuple<List<TA>::iterator, double, int, int> getBestPos(const TA&, const List<TA>&, const Vector2D<double>&);
 	virtual std::tuple<Walks::iterator, List<TA>::iterator, double, int, int> getBestPos(const TA&, Walks&, const Vector2D<double>&);
 	virtual void updateTimes(List<TA>&, const List<TA>::iterator&, const double, const bool, const Vector2D<double>&);
-	virtual std::tuple<bool, double> insertionIsValid(const TA&, const TA&, const TA&, const Vector2D<double>&);
-	virtual std::tuple<bool, double> insertionIsValid(const TA& , const TA&, const Vector2D<double>&);
+	virtual std::tuple<bool, double> insertionBetweenIsValid(const TA&, const TA&, const TA&, const Vector2D<double>&);
+	virtual std::tuple<bool, double> insertionBeforeIsValid(const TA& , const TA&, const double, const Vector2D<double>&);
+	virtual std::tuple<bool, double> insertionAfterIsValid(const TA&, const TA&, const double, const Vector2D<double>&);
 	std::map<std::string, std::vector<Usage>> initRegistry(List<TA>&, std::vector<ILS::Interval>);
 	std::map<std::string, std::vector<double>> getActivities(List<TA>&, std::vector<ILS::Interval>);
 	std::vector<Interval> getIntervals(std::vector<TA*>, int, double, double);
@@ -112,6 +113,7 @@ public:
     ~ILS();
 	virtual void validate(const List<TA>&, const Vector2D<double>&);
 	virtual void validate(const Walks&, const Vector2D<double>&);
+	// virtual void validate(const Solution&, const Vector2D<double>&);
 	void validate(const std::vector<Solution>&, const Vector2D<double>&);
 	void SolveNew(OP&);
 
@@ -123,11 +125,13 @@ private:
 	std::tuple<Walks::iterator, List<TA>::iterator, double, int, int> getBestPos(const TA&, Walks&, const Vector2D<double>&) override;
 	void updateTimes(List<TA>&, const List<TA>::iterator&, const double, const bool, const Vector2D<double>&) override;
 	void updateMaxShifts(const List<TA>&, const Vector2D<double>&) override;
-	std::tuple<bool, double> insertionIsValid(const TA&, const TA&, const TA&, const Vector2D<double>&) override;
-	std::tuple<bool, double> insertionIsValid(const TA& , const TA&, const Vector2D<double>&) override;
+	std::tuple<bool, double> insertionBetweenIsValid(const TA&, const TA&, const TA&, const Vector2D<double>&) override;
+	std::tuple<bool, double> insertionBeforeIsValid(const TA& , const TA&, const double, const Vector2D<double>&) override;
+	std::tuple<bool, double> insertionAfterIsValid(const TA&, const TA&, const double, const Vector2D<double>&) override;
 public:
 	using ILS::ILS; //inherit constructor
 	void validate(const List<List<TA>>&, const Vector2D<double>&);
 	void validate(const List<TA>&, const Vector2D<double>&) override;
+	// void validate(const Solution&, const Vector2D<double>&) override;
 };
 
