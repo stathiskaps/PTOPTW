@@ -514,7 +514,9 @@ void ILS::AddStartDepots(std::vector<Solution>& solutions, const std::vector<ILS
 				}
 			}
 
+			std::cout << "Adding start depots" << std::endl;
 			solutions[i].m_walks[j].push_front(prev_it.iter->data);
+			updateTimes(solutions[i].m_walks[j], solutions[i].m_walks[j].begin(), intervals[i].start_time, false, op.mTravelTimes);
 		}
 
 	}
@@ -550,16 +552,16 @@ void ILS::AddEndDepots(std::vector<Solution>& solutions, const std::vector<ILS::
 			TA last = solutions[i].m_walks[j].back();
 			const double distance = GetEuclideanDistance(last.point.pos.lat, last.point.pos.lon, cnext.pos.lat, cnext.pos.lon);
 			if ((last.depTime + distance) > intervals[i].end_time) {
-				std::cout << std::endl;
+				Point nearest = last.point.findPointWithDistance(cnext, intervals[i].end_time - last.depTime);
+				endDepot = (NEAREST_NEXT, nearest);
 			} else {
 				endDepot = TA(CNEXT_ID, cnext);
 			}
-			// TA new_last = TA(cnext);
-			// auto [valid, _] = insertionAfterIsValid(last, new_last, intervals[i].end_time, op.mTravelTimes);
-			
 
+			std::cout << "Adding end depots" << std::endl;
 			endDepot.timeWindow.closeTime = intervals[i].end_time;
 			solutions[i].m_walks[j].push_back(endDepot);
+			updateTimes(solutions[i].m_walks[j], solutions[i].m_walks[j].end() - 1, -1, false, op.mTravelTimes);
 		}
 	}
 }
@@ -584,16 +586,16 @@ void ILS::SplitSearch(std::vector<Solution>& solutions, const std::vector<ILS::I
 			AddEndDepots(solutions, intervals, i, op);
 		}
 
-		for (size_t j = 0; j < solutions[i].m_walks.size(); ++j) { //foreach walk
-			updateTimes(solutions[i].m_walks[j], solutions[i].m_walks[j].begin(), -1, false, op.mTravelTimes);
-		}
+		// for (size_t j = 0; j < solutions[i].m_walks.size(); ++j) { //foreach walk
+		// 	updateTimes(solutions[i].m_walks[j], solutions[i].m_walks[j].begin(), -1, false, op.mTravelTimes);
+		// }
 
+		std::cout << "Validating walks of solution " << i << std::endl;
 		validate(solutions[i].m_walks, op.mTravelTimes);
 		
 		std::vector<std::string> ids = construct(solutions[i], op.mTravelTimes);
 		for (auto& id : ids) {
 			reg[id].at(i).solved++;
-			// registry[id].buckets[i].inSolution++;
 		}
 
 		if (i > 0) {

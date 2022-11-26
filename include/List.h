@@ -44,6 +44,12 @@ struct Point {
 		id = pId;
 		pos = Position(pLat, pLon);
 	}
+
+	Point(double pLat, double pLon) {
+		id = DEFAULT_POINT_ID;
+		pos = Position(pLat, pLon);
+	}
+
 	~Point() {}
 
 	double euclidean_distance(Point p) {
@@ -53,6 +59,13 @@ struct Point {
 		dist = sqrt(dist);
 		nearest = (double)roundf(dist * 100) / 100;
 		return nearest;
+	}
+
+	//Returns a point towards point p2, with distance dt from current point
+	Point findPointWithDistance(Point p2, double dt){
+		double d = euclidean_distance(p2);
+		double t = dt/d;
+		return Point(((1-t)*this->pos.lat + t*p2.pos.lat), ((1-t)*this->pos.lon + t*p2.pos.lon));
 	}
 };
 
