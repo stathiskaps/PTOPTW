@@ -124,7 +124,7 @@ void init(std::string filename, int numRoutes, int numIntervals) {
 	end_depot->id = END_DEPOT_ID;
 	touristAttractions.erase(touristAttractions.begin());
 
-	OP op = OP(touristAttractions, points, start_depot, end_depot, numRoutes);
+	OP op = OP(touristAttractions, points, start_depot, end_depot, numRoutes, end_depot->timeWindow.openTime, end_depot->timeWindow.closeTime);
 
 	ILS_TOPTW ilstoptw = ILS_TOPTW(numRoutes, numIntervals);
 	ilstoptw.SolveNew(op);

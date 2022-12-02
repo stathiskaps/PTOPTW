@@ -73,7 +73,7 @@ struct TimeWindow {
 	double openTime;
 	double closeTime;
 
-	double length() {
+	double duration() const {
 		return closeTime - openTime;
 	}
 };

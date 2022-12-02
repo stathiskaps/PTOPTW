@@ -14,13 +14,14 @@ private:
 	std::vector<std::vector<double>> mTravelTimes;
 	TA *mStartDepot, *mEndDepot;
 	int m_walks_num;
+	TimeWindow mTimeWindow;
 
 	std::tuple<std::vector<std::vector<double>>, double> calcTravelTimes(std::vector<Point>& points);
 
 public:
 	OP();
 	~OP();
-	OP(std::vector<TA*>, std::vector<Point>, TA*, TA*, int);
+	OP(std::vector<TA*>, std::vector<Point>, TA*, TA*, int, double, double);
 	void AddPointToGraph(Point&);
 	void PrintTravelTimes(std::string);
 

@@ -173,6 +173,7 @@ void ILS::InitSolutions(std::vector<Solution>& sols, const OP& op){
 	for (auto &walk : sols.front().m_walks) {
 		if (walk.front().id != START_DEPOT_ID) {
 			walk.push_front(*op.mStartDepot);
+			walk.front().depTime = op.mTimeWindow.openTime;
 		}
 	}
 
@@ -180,6 +181,7 @@ void ILS::InitSolutions(std::vector<Solution>& sols, const OP& op){
 	for (auto &walk : sols.back().m_walks) {
 		if (walk.back().id != END_DEPOT_ID) {
 			walk.push_back(*op.mEndDepot);
+			walk.back().maxShift = op.mTimeWindow.duration();
 		}
 	}
 }
@@ -226,7 +228,7 @@ void ILS::SolveNew(OP& op) {
 	InitSolutions(proc_solutions, op);
 	List<TA> pool = std::move(unvisited);
 
-
+ 
 	while (times_not_improved < MAX_TIMES_NOT_IMPROVED) {
 		counter++;
 
@@ -497,12 +499,14 @@ void ILS::AddStartDepots(std::vector<Solution>& solutions, const std::vector<ILS
 			if(prev_sol_index == -1){
 				throw std::runtime_error("didn't find a valid previous walk to get a startDepot");
 			}
-
+	
 			List<TA>::iterator prev_it = solutions[prev_sol_index].m_walks[j].end() - 1;
+			prev_it.iter->data.timeWindow=op.mTimeWindow;
 
+			//left trim invalid nodes
 			if(!solutions[i].m_walks[j].empty()) { 
 				List<TA>::iterator curr = solutions[i].m_walks[j].begin();
-				while(curr != solutions[i].m_walks[j].end()){ // left trim walk
+				while(curr != solutions[i].m_walks[j].end()){
 					auto [valid, _] = insertionBeforeIsValid(prev_it.iter->data, curr.iter->data, intervals[i].start_time, op.mTravelTimes);
 					if(!valid){
 						solutions[i].m_unvisited.push_back(curr.iter->data);
@@ -535,6 +539,7 @@ void ILS::AddEndDepots(std::vector<Solution>& solutions, const std::vector<ILS::
 			if(solutions[i].m_walks[j].back().id != op.mEndDepot->id){
 				solutions[i].m_walks[j].push_back(*op.mEndDepot);
 				solutions[i].m_walks[j].back().timeWindow.closeTime = intervals[i].end_time;
+				updateTimes(solutions[i].m_walks[j], solutions[i].m_walks[j].end() - 1, -1, false, op.mTravelTimes);
 			}
 		}
 		else {
@@ -552,10 +557,15 @@ void ILS::AddEndDepots(std::vector<Solution>& solutions, const std::vector<ILS::
 			TA last = solutions[i].m_walks[j].back();
 			const double distance = GetEuclideanDistance(last.point.pos.lat, last.point.pos.lon, cnext.pos.lat, cnext.pos.lon);
 			if ((last.depTime + distance) > intervals[i].end_time) {
-				Point nearest = last.point.findPointWithDistance(cnext, intervals[i].end_time - last.depTime);
+				Point nearest = last.point.findPointWithDistance(cnext, intervals[i].end_time - last.depTime - 1);
+				op.AddPointToGraph(nearest); //nearest gets an id here
 				endDepot = (NEAREST_NEXT, nearest);
+				endDepot.arrPointId = nearest.id;
+				endDepot.depPointId = nearest.id;
 			} else {
 				endDepot = TA(CNEXT_ID, cnext);
+				endDepot.arrPointId = cnext.id;
+				endDepot.depPointId = cnext.id;
 			}
 
 			std::cout << "Adding end depots" << std::endl;
@@ -758,9 +768,10 @@ void ILS::updateMaxShifts(const List<TA>& li, const Vector2D<double>& travel_tim
 	List<TA>::iterator it{ li.end() - 1 };
 	it.iter->data.maxShift = it.iter->data.timeWindow.closeTime - it.iter->data.depTime;
 	it--;
-	do {
+	while(it != li.end()){
 		it.iter->data.maxShift = (it + 1).iter->data.maxShift;
-	} while (it-- != li.begin());
+		it--;
+	}
 }
 
 void ILS::validate(const std::vector<Solution>& sols, const Vector2D<double>& travel_times){
@@ -939,9 +950,10 @@ void ILS_TOPTW::updateMaxShifts(const List<TA>& li, const Vector2D<double>& trav
 	List<TA>::iterator it{ li.end() - 1 };
 	it.iter->data.maxShift = it.iter->data.timeWindow.closeTime - it.iter->data.depTime;
 	it--;
-	do {
+	while(it != li.end()){
 		it.iter->data.maxShift = std::min(it.iter->data.timeWindow.closeTime - it.iter->data.depTime, (it + 1).iter->data.waitDuration + (it + 1).iter->data.maxShift);
-	} while (it-- != li.begin());
+		it--;
+	}
 }
 
 void ILS_TOPTW::validate(const List<List<TA>>& walks, const Vector2D<double>& travel_times) {

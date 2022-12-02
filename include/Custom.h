@@ -105,10 +105,9 @@ public:
     }
 
     void print(std::string tag) const{
-        std::cout << tag << ":\t";
-        iterator first = begin();
-        while(first++ != end()){
-            first.iter->print();
+        std::cout << tag << ": ";
+        for(iterator it = begin(); it != end(); ++it){
+            it.iter->print();
         }
         std::cout << "(size: " << size() << ")" << std::endl;
     }
