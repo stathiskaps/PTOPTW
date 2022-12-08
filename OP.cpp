@@ -28,7 +28,8 @@ std::tuple<std::vector<std::vector<double>>, double> OP::calcTravelTimes(std::ve
 	for (int i = 0; i < pointsSize; ++i) {
 		std::vector<double> vec;
 		for (int j = 0; j < pointsSize; j++) {
-			val = GetEuclideanDistance(points.at(i).pos.lat, points.at(i).pos.lon, points.at(j).pos.lat, points.at(j).pos.lon);
+			val = points.at(i).euclidean_distance(points.at(j));
+			// val = GetEuclideanDistance(points.at(i).pos.lat, points.at(i).pos.lon, points.at(j).pos.lat, points.at(j).pos.lon);
 			vec.push_back(val);
 			totalTravelTime += val;
 		}

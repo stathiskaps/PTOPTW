@@ -467,23 +467,21 @@ bool ILS::hasWeightedCentroid(const Solution& sol, const int walk_index, const i
 	return sol.m_walks[walk_index].size() >= min_walk_size || !sol.m_unvisited.empty();
 }
 
-// double ILS::getShift(const List<TA>::iterator left, const List<TA>::iterator ins, const List<TA>::iterator right, const Vector2D<double>& travel_times){
-// 	double start_time = left.iter->data
-// 	double shift = travel_times[left.iter->data.depPointId][ins.point.id]
-// 				+ ins.waitDuration
-// 				+ ins.visitDuration
-// 				+ travel_times[ins.point.id][right.iter->data.arrPointId]
-// 				- travel_times[left.iter->data.depPointId][right.iter->data.arrPointId];
+std::tuple<bool, double> ILS::CandidateStartDepotIsValid(const List<TA>& walk, const TA& ta, const double start_time, const Vector2D<double>& travel_times){
+	auto first_it = walk.begin();
+	double wait_dur = std::max(0.0, ta.timeWindow.openTime - start_time);
+	double start_of_visit_time = start_time + wait_dur;
+	double dep_time = start_of_visit_time + ta.visitDuration;
+	double shift = wait_dur
+		+ ta.visitDuration
+		+ travel_times[ta.point.id][first_it.iter->data.arrPointId];
 
-// 	return shift;
-// }
-
-// bool ILS::TrimLeft(TA ta, List<TA> walk){
-// 	List<TA>::iterator curr = walk.begin();
-// 	for(List<TA>::iterator curr = walk.begin(); curr!=walk)
-// }
+	return { dep_time <= ta.timeWindow.closeTime && shift <= first_it.iter->data.maxShift, shift };
+}
 
 void ILS::AddStartDepots(std::vector<Solution>& solutions, const std::vector<ILS::Interval>& intervals, const int i, const OP& op){
+
+	TimeWindow timeBudget = TimeWindow{intervals[i].start_time, intervals[i].end_time};
 	for (size_t j = 0; j < solutions[i].m_walks.size(); ++j) {
 		int prev_sol_index = i-1;
 		
@@ -501,13 +499,13 @@ void ILS::AddStartDepots(std::vector<Solution>& solutions, const std::vector<ILS
 			}
 	
 			List<TA>::iterator prev_it = solutions[prev_sol_index].m_walks[j].end() - 1;
-			prev_it.iter->data.timeWindow=op.mTimeWindow;
+			prev_it.iter->data.timeWindow=timeBudget;
 
 			//left trim invalid nodes
 			if(!solutions[i].m_walks[j].empty()) { 
 				List<TA>::iterator curr = solutions[i].m_walks[j].begin();
 				while(curr != solutions[i].m_walks[j].end()){
-					auto [valid, _] = insertionBeforeIsValid(prev_it.iter->data, curr.iter->data, intervals[i].start_time, op.mTravelTimes);
+					auto [valid, _] = CandidateStartDepotIsValid(solutions[i].m_walks[j], curr.iter->data, intervals[i].start_time, op.mTravelTimes);
 					if(!valid){
 						solutions[i].m_unvisited.push_back(curr.iter->data);
 						curr = solutions[i].m_walks[j].erase(curr);
@@ -526,10 +524,26 @@ void ILS::AddStartDepots(std::vector<Solution>& solutions, const std::vector<ILS
 	}
 }
 
+std::tuple<bool, double> ILS::CandidateEndDepotIsValid(const List<TA>& walk, const TA candidateEndDepot, const TimeWindow timebudget){
+	double shift = candidateEndDepot.waitDuration + candidateEndDepot.visitDuration;
+	auto last_it = walk.end()-1;
+	if(walk.empty()){
+		return { timebudget.openTime + shift <= timebudget.closeTime, shift };
+	}
+	const double distance = last_it.iter->data.point.euclidean_distance(candidateEndDepot.point);
+	shift += distance;
+	return { last_it.iter->data.depTime + shift <= timebudget.closeTime, shift };
+}
+
 void ILS::AddEndDepots(std::vector<Solution>& solutions, const std::vector<ILS::Interval>& intervals, const int i, OP& op){
 	const int min_size = 3;
+	TimeWindow timeBudget = TimeWindow{intervals[i].start_time, intervals[i].end_time};
 	for (size_t j = 0; j < solutions[i].m_walks.size(); ++j) {
 		//add endpoint
+		Point candidateEndPoint, finalEndPoint;
+		TA last = solutions[i].m_walks[j].back(), endDepot;
+		std::string endPointId;
+
 		int next_sol_index = i + 1;
 		while (next_sol_index < solutions.size() && !hasWeightedCentroid(solutions[next_sol_index], j, min_size)) {
 			next_sol_index++;
@@ -537,42 +551,38 @@ void ILS::AddEndDepots(std::vector<Solution>& solutions, const std::vector<ILS::
 
 		if (last_solution || next_sol_index == solutions.size()) {
 			if(solutions[i].m_walks[j].back().id != op.mEndDepot->id){
-				solutions[i].m_walks[j].push_back(*op.mEndDepot);
-				solutions[i].m_walks[j].back().timeWindow.closeTime = intervals[i].end_time;
-				updateTimes(solutions[i].m_walks[j], solutions[i].m_walks[j].end() - 1, -1, false, op.mTravelTimes);
+				candidateEndPoint = op.mEndDepot->point;
 			}
 		}
 		else {
-			Point cnext;
 			TA endDepot;
 			if (solutions[next_sol_index].m_walks[j].size() > min_size) {
 				const List<TA>& next_solution_walk = solutions[next_sol_index].m_walks[j];
-				cnext = getWeightedCentroid(next_solution_walk.at(0), next_solution_walk.at(min_size));
+				candidateEndPoint = getWeightedCentroid(next_solution_walk.at(0), next_solution_walk.at(min_size));
 			}
 			else {
-				cnext = getWeightedCentroid(solutions[next_sol_index].m_unvisited.begin(), solutions[next_sol_index].m_unvisited.end());
+				candidateEndPoint = getWeightedCentroid(solutions[next_sol_index].m_unvisited.begin(), solutions[next_sol_index].m_unvisited.end());
 			}
-			op.AddPointToGraph(cnext);
-
-			TA last = solutions[i].m_walks[j].back();
-			const double distance = GetEuclideanDistance(last.point.pos.lat, last.point.pos.lon, cnext.pos.lat, cnext.pos.lon);
-			if ((last.depTime + distance) > intervals[i].end_time) {
-				Point nearest = last.point.findPointWithDistance(cnext, intervals[i].end_time - last.depTime - 1);
-				op.AddPointToGraph(nearest); //nearest gets an id here
-				endDepot = (NEAREST_NEXT, nearest);
-				endDepot.arrPointId = nearest.id;
-				endDepot.depPointId = nearest.id;
-			} else {
-				endDepot = TA(CNEXT_ID, cnext);
-				endDepot.arrPointId = cnext.id;
-				endDepot.depPointId = cnext.id;
-			}
-
-			std::cout << "Adding end depots" << std::endl;
-			endDepot.timeWindow.closeTime = intervals[i].end_time;
-			solutions[i].m_walks[j].push_back(endDepot);
-			updateTimes(solutions[i].m_walks[j], solutions[i].m_walks[j].end() - 1, -1, false, op.mTravelTimes);
 		}
+		
+		//We should check if candidateEndPoint can be added at the end of the walk as endDepot
+		//If we use function insertionAfterIsValid, we need first to add the point to the graph and calculate
+		//the travel times for and to each other point. But we only need to know the distance between walk's last point
+		//and candidateEndPoint to figure out if the insertion is feasible. So we won't add the candidate end point in the graph.
+		const TA candidateEndDepot = TA(CANDIDATE_END_DEPOT_ID, candidateEndPoint);
+		auto [valid, _] = CandidateEndDepotIsValid(solutions[i].m_walks[j], candidateEndDepot, timeBudget);
+		if (!valid){
+			finalEndPoint = last.point.findPointWithDistance(candidateEndPoint, intervals[i].end_time - last.depTime - 1);
+		} else {
+			finalEndPoint = candidateEndPoint;
+		}
+
+		op.AddPointToGraph(finalEndPoint); //finalEndPoint gets an id here
+		endDepot = TA(DUMMY_END_DEPOT_ID, finalEndPoint); //endDepot arrPointId and dePointId get the finalPoint.id value
+		endDepot.timeWindow = timeBudget;
+		solutions[i].m_walks[j].push_back(endDepot);
+		updateTimes(solutions[i].m_walks[j], solutions[i].m_walks[j].end() - 1, -1, false, op.mTravelTimes);
+
 	}
 }
 

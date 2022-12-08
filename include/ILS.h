@@ -105,6 +105,9 @@ private:
 	void PrepareForShake(std::vector<Solution>&);
 	void RemoveDummyNodes(std::vector<Solution>&);
 	void InitSolutions(std::vector<Solution>&, const OP& op);
+	std::tuple<bool, double> CandidateEndDepotIsValid(const List<TA>&, const TA, TimeWindow);
+	std::tuple<bool, double> CandidateStartDepotIsValid(const List<TA>&, const TA&, const double, const Vector2D<double>&);
+
 
 	
 public:

@@ -18,6 +18,8 @@
 #define DEPOT_ID "depot"
 #define START_DEPOT_ID "start_depot"
 #define END_DEPOT_ID "end_depot"
+#define CANDIDATE_END_DEPOT_ID "candidate_end_depot"
+#define DUMMY_END_DEPOT_ID "dummy_end_depot"
 #define DUMMY_ID "dummy"
 #define CNEXT_ID "cnext"
 #define NEAREST_NEXT "nearest_next"

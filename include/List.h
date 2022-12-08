@@ -53,12 +53,8 @@ struct Point {
 	~Point() {}
 
 	double euclidean_distance(Point p) {
-		double dist;
-		double nearest;
-		dist = pow(p.pos.lat - pos.lat, 2) + pow(p.pos.lon - pos.lon, 2);
-		dist = sqrt(dist);
-		nearest = (double)roundf(dist * 100) / 100;
-		return nearest;
+		double distance = sqrt(pow(p.pos.lat - this->pos.lat, 2) + pow(p.pos.lon - this->pos.lon, 2));;
+		return distance;
 	}
 
 	//Returns a point towards point p2, with distance dt from current point
