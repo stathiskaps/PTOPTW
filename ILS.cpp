@@ -555,7 +555,6 @@ void ILS::AddEndDepots(std::vector<Solution>& solutions, const std::vector<ILS::
 			}
 		}
 		else {
-			TA endDepot;
 			if (solutions[next_sol_index].m_walks[j].size() > min_size) {
 				const List<TA>& next_solution_walk = solutions[next_sol_index].m_walks[j];
 				candidateEndPoint = getWeightedCentroid(next_solution_walk.at(0), next_solution_walk.at(min_size));
