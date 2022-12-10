@@ -40,11 +40,6 @@
 #ifndef S_H
 #define S_H
 
-class S {
-public:
-	static int ta_id;
-};
-
 #endif
 //namespace uuid {
 //	static std::random_device              rd;

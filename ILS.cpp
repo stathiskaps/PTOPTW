@@ -168,20 +168,16 @@ void ILS::printSolutions(const std::string tag, const std::vector<Solution>& sol
 	}
 }
 
-void ILS::InitSolutions(std::vector<Solution>& sols, const OP& op){
-	//go to each walk of last solution and add an endDepot
-	for (auto &walk : sols.front().m_walks) {
-		if (walk.front().id != START_DEPOT_ID) {
-			walk.push_front(*op.mStartDepot);
-			walk.front().depTime = op.mTimeWindow.openTime;
-		}
-	}
+void ILS::InitSolutions(std::vector<Solution>& sols, const std::vector<ILS::Interval> intervals,  const OP& op){
 
-	//go to each walk of last solution and add an endDepot
-	for (auto &walk : sols.back().m_walks) {
-		if (walk.back().id != END_DEPOT_ID) {
-			walk.push_back(*op.mEndDepot);
-			walk.back().maxShift = op.mTimeWindow.duration();
+	for(std::vector<Solution>::iterator sol_it = sols.begin(); sol_it != sols.end(); ++sol_it){
+		const int sol_index = sol_it - sols.begin();
+		for(std::vector<List<TA>>::iterator walk_it = sol_it->m_walks.begin(); walk_it != sol_it->m_walks.end(); ++walk_it){
+			walk_it->push_front(*op.mStartDepot);
+			walk_it->push_back(*op.mEndDepot);
+			walk_it->front().timeWindow = TimeWindow{intervals[sol_index].start_time, intervals[sol_index].end_time};
+			walk_it->back().timeWindow = TimeWindow{intervals[sol_index].start_time, intervals[sol_index].end_time};
+			updateTimes(*walk_it, walk_it->begin(), intervals[sol_index].start_time, false, op.mTravelTimes);
 		}
 	}
 }
@@ -225,7 +221,7 @@ void ILS::SolveNew(OP& op) {
 			s.m_walks.push_back(List<TA>());
 		}
 	}
-	InitSolutions(proc_solutions, op);
+	InitSolutions(proc_solutions, intervals, op);
 	List<TA> pool = std::move(unvisited);
 
  
@@ -396,13 +392,13 @@ void ILS::RemoveDummyNodes(std::vector<Solution>& sols){
 
 int ILS::SplitShake(std::vector<Solution>& sols, std::vector<ILS::SR>& shake_settings, OP& op, const int& max_to_remove){
 	int removed_counter = 0;
-	PrepareForShake(sols);
+	// PrepareForShake(sols);
 	for(auto sol_it = sols.begin(); sol_it != sols.end(); ++sol_it){
 		const int sol_index = sol_it - sols.begin();
 		int removed = Shake(*sol_it, shake_settings[sol_index].S, shake_settings[sol_index].R, op, max_to_remove);
 		removed_counter += removed;
 	}
-	RemoveDummyNodes(sols);
+	// RemoveDummyNodes(sols);
 	return removed_counter;
 }
 
@@ -594,16 +590,16 @@ void ILS::SplitSearch(std::vector<Solution>& solutions, const std::vector<ILS::I
 
 		if (solutions[i].m_unvisited.empty()) continue;
 
-		if (first_solution) {
-			AddEndDepots(solutions, intervals, i, op);
-		} 
-		else if (last_solution) {
-			AddStartDepots(solutions, intervals, i, op);
-		}
-		else if (middle_solution){
-			AddStartDepots(solutions, intervals, i, op);
-			AddEndDepots(solutions, intervals, i, op);
-		}
+		// if (first_solution) {
+		// 	AddEndDepots(solutions, intervals, i, op);
+		// } 
+		// else if (last_solution) {
+		// 	AddStartDepots(solutions, intervals, i, op);
+		// }
+		// else if (middle_solution){
+		// 	AddStartDepots(solutions, intervals, i, op);
+		// 	AddEndDepots(solutions, intervals, i, op);
+		// }
 
 		// for (size_t j = 0; j < solutions[i].m_walks.size(); ++j) { //foreach walk
 		// 	updateTimes(solutions[i].m_walks[j], solutions[i].m_walks[j].begin(), -1, false, op.mTravelTimes);
@@ -617,17 +613,17 @@ void ILS::SplitSearch(std::vector<Solution>& solutions, const std::vector<ILS::I
 			reg[id].at(i).solved++;
 		}
 
-		if (i > 0) {
-			for(std::vector<List<TA>>::iterator walk_it = solutions[i].m_walks.begin(); walk_it != solutions[i].m_walks.end(); ++walk_it){
-				walk_it->pop_front();
-			}
-		}
+		// if (i > 0) {
+		// 	for(std::vector<List<TA>>::iterator walk_it = solutions[i].m_walks.begin(); walk_it != solutions[i].m_walks.end(); ++walk_it){
+		// 		walk_it->pop_front();
+		// 	}
+		// }
 
-		if (i < solutions.size() - 1) {
-			for (auto& walk : solutions[i].m_walks) {
-				walk.pop_back();
-			} 
-		}
+		// if (i < solutions.size() - 1) {
+		// 	for (auto& walk : solutions[i].m_walks) {
+		// 		walk.pop_back();
+		// 	} 
+		// }
 	}
 }
 
