@@ -11,8 +11,118 @@
 #include "Definitions.h"
 #include "ILS.h"
 #include "OP.h"
+#include <boost/graph/adjacency_list.hpp>
+#include <boost/graph/graphviz.hpp>
 
-int S::ta_id;
+// Define a simple struct to represent a point in 2D space
+struct Node
+{
+    double x, y;
+};
+
+void createGraph(){
+	struct Vertex { int foo; };
+    struct Edge { std::string blah; };
+
+    using namespace boost;
+    using graph_t  = adjacency_list<listS, vecS, directedS, Vertex, Edge >;
+    using vertex_t = graph_traits<graph_t>::vertex_descriptor;
+    using edge_t   = graph_traits<graph_t>::edge_descriptor;
+
+    //Instantiate a graph
+    graph_t g;
+
+    // Create two vertices in that graph
+    vertex_t u = boost::add_vertex(Vertex{123}, g);
+    vertex_t v = boost::add_vertex(Vertex{456}, g);
+
+    // Create an edge conecting those two vertices
+    boost::add_edge(u, v, Edge{"Hello"}, g);
+
+    boost::write_graphviz(std::cout, g, [&] (auto& out, auto v) {
+       out << "[label=\"" << g[v].foo << "\"]";
+      },
+      [&] (auto& out, auto e) {
+       out << "[label=\"" << g[e].blah << "\"]";
+    });
+    std::cout << std::flush;
+}
+
+struct Bounds{
+	double minLat, minLon, maxLat, maxLon;
+};
+
+
+void drawPoints(std::vector<Point> points){
+
+	Bounds bounds;
+	for(auto p: points){
+		if(p.pos.lat < bounds.minLat){
+		bounds.minLat = p.pos.lat;
+		}
+		if(p.pos.lat > bounds.maxLat){
+			bounds.maxLat = p.pos.lat;
+		}
+		if(p.pos.lon < bounds.minLon){
+			bounds.minLon = p.pos.lon;
+		}
+		if(p.pos.lon > bounds.maxLon){
+			bounds.maxLon = p.pos.lon;
+		}
+	}
+
+	// Create a vector of nodes to represent the graph
+
+	const double radius = 2;
+
+    std::vector<Node> nodes = {
+        {1, 2},
+        {3, 4},
+        {5, 6},
+        {7, 8}
+    };
+
+	std::cout << "Points.size = " << points.size() << std::endl;
+
+    // Create a vector of pairs of indices to represent the routes between nodes
+    std::vector<std::pair<int, int>> routes = {
+        {0, 1},
+        {1, 2},
+        {2, 3}
+    };
+
+    // Open an output stream to write the SVG file
+    std::ofstream out("graph.svg");
+
+
+
+    // Write the SVG file header
+    out << "<svg viewBox=\"" << bounds.minLat - radius << " " << bounds.minLon - radius << " " << bounds.maxLat - bounds.minLat + radius*2 << " " << bounds.maxLon - bounds.minLon + radius*2 << "\" xmlns=\"http://www.w3.org/2000/svg\">" << std::endl;
+
+
+	// Write the routes as lines in the SVG file
+    for (const auto& [n1, n2] : routes)
+    {
+        const Point& point1 = points[n1];
+        const Point& point2 = points[n2];
+        out << "<line x1=\"" << point1.pos.lat << "\" y1=\"" << point1.pos.lon << "\" x2=\"" << point2.pos.lat << "\" y2=\"" << point2.pos.lon << "\" style=\"stroke:rgb(66,66,66);stroke-width:0.5\" />" << std::endl;
+    }
+
+    // Write the nodes as circles in the SVG file
+    for (const Point& p : points)
+    {
+        out << "<circle cx=\"" << p.pos.lat << "\" cy=\"" << p.pos.lon  << "\" r=\"" << radius << "\" />" << std::endl;
+		out << "<text x=\""<< p.pos.lat << "\" y=\""<< p.pos.lon << "\" text-anchor=\"middle\" font-size=\"2px\" fill=\"white\" alignment-baseline=\"middle\">" << p.id  << "</text>" << std::endl;
+    }
+
+
+
+    // Write the SVG file footer
+    out << "</svg>" << std::endl;
+
+    // Close the output stream
+    out.close();
+}
 
 std::vector<std::string> split(const std::string& line) {
 	std::string buf;                 // Have a buffer string
@@ -25,12 +135,6 @@ std::vector<std::string> split(const std::string& line) {
 
 	return tokens;
 }
-
-
-
-
-
-
 
 double calcMeanVisitTime(std::vector<TA*> touristAttractions) {
 	double totalVisitDuration = 0;
@@ -45,7 +149,8 @@ void init(std::string filename, int numRoutes, int numIntervals) {
 	std::vector<TA*> touristAttractions; //TODO:delete pointers
 	std::vector<Point> points;
 	std::string path = "./instances/Cordeau/";
-	S::ta_id = 0;
+
+	Bounds bounds;
 
 	std::ifstream infile(path.append(filename + ".txt"));
 
@@ -113,7 +218,7 @@ void init(std::string filename, int numRoutes, int numIntervals) {
 	}
 
 	// raise(SIGINT);
-
+	drawPoints(points);
 
 #if 1
 	std::cout << std::endl;
