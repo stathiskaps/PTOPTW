@@ -233,6 +233,7 @@ void ILS::SolveNew(OP& op) {
 		auto split_search_start = std::chrono::steady_clock::now();
 		splitUnvisitedList(proc_solutions, pool, mIntervalsNum, reg, activities);
 		SplitSearch(proc_solutions, intervals, op, reg);
+		drawSolutions(proc_solutions);
 		auto split_search_end = std::chrono::steady_clock::now();
 		auto split_search_diff = split_search_end - split_search_start;
 
@@ -584,9 +585,9 @@ void ILS::AddEndDepots(std::vector<Solution>& solutions, const std::vector<ILS::
 void ILS::SplitSearch(std::vector<Solution>& solutions, const std::vector<ILS::Interval>& intervals, OP& op, std::map<std::string, std::vector<ILS::Usage>>& reg) {
 
 	const int min_size = 3;
-	const size_t solutions_size = solutions.size();
+	const int solutions_size = solutions.size();
 
-	for (size_t i = 0; i < solutions.size(); ++i) {
+	for (int i = 0; i < solutions.size(); ++i) {
 
 		if (solutions[i].m_unvisited.empty()) continue;
 
@@ -625,6 +626,99 @@ void ILS::SplitSearch(std::vector<Solution>& solutions, const std::vector<ILS::I
 		// 	} 
 		// }
 	}
+}
+
+void ILS::drawSolutions(const std::vector<Solution>& solutions){
+	Bounds bounds;
+	const double radius = 2;
+	const std::string filename = "Solutions.svg";
+	std::vector<std::string> colors = {"black", "steelblue", "firebrick", "darkgray", "midnightblue"};
+	int sol_counter{};
+	for(auto& sol : solutions){
+		for(List<TA>::iterator ta_it = sol.m_unvisited.begin(); ta_it != sol.m_unvisited.end(); ++ta_it){
+			if(ta_it.iter->data.point.pos.lat < bounds.minLat){
+				bounds.minLat = ta_it.iter->data.point.pos.lat;
+			}
+			if(ta_it.iter->data.point.pos.lat > bounds.maxLat){
+				bounds.maxLat = ta_it.iter->data.point.pos.lat;
+			}
+			if(ta_it.iter->data.point.pos.lon < bounds.minLon){
+				bounds.minLon = ta_it.iter->data.point.pos.lon;
+			}
+			if(ta_it.iter->data.point.pos.lon > bounds.maxLon){
+				bounds.maxLon = ta_it.iter->data.point.pos.lon;
+			}
+		}
+
+		for(auto& walk : sol.m_walks){
+			for(List<TA>::iterator ta_it = walk.begin(); ta_it != walk.end(); ++ta_it){
+				if(ta_it.iter->data.point.pos.lat < bounds.minLat){
+					bounds.minLat = ta_it.iter->data.point.pos.lat;
+				}
+				if(ta_it.iter->data.point.pos.lat > bounds.maxLat){
+					bounds.maxLat = ta_it.iter->data.point.pos.lat;
+				}
+				if(ta_it.iter->data.point.pos.lon < bounds.minLon){
+					bounds.minLon = ta_it.iter->data.point.pos.lon;
+				}
+				if(ta_it.iter->data.point.pos.lon > bounds.maxLon){
+					bounds.maxLon = ta_it.iter->data.point.pos.lon;
+				}
+			}
+		}
+	}
+
+	// Open an output stream to write the SVG file
+    std::ofstream out(filename);
+
+	// Write the SVG file header
+    out << "<svg viewBox=\"" << bounds.minLat - radius << " " << bounds.minLon - radius << " " <<
+	bounds.maxLat - bounds.minLat + radius*2 << " " << bounds.maxLon - bounds.minLon + radius*2 <<
+	"\" xmlns=\"http://www.w3.org/2000/svg\">" << std::endl;
+
+	// Write the routes as lines in the SVG file
+	for(auto sol_it = solutions.begin(); sol_it != solutions.end(); ++sol_it){
+		const int index = sol_it - solutions.begin();
+		for(auto& walk : sol_it->m_walks){
+			List<TA>::iterator left, right;
+			for(left = walk.begin(), right = walk.begin() + 1; right != walk.end(); ++left, ++right){
+				out << "<line x1=\"" << left.iter->data.point.pos.lat << "\" y1=\"" << left.iter->data.point.pos.lon <<
+				"\" x2=\"" << right.iter->data.point.pos.lat << "\" y2=\"" << right.iter->data.point.pos.lon << "\" stroke=\" "<< colors[index] << "\" stroke-width=\"0.5\" />" << std::endl;
+			}
+		}
+	}
+
+	//Write nodes
+	for(auto sol_it = solutions.begin(); sol_it != solutions.end(); ++sol_it){
+		const int index = sol_it - solutions.begin();
+		for(List<TA>::iterator ta_it = sol_it->m_unvisited.begin(); ta_it != sol_it->m_unvisited.end(); ++ta_it){
+        	out << "<circle cx=\"" << ta_it.iter->data.point.pos.lat << "\" cy=\"" << ta_it.iter->data.point.pos.lon  << "\" fill=\"" << colors[index] << "\" r=\"" << radius << "\" />" << std::endl;
+		}
+		for(auto& walk : sol_it->m_walks){
+			for(List<TA>::iterator ta_it = walk.begin(); ta_it != walk.end(); ++ta_it){
+				out << "<circle cx=\"" << ta_it.iter->data.point.pos.lat << "\" cy=\"" << ta_it.iter->data.point.pos.lon  << "\" fill=\"" << colors[index] << "\" r=\"" << radius << "\" />" << std::endl;
+			}
+		}
+	}
+
+	//Write texts
+	for(auto sol_it = solutions.begin(); sol_it != solutions.end(); ++sol_it){
+		const int index = sol_it - solutions.begin();
+		for(List<TA>::iterator ta_it = sol_it->m_unvisited.begin(); ta_it != sol_it->m_unvisited.end(); ++ta_it){
+        	out << "<text x=\""<< ta_it.iter->data.point.pos.lat << "\" y=\""<< ta_it.iter->data.point.pos.lon << "\" text-anchor=\"middle\" font-size=\"2px\" fill=\"white\" alignment-baseline=\"middle\">" << ta_it.iter->data.point.id  << "</text>" << std::endl;
+    	}
+		for(auto& walk : sol_it->m_walks){
+			for(List<TA>::iterator ta_it = walk.begin(); ta_it != walk.end(); ++ta_it){
+				out << "<text x=\""<< ta_it.iter->data.point.pos.lat << "\" y=\""<< ta_it.iter->data.point.pos.lon << "\" text-anchor=\"middle\" font-size=\"2px\" fill=\"white\" alignment-baseline=\"middle\">" << ta_it.iter->data.point.id  << "</text>" << std::endl;
+			}
+		}
+	}
+
+	// Write the SVG file footer
+    out << "</svg>" << std::endl;
+
+    // Close the output stream
+    out.close();
 }
 
 

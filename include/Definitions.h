@@ -32,52 +32,14 @@
 #define NOISE -2
 #define UNDEFINED -3
 
-
 #define MAX_MINUTES 1440
 #define OPEN_DAY_TIME 0
 #define CLOSE_DAY_TIME 1260
 
-#ifndef S_H
-#define S_H
-
-#endif
-//namespace uuid {
-//	static std::random_device              rd;
-//	static std::mt19937                    gen(rd());
-//	static std::uniform_int_distribution<> dis(0, 9);
-//	static std::uniform_int_distribution<> dis2(8, 11);
-//
-//	//std::string generate_uuid_v3() {
-//	//	std::stringstream ss;
-//	//	int i;
-//	//	ss << std::hex;
-//	//	for (i = 0; i < 8; i++) {
-//	//		ss << dis(gen);
-//	//	}
-//	//	ss << "-";
-//	//	for (i = 0; i < 4; i++) {
-//	//		ss << dis(gen);
-//	//	}
-//	//	ss << "-4";
-//	//	for (i = 0; i < 3; i++) {
-//	//		ss << dis(gen);
-//	//	}
-//	//	ss << "-";
-//	//	ss << dis2(gen);
-//	//	for (i = 0; i < 3; i++) {
-//	//		ss << dis(gen);
-//	//	}
-//	//	ss << "-";
-//	//	for (i = 0; i < 12; i++) {
-//	//		ss << dis(gen);
-//	//	};
-//	//	return ss.str();
-//	//}
-//}
-
 bool contains(std::list<std::string>&, std::string);
 bool contains(const std::vector<std::string>&, std::string);
 double GetEuclideanDistance(int x1, int y1, int x2, int y2);
+
 #ifndef ID_H
 #define ID_H
 

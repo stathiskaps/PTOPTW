@@ -69,6 +69,10 @@ private:
 		int R = 1;
 	};
 
+	struct Bounds{
+		double minLat, minLon, maxLat, maxLon;
+	};
+
 	//std::map<std::string, std::vector<ActivityInBucket>> registry;
 
 	int mBucketsNum, mIntervalsNum;
@@ -107,6 +111,7 @@ private:
 	void InitSolutions(std::vector<Solution>&, const std::vector<ILS::Interval> intervals, const OP& op);
 	std::tuple<bool, double> CandidateEndDepotIsValid(const List<TA>&, const TA, TimeWindow);
 	std::tuple<bool, double> CandidateStartDepotIsValid(const List<TA>&, const TA&, const double, const Vector2D<double>&);
+	void drawSolutions(const std::vector<Solution>& solutions);
 
 
 	
