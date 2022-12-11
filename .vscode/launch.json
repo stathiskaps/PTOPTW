@@ -8,7 +8,7 @@
             "name": "(gdb) Launch",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/build/AMTOPTW_algorithm",
+            "program": "${workspaceFolder}/build/AMTOPTW",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}/build/",
