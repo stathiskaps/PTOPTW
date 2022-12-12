@@ -19,6 +19,7 @@
 #include "Divider.h"
 #include "OP.h"
 #include "Custom.h"
+#include "Graphics.h"
 //#include "boost/geometry.hpp"
 #include "ygor/YgorClustering.hpp"
 
@@ -75,7 +76,8 @@ private:
 
 	//std::map<std::string, std::vector<ActivityInBucket>> registry;
 
-	int mBucketsNum, mIntervalsNum;
+	int mIntervalsNum;
+	std::vector<Solution> best_solutions;
 	void dbScan(OP& op);
 	void AddStartDepots(std::vector<Solution>&, const std::vector<ILS::Interval>&, const int, const OP&);
 	void AddEndDepots(std::vector<Solution>&, const std::vector<Interval>&, const int, OP&);
@@ -112,12 +114,13 @@ private:
 	std::tuple<bool, double> CandidateEndDepotIsValid(const List<TA>&, const TA, TimeWindow);
 	std::tuple<bool, double> CandidateStartDepotIsValid(const List<TA>&, const TA&, const double, const Vector2D<double>&);
 	void drawSolutions(const std::vector<Solution>& solutions);
+	void displayBestSolutions();
 
 
 	
 public:
     ILS();
-	ILS(int, int);
+	ILS(int);
     ~ILS();
 	virtual void validate(const List<TA>&, const Vector2D<double>&);
 	virtual void validate(const Walks&, const Vector2D<double>&);

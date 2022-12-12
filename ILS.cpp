@@ -1,8 +1,10 @@
 #include "ILS.h"
 
-ILS::ILS() : mBucketsNum(0) {}
+ILS::ILS() {}
 
-ILS::ILS(int bucketsNum, int intervalsNum) : mBucketsNum(bucketsNum), mIntervalsNum(intervalsNum) {}
+ILS::ILS(int intervalsNum) : mIntervalsNum(intervalsNum) {
+
+}
 
 ILS::~ILS() {}
 
@@ -186,8 +188,36 @@ void ILS::InitSolutions(std::vector<Solution>& sols, const std::vector<ILS::Inte
 void ILS::SolveNew(OP& op) {
 
 	// std::cout.setstate(std::ios_base::failbit);
-	// dbScan(op);
-	// return;
+
+	std::function<void(*void)> display_func = []
+    {
+        // Clear the screen
+        glClear(GL_COLOR_BUFFER_BIT);
+
+        // Draw a point at the center of the screen
+        glBegin(GL_POINTS);
+        glVertex2i(0, 0);
+        glEnd();
+
+        // Swap the front and back buffers
+        glutSwapBuffers();
+    };
+
+	// Set the OpenGL display mode
+	glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB);
+	// Set the initial window size
+	glutInitWindowSize(WINDOW_WIDTH, WINDOW_HEIGHT);
+	// Create the window with the given title
+	glutCreateWindow("Best Solution");
+
+	// Get a pointer to the stored callable object
+    void* display_ptr = display_func.target<void(*)(void)>();
+	// Set the display callback function
+	glutDisplayFunc(display_ptr);
+	glutReshapeFunc( resize );
+
+	// Enter the GLUT main loop
+	std::thread glutThread(glutMainLoop);
 
 	auto start = std::chrono::steady_clock::now();
 
@@ -214,7 +244,7 @@ void ILS::SolveNew(OP& op) {
 		shake_settings.push_back(ILS::SR{1, 1});
 	}
 
-	std::vector<Solution> proc_solutions(mIntervalsNum, Solution()), best_solutions;
+	std::vector<Solution> proc_solutions(mIntervalsNum, Solution());
 	//Initialize solutions
 	for (auto& s : proc_solutions) {
 		for (size_t i = 0; i < op.m_walks_num; ++i) {
@@ -248,6 +278,7 @@ void ILS::SolveNew(OP& op) {
 				sr.R = 1;
 			}
 			times_not_improved = 0;
+			glutPostRedisplay();
 		}
 		else {
 			times_not_improved++;
@@ -271,6 +302,9 @@ void ILS::SolveNew(OP& op) {
 	std::cout << "Visits: " << best_solution.getVisits() << std::endl;
 	std::cout << "Execution time: " << std::chrono::duration <double, std::milli> (diff).count() << " ms" << std::endl;
 	std::cout << std::endl;
+
+	// Wait for the GLUT thread to finish
+    glutThread.join();
 }
 
 void ILS::gatherUnvisited(std::vector<Solution>& solutions, List<TA>& pool){
@@ -1135,5 +1169,11 @@ void ILS_TOPTW::validate(const List<TA>& walk, const Vector2D<double>& travel_ti
 	if (!valid) {
 		std::cerr << "walk is invalid: exiting.. " << std::endl;
 		std::exit(1);
+	}
+}
+
+void ILS::displayBestSolutions(){
+	for(auto sol_it = best_solutions.begin(); sol_it != best_solutions.end(); ++sol_it){
+
 	}
 }
