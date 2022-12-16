@@ -15,6 +15,8 @@
 
 #define DEFAULT_CENTROID_ID "c"
 #define DEFAULT_TA_ID "default"
+#define TARGET_TA_ID "target"
+#define NULL_TA_ID "null"
 #define DEPOT_ID "depot"
 #define START_DEPOT_ID "start_depot"
 #define END_DEPOT_ID "end_depot"
@@ -24,6 +26,7 @@
 #define CNEXT_ID "cnext"
 #define NEAREST_NEXT "nearest_next"
 #define DEFAULT_POINT_ID -1
+#define TARGET_POINT_ID -3
 #define DEFAULT_CLUSTER_ID -2
 #define DEFAULT_POS -1
 #define DEFAULT_WALK_ID -1

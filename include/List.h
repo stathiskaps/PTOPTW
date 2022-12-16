@@ -35,6 +35,10 @@ struct Point {
 		id = DEFAULT_POINT_ID;
 	}
 
+	Point(int pId){
+		id = pId;
+	}
+
 	Point(int pId, Position pPos) {
 		id = pId;
 		pos = pPos;

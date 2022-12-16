@@ -11,7 +11,6 @@
 #include "Definitions.h"
 #include "ILS.h"
 #include "OP.h"
-#include "TSP.h"
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/graph/graphviz.hpp>
 
@@ -220,7 +219,7 @@ int main(int argc, char** argv)
 	
 	// glutMainLoop();
 
-	glutInit(&argc, argv);
+	// glutInit(&argc, argv);
 
 	int k, numRoutes, numIntervals;
 	std::string filename;

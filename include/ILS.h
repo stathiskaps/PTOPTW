@@ -1,5 +1,3 @@
-#pragma once
-
 #include <iostream>
 #include <vector>
 #include <map>
@@ -22,6 +20,11 @@
 #include "Graphics.h"
 //#include "boost/geometry.hpp"
 #include "ygor/YgorClustering.hpp"
+
+#ifndef ILS_H
+#define ILS_H
+
+
 
 #define last_solution i==solutions.size()-1
 #define first_solution i==0
@@ -74,23 +77,19 @@ private:
 		double minLat, minLon, maxLat, maxLon;
 	};
 
-	//std::map<std::string, std::vector<ActivityInBucket>> registry;
-
 	int mIntervalsNum;
-	std::vector<Solution> best_solutions;
 	void dbScan(OP& op);
 	void AddStartDepots(std::vector<Solution>&, const std::vector<ILS::Interval>&, const int, const OP&);
 	void AddEndDepots(std::vector<Solution>&, const std::vector<Interval>&, const int, OP&);
 	bool compareTimeWindowCenter(const List<TA>::iterator&, const List<TA>::iterator&);
 
 
-
 	// virtual std::tuple<List<TA>::iterator, double, int, int> getBestPos(const TA&, const List<TA>&, const Vector2D<double>&);
-	virtual std::tuple<Walks::iterator, List<TA>::iterator, double, int, int> getBestPos(const TA&, Walks&, const Vector2D<double>&);
+	virtual std::tuple<Walks::iterator, List<TA>::iterator, double, int, int> getBestPos(const TA&, Walks&, const Vector2D<double>&, const double);
 	virtual void updateTimes(List<TA>&, const List<TA>::iterator&, const double, const bool, const Vector2D<double>&);
-	virtual std::tuple<bool, double> insertionBetweenIsValid(const TA&, const TA&, const TA&, const Vector2D<double>&);
+	virtual std::tuple<bool, double> insertionBetweenIsValid(const TA&, const TA&, const TA&, const Vector2D<double>&, const double);
 	virtual std::tuple<bool, double> insertionBeforeIsValid(const TA& , const TA&, const double, const Vector2D<double>&);
-	virtual std::tuple<bool, double> insertionAfterIsValid(const TA&, const TA&, const double, const Vector2D<double>&);
+	virtual std::tuple<bool, double> insertionAtEndIsValid(const List<TA>&, const TA&, const double, const Vector2D<double>&);
 	std::map<std::string, std::vector<Usage>> initRegistry(List<TA>&, std::vector<ILS::Interval>);
 	std::map<std::string, std::vector<double>> getActivities(List<TA>&, std::vector<ILS::Interval>);
 	std::vector<Interval> getIntervals(std::vector<TA*>, int, double, double);
@@ -98,11 +97,11 @@ private:
 	void gatherUnvisited(std::vector<Solution>&, List<TA>&);
 	std::vector<List<TA>> splitUnvisitedList(std::vector<Solution>&, List<TA>&, int, std::map<std::string, std::vector<ILS::Usage>>&, std::map<std::string, std::vector<double>>);
 	bool hasWeightedCentroid(const Solution& sol, const int, const int);
-	inline Point getWeightedCentroid(const List<TA>::iterator& first, const List<TA>::iterator& last);
+	inline Point getWeightedCentroid(const List<TA>::iterator&, const List<TA>::iterator&, const int);
 	int SplitShake(std::vector<Solution>&, std::vector<ILS::SR>&, OP&, const int&);
 	int Shake(Solution&, int&, int&, OP&, const int&);
 	virtual void updateMaxShifts(const List<TA>&, const Vector2D<double>&);
-	std::vector<std::string> construct(Solution&, const Vector2D<double>&);
+	std::vector<std::string> construct(Solution&, const Vector2D<double>&, const std::vector<Point>);
 	int collectScores(std::vector<Solution>);
 	Solution connectSolutions(std::vector<Solution>&, const size_t);
 	inline int collectProfit (const List<TA>::iterator&, const List<TA>::iterator&) const;
@@ -114,11 +113,11 @@ private:
 	std::tuple<bool, double> CandidateEndDepotIsValid(const List<TA>&, const TA, TimeWindow);
 	std::tuple<bool, double> CandidateStartDepotIsValid(const List<TA>&, const TA&, const double, const Vector2D<double>&);
 	void drawSolutions(const std::vector<Solution>& solutions);
-	void displayBestSolutions();
-
-
+	std::vector<Point> getTargets(const std::vector<Solution>&, const int, const OP&);
 	
 public:
+	std::vector<Solution> best_solutions;
+
     ILS();
 	ILS(int);
     ~ILS();
@@ -133,12 +132,12 @@ public:
 class ILS_TOPTW : public ILS {
 private:
 	// std::tuple<List<TA>::iterator, double, int, int> getBestPos(const TA&, const List<TA>&, const Vector2D<double>&) override;
-	std::tuple<Walks::iterator, List<TA>::iterator, double, int, int> getBestPos(const TA&, Walks&, const Vector2D<double>&) override;
+	std::tuple<Walks::iterator, List<TA>::iterator, double, int, int> getBestPos(const TA&, Walks&, const Vector2D<double>&, const double) override;
 	void updateTimes(List<TA>&, const List<TA>::iterator&, const double, const bool, const Vector2D<double>&) override;
 	void updateMaxShifts(const List<TA>&, const Vector2D<double>&) override;
-	std::tuple<bool, double> insertionBetweenIsValid(const TA&, const TA&, const TA&, const Vector2D<double>&) override;
+	std::tuple<bool, double> insertionBetweenIsValid(const TA&, const TA&, const TA&, const Vector2D<double>&, const double) override;
 	std::tuple<bool, double> insertionBeforeIsValid(const TA& , const TA&, const double, const Vector2D<double>&) override;
-	std::tuple<bool, double> insertionAfterIsValid(const TA&, const TA&, const double, const Vector2D<double>&) override;
+	std::tuple<bool, double> insertionAtEndIsValid(const List<TA>&, const TA&, const double, const Vector2D<double>&) override;
 public:
 	using ILS::ILS; //inherit constructor
 	void validate(const List<List<TA>>&, const Vector2D<double>&);
@@ -146,3 +145,6 @@ public:
 	// void validate(const Solution&, const Vector2D<double>&) override;
 };
 
+void displayBestSolutions(ILS ils);
+
+#endif
