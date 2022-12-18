@@ -117,6 +117,29 @@ typedef struct TouristAttraction {
 	{
 	}
 
+	TouristAttraction(const TouristAttraction &other)
+		: id(other.id),
+		point(other.point),
+		visitDuration(other.visitDuration),
+		profit(other.profit),
+		timeWindow(other.timeWindow),
+		arrTime(other.arrTime),
+		waitDuration(other.waitDuration),
+		startOfVisitTime(other.startOfVisitTime),
+		depTime(other.depTime),
+		shift(other.shift),
+		maxShift(other.maxShift),
+		route(other.route),
+		walk(other.walk),
+		cluster(other.cluster),
+		minDist(other.minDist),
+		arrPointId(other.arrPointId),
+		depPointId(other.depPointId),
+		type(other.type),
+		category(other.category)
+	{
+	}
+
 	TouristAttraction(std::string pId, Point p)
 		: id(pId),
 		point(p),
@@ -189,6 +212,11 @@ typedef struct TouristAttraction {
 		type(touristAttractionType::sight),
 		category(sightCategory::none)
 	{
+	}
+
+	void neutralize(std::string pId){
+		id = pId;
+		visitDuration = 0;
 	}
 
 	double euclidean_distance(TouristAttraction ta) { 

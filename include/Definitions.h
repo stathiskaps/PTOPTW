@@ -19,6 +19,7 @@
 #define NULL_TA_ID "null"
 #define DEPOT_ID "depot"
 #define START_DEPOT_ID "start_depot"
+#define DUMMY_START_DEPOT "dummy_start_depot"
 #define END_DEPOT_ID "end_depot"
 #define CANDIDATE_END_DEPOT_ID "candidate_end_depot"
 #define DUMMY_END_DEPOT_ID "dummy_end_depot"
