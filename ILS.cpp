@@ -217,7 +217,7 @@ void ILS::SolveNew(OP& op) {
 	// // Enter the GLUT main loop
 	// std::thread glutThread(glutMainLoop);
 
-	auto start = std::chrono::steady_clock::now();
+	auto start = std::chrono::high_resolution_clock::now();
 
 	std::cout << "Problem will be divided in " << mIntervalsNum << " intervals." << std::endl;
 
@@ -259,6 +259,7 @@ void ILS::SolveNew(OP& op) {
 		std::cout << "Revision " << counter << std::endl;
 		
 		auto split_search_start = std::chrono::steady_clock::now();
+		printSolutions("Solutions before splitting unvisited: ", proc_solutions);
 		splitUnvisitedList(proc_solutions, pool, mIntervalsNum, reg, activities);
 		SplitSearch(proc_solutions, intervals, op, reg);
 		// printSolutions("Solutions after splitsearch ", proc_solutions);
@@ -287,8 +288,9 @@ void ILS::SolveNew(OP& op) {
 		gatherUnvisited(proc_solutions, pool);
 
 	}
-	auto end = std::chrono::steady_clock::now();
-	auto diff = end - start;
+	auto end = std::chrono::high_resolution_clock::now();
+	auto elapsed_time = std::chrono::duration_cast<std::chrono::duration<double>>(end - start).count();
+	// auto diff = end - start;
 
 	std::cout.clear();
 	best_solution = connectSolutions(best_solutions, op.m_walks_num);
@@ -298,8 +300,8 @@ void ILS::SolveNew(OP& op) {
 	}
 	validate(best_solution.m_walks, op.mTravelTimes);
 	std::cout << "Best score: " << best_score << std::endl;
+	std::cout << "Execution time: " << elapsed_time << " seconds" << std::endl;
 	std::cout << "Visits: " << best_solution.getVisits() << std::endl;
-	std::cout << "Execution time: " << std::chrono::duration <double, std::milli> (diff).count() << " ms" << std::endl;
 	std::cout << std::endl;
 
 	// Wait for the GLUT thread to finish
@@ -518,42 +520,41 @@ void ILS::AddStartDepots(std::vector<Solution>& solutions, const std::vector<Tim
 	for (size_t j = 0; j < solutions[i].m_walks.size(); ++j) {
 		int prev_sol_index = i-1;
 		
-		if(first_solution){
-			solutions[i].m_walks[j].push_front(*op.mStartDepot);
-			solutions[i].m_walks[j].front().depTime = intervals[i].openTime;
-		} else {
-			while(solutions[prev_sol_index].m_walks[j].empty() && prev_sol_index >= 0){
-				prev_sol_index--;
-				continue;
-			}
+		if(first_solution){ //we have already added a start depot at first solution's walks
+			return;
+		}
 
-			if(prev_sol_index == -1){
-				throw std::runtime_error("didn't find a valid previous walk to get a startDepot");
-			}
-	
-			TA &prev_last = solutions[prev_sol_index].m_walks[j].back();
-			TA candidate = prev_last;
-			candidate.neutralize(DUMMY_START_DEPOT);
-			candidate.timeWindow = intervals[i];
+		while(solutions[prev_sol_index].m_walks[j].empty() && prev_sol_index >= 0){
+			prev_sol_index--;
+			continue;
+		}
 
-			//left trim invalid nodes
-			if(!solutions[i].m_walks[j].empty()) { 
-				List<TA>::iterator curr = solutions[i].m_walks[j].begin();
-				while(curr != solutions[i].m_walks[j].end()){
-					auto [valid, _] = CandidateStartDepotIsValid(solutions[i].m_walks[j], candidate, intervals[i].openTime, op.mTravelTimes);
-					if(!valid){
-						solutions[i].m_unvisited.push_back(curr.iter->data);
-						curr = solutions[i].m_walks[j].erase(curr);
-						updateTimes(solutions[i].m_walks[j], curr, false, op.mTravelTimes, intervals[i]);
-					} else {
-						break;
-					}
+		if(prev_sol_index == -1){
+			throw std::runtime_error("didn't find a valid previous walk to get a startDepot");
+		}
+
+		TA &prev_last = solutions[prev_sol_index].m_walks[j].back();
+		TA candidate = prev_last;
+		candidate.neutralize(DUMMY_START_DEPOT);
+		candidate.timeWindow = intervals[i];
+
+		//left trim invalid nodes
+		if(!solutions[i].m_walks[j].empty()) { 
+			List<TA>::iterator curr = solutions[i].m_walks[j].begin();
+			while(curr != solutions[i].m_walks[j].end()){
+				auto [valid, _] = CandidateStartDepotIsValid(solutions[i].m_walks[j], candidate, intervals[i].openTime, op.mTravelTimes);
+				if(!valid){
+					solutions[i].m_unvisited.push_back(curr.iter->data);
+					curr = solutions[i].m_walks[j].erase(curr);
+					updateTimes(solutions[i].m_walks[j], curr, false, op.mTravelTimes, intervals[i]);
+				} else {
+					break;
 				}
 			}
-
-			solutions[i].m_walks[j].push_front(candidate);
-			updateTimes(solutions[i].m_walks[j], solutions[i].m_walks[j].begin(), false, op.mTravelTimes, intervals[i]);
 		}
+
+		solutions[i].m_walks[j].push_front(candidate);
+		updateTimes(solutions[i].m_walks[j], solutions[i].m_walks[j].begin(), false, op.mTravelTimes, intervals[i]);
 
 	}
 }
@@ -662,7 +663,7 @@ void ILS::SplitSearch(std::vector<Solution>& solutions, const std::vector<TimeWi
 
 		if (solutions[i].m_unvisited.empty()) continue;
 
-		if(middle_solution || last_solution) {
+		if(i > 0) {
 			AddStartDepots(solutions, intervals, i, op);
 		}
 

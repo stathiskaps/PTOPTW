@@ -33,7 +33,7 @@ int Solution::getScores(){
 
 int Solution::getVisits(){
     int visits{};
-    for (auto& w : m_walks) visits += w.size() - 2;
+    for (auto& w : m_walks) visits += w.size() - 1;
     return visits;
 }
 
