@@ -10,6 +10,7 @@
 #include <signal.h>
 #include <fmt/ranges.h>
 #include <chrono>
+#include <algorithm>
 #include <plog/Log.h> // Step1: include the headers
 #include "plog/Initializers/RollingFileInitializer.h"
 #include "List.h"
@@ -48,6 +49,7 @@ using Walk = List<TA>;
 
 class ILS{
 private:
+
 	struct Usage{
 		u_int16_t imported;
 		u_int16_t solved;
@@ -70,6 +72,13 @@ private:
 		double minLat, minLon, maxLat, maxLon;
 	};
 
+	struct Metrics{
+		std::vector<double> local_search;
+		double split_unvisited;
+		double shake;
+	};
+
+	Metrics metrics;
 	int mIntervalsNum;
 	void dbScan(OP& op);
 	void AddStartDepots(std::vector<Solution>&, const std::vector<TimeWindow>&, const int, const OP&);
@@ -107,6 +116,9 @@ private:
 	std::tuple<bool, double> CandidateStartDepotIsValid(const List<TA>&, const TA&, const double, const Vector2D<double>&);
 	void drawSolutions(const std::vector<Solution>& solutions);
 	std::vector<Point> getTargets(const std::vector<Solution>&, const int, const OP&);
+	std::vector<TimeWindow> kmeans(const std::vector<TA*>);
+	std::vector<TimeWindow> intervals(const std::vector<TA>&, const int);
+	// bool compareByMetadata(const TA &a, const TA &b);
 	
 public:
 	std::vector<Solution> best_solutions;

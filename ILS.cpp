@@ -3,7 +3,8 @@
 ILS::ILS() {}
 
 ILS::ILS(int intervalsNum) : mIntervalsNum(intervalsNum) {
-
+	metrics.local_search = std::vector<double>(intervalsNum, 0);
+	metrics.split_unvisited = 0.0;
 }
 
 ILS::~ILS() {}
@@ -104,6 +105,11 @@ void ILS::dbScan(OP& op){
     }
 }
 
+std::vector<TimeWindow> ILS::kmeans(const std::vector<TA*> attractions) {
+	std::vector<TimeWindow> timeWindows;
+	return timeWindows;
+}
+
 std::map<std::string, std::vector<double>> ILS::getActivities(List<TA>& unvisited, std::vector<TimeWindow> intervals){
 	std::map<std::string, std::vector<double>> activities;
 	for(auto& n : unvisited) {
@@ -198,6 +204,67 @@ void ILS::InitSolutions(std::vector<Solution>& sols, const std::vector<TimeWindo
 	// }
 }
 
+bool compareByMetadata(const TA &a, const TA &b)
+{
+    return (((a.timeWindow.openTime + a.timeWindow.closeTime) / 2) + a.timeWindow.duration()) < (((b.timeWindow.openTime + b.timeWindow.closeTime) / 2) + b.timeWindow.duration());
+}
+
+double maxCenter(const std::vector<TA>& v) {
+	double max = DBL_MIN;
+	for(auto &ta : v){
+		if(ta.timeWindow.center() > max){
+			max = ta.timeWindow.center();
+		}
+	}
+	return max;
+}
+
+double maxLength(const std::vector<TA>& v){
+	double max = DBL_MIN;
+	for(auto& ta : v){
+		if(ta.timeWindow.duration() > max) {
+			max = ta.timeWindow.duration();
+		}
+	}
+	return max;
+}
+
+bool constraintsAreSatisfied(const TA ta, const TimeWindow interval){
+	return std::min(ta.timeWindow.closeTime, interval.closeTime) - std::max(ta.timeWindow.openTime, interval.openTime) >= ta.timeWindow.duration()/2;
+}
+
+std::vector<TimeWindow> ILS::intervals(const std::vector<TA>& nodes, const int maxIntervals) {
+	std::vector<TimeWindow> intervals;
+	std::vector<TA> sorted = nodes;
+	std::sort(sorted.begin(), sorted.end(), compareByMetadata);
+
+	double intervalStart = 0.0;
+
+	std::vector<TA> unclassified = sorted;
+
+	while(intervals.size() < maxIntervals) {
+		const int remainingIntervals = maxIntervals - intervals.size();
+		const int numToClassify = (int)unclassified.size() / remainingIntervals;
+		std::vector<TA>::const_iterator first = unclassified.begin();
+		std::vector<TA>::const_iterator last = unclassified.begin() + numToClassify - 1;
+		std::vector<TA> nodesToClassify(first, last);
+		double intervalEnd = std::max(intervalStart + maxLength(nodesToClassify), maxCenter(nodesToClassify));
+		TimeWindow interval = {intervalStart, intervalEnd};
+		intervals.push_back(interval);
+
+		for(std::vector<TA>::iterator it = first; it != last;) {
+			if(constraintsAreSatisfied(*it, interval)) {
+				unclassified.erase(it);
+			} else {
+				++it;
+			}
+		}
+		
+	}
+
+	return intervals;
+}
+
 
 void ILS::SolveNew(OP& op) {
 
@@ -225,10 +292,14 @@ void ILS::SolveNew(OP& op) {
 	const int num_locations = op.mAttractions.size();
 	const int max_to_remove = num_locations / (3 * op.m_walks_num);
 
+	std::vector<TA> unvisitedVec;
 	List<TA> unvisited;
 	for (auto ta : op.mAttractions) {
 		unvisited.push_back(*ta);
+		unvisitedVec.push_back(*ta);
 	}
+
+	std::vector<TimeWindow> ivals = intervals(unvisitedVec, mIntervalsNum);
 
 	std::vector<TimeWindow> intervals = getIntervals(op.mAttractions, mIntervalsNum, op.mStartDepot->timeWindow.openTime, op.mEndDepot->timeWindow.closeTime);
 	const std::map<std::string, std::vector<double>> activities = getActivities(unvisited, intervals);
@@ -258,13 +329,10 @@ void ILS::SolveNew(OP& op) {
 
 		std::cout << "Revision " << counter << std::endl;
 		
-		auto split_search_start = std::chrono::steady_clock::now();
 		printSolutions("Solutions before splitting unvisited: ", proc_solutions);
 		splitUnvisitedList(proc_solutions, pool, mIntervalsNum, reg, activities);
 		SplitSearch(proc_solutions, intervals, op, reg);
 		// printSolutions("Solutions after splitsearch ", proc_solutions);
-		auto split_search_end = std::chrono::steady_clock::now();
-		auto split_search_diff = split_search_end - split_search_start;
 
 		// std::cout << "Split search execution time (rev " << std::to_string(counter) << "): " << std::chrono::duration <double, std::milli> (split_search_diff).count() << " ms" << std::endl;
 
@@ -300,9 +368,28 @@ void ILS::SolveNew(OP& op) {
 	}
 	validate(best_solution.m_walks, op.mTravelTimes);
 	std::cout << "Best score: " << best_score << std::endl;
-	std::cout << "Execution time: " << elapsed_time << " seconds" << std::endl;
+
 	std::cout << "Visits: " << best_solution.getVisits() << std::endl;
+
 	std::cout << std::endl;
+	std::cout << "-------------Metrics-----------------" << std::endl;
+	std::cout << "Split Local Search: " << std::endl;
+	for(size_t i = 0; i < metrics.local_search.size(); ++i){
+		std::cout << "Solution " << i << ": " << metrics.local_search[i] << " seconds" << std::endl;
+	}
+
+	std::cout << std::endl;
+	std::cout << "Split Unvisited List: ";
+	std::cout << metrics.split_unvisited << " seconds" << std::endl;
+	std::cout << std::endl;
+
+	std::cout << "Shake: ";
+	std::cout << metrics.shake << " seconds" << std::endl;
+	std::cout << std::endl;
+
+	std::cout << "Total execution time: " << elapsed_time << " seconds" << std::endl;
+	std::cout << "-------------------------------------" << std::endl;
+
 
 	// Wait for the GLUT thread to finish
     // glutThread.join();
@@ -318,6 +405,7 @@ void ILS::gatherUnvisited(std::vector<Solution>& solutions, List<TA>& pool){
 
 std::vector<List<TA>> ILS::splitUnvisitedList(std::vector<Solution>& solutions, List<TA>& pool, int intervals_num, std::map<std::string, std::vector<ILS::Usage>>& reg, std::map<std::string, std::vector<double>> activities) {
 
+	auto start = std::chrono::high_resolution_clock::now();
 	if(solutions.size() != intervals_num){
 		throw std::runtime_error("solutions size is indifferent from intervals number");
 	}
@@ -355,6 +443,10 @@ std::vector<List<TA>> ILS::splitUnvisitedList(std::vector<Solution>& solutions, 
 
 	//check if i can implement emplace back instead of creating new object
 	pool.clear();
+
+	auto end = std::chrono::high_resolution_clock::now();
+	auto elapsed_time = std::chrono::duration_cast<std::chrono::duration<double>>(end - start).count();
+	metrics.split_unvisited += elapsed_time;
 
 	return lists;
 }
@@ -429,6 +521,7 @@ void ILS::RemoveDummyNodes(std::vector<Solution>& sols){
 }
 
 int ILS::SplitShake(std::vector<Solution>& sols, std::vector<ILS::SR>& shake_settings, OP& op, const int& max_to_remove, const std::vector<TimeWindow> intervals){
+	auto start = std::chrono::high_resolution_clock::now();
 	int removed_counter = 0;
 	PrepareForShake(sols);
 	for(auto sol_it = sols.begin(); sol_it != sols.end(); ++sol_it){
@@ -437,6 +530,9 @@ int ILS::SplitShake(std::vector<Solution>& sols, std::vector<ILS::SR>& shake_set
 		removed_counter += removed;
 	}
 	RemoveDummyNodes(sols);
+	auto end = std::chrono::high_resolution_clock::now();
+	auto elapsed_time = std::chrono::duration_cast<std::chrono::duration<double>>(end - start).count();
+	metrics.shake += elapsed_time;
 	return removed_counter;
 }
 
@@ -661,6 +757,8 @@ void ILS::SplitSearch(std::vector<Solution>& solutions, const std::vector<TimeWi
 
 	for (int i = 0; i < solutions.size(); ++i) {
 
+		auto start = std::chrono::high_resolution_clock::now();
+
 		if (solutions[i].m_unvisited.empty()) continue;
 
 		if(i > 0) {
@@ -698,6 +796,10 @@ void ILS::SplitSearch(std::vector<Solution>& solutions, const std::vector<TimeWi
 				updateTimes(*walk_it, walk_it->begin(), false, op.mTravelTimes, intervals[i]);
 			}
 		}
+
+		auto end = std::chrono::high_resolution_clock::now();
+		auto elapsed_time = std::chrono::duration_cast<std::chrono::duration<double>>(end - start).count();
+		metrics.local_search[i] += elapsed_time;
 
 		// if (i < solutions.size() - 1) {
 		// 	for (auto& walk : solutions[i].m_walks) {

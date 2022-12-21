@@ -76,6 +76,10 @@ struct TimeWindow {
 	double duration() const {
 		return closeTime - openTime;
 	}
+
+	double center() const {
+		return (openTime + closeTime) / 2;
+	}
 };
 
 typedef struct TouristAttraction {
