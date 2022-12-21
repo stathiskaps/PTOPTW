@@ -252,7 +252,7 @@ std::vector<TimeWindow> ILS::intervals(const std::vector<TA>& nodes, const int m
 		TimeWindow interval = {intervalStart, intervalEnd};
 		intervals.push_back(interval);
 
-		for(std::vector<TA>::iterator it = first; it != last;) {
+		for(std::vector<TA>::const_iterator it = first; it != last;) {
 			if(constraintsAreSatisfied(*it, interval)) {
 				unclassified.erase(it);
 			} else {
@@ -299,7 +299,7 @@ void ILS::SolveNew(OP& op) {
 		unvisitedVec.push_back(*ta);
 	}
 
-	std::vector<TimeWindow> ivals = intervals(unvisitedVec, mIntervalsNum);
+	// std::vector<TimeWindow> ivals = intervals(unvisitedVec, mIntervalsNum);
 
 	std::vector<TimeWindow> intervals = getIntervals(op.mAttractions, mIntervalsNum, op.mStartDepot->timeWindow.openTime, op.mEndDepot->timeWindow.closeTime);
 	const std::map<std::string, std::vector<double>> activities = getActivities(unvisited, intervals);
