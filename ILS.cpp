@@ -5,6 +5,7 @@ ILS::ILS() {}
 ILS::ILS(int intervalsNum) : mIntervalsNum(intervalsNum) {
 	metrics.local_search = std::vector<double>(intervalsNum, 0);
 	metrics.split_unvisited = 0.0;
+	metrics.shake = 0.0;
 }
 
 ILS::~ILS() {}
@@ -305,7 +306,7 @@ void ILS::SolveNew(OP& op) {
 	const std::map<std::string, std::vector<double>> activities = getActivities(unvisited, intervals);
 	std::map<std::string, std::vector<ILS::Usage>> reg = initRegistry(unvisited, intervals); 
 
-	int counter{}, S{ 1 }, R{ 1 }, times_not_improved{ 0 }, best_score{ INT_MIN };
+	int counter{}, times_not_improved{ 0 }, best_score{ INT_MIN };
 	Solution best_solution;
 
 	std::vector<ILS::SR> shake_settings;
