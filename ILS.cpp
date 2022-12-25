@@ -369,7 +369,6 @@ void ILS::SolveNew(OP& op) {
 	}
 	validate(best_solution.m_walks, op.mTravelTimes);
 	std::cout << "Best score: " << best_score << std::endl;
-
 	std::cout << "Visits: " << best_solution.getVisits() << std::endl;
 
 	std::cout << std::endl;
@@ -390,7 +389,10 @@ void ILS::SolveNew(OP& op) {
 
 	std::cout << "Total execution time: " << elapsed_time << " seconds" << std::endl;
 	std::cout << "-------------------------------------" << std::endl;
+	std::cout << std::endl;
 
+	std::cout << best_score << "\t" << elapsed_time << "\t" << best_solution.getVisits() << std::endl;
+	std::cout << std::endl;
 
 	// Wait for the GLUT thread to finish
     // glutThread.join();
