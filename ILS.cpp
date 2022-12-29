@@ -10,107 +10,6 @@ ILS::ILS(int intervalsNum) : mIntervalsNum(intervalsNum) {
 
 ILS::~ILS() {}
 
-void ILS::dbScan(OP& op){
-	typedef ClusteringDatum<2, double, 1, float, uint16_t> CDat_t;
-
-    constexpr size_t MaxElementsInANode = 6; // 16, 32, 128, 256, ... ?
-    typedef boost::geometry::index::rstar<MaxElementsInANode> RTreeParameter_t;
-    typedef boost::geometry::index::rtree<CDat_t,RTreeParameter_t> RTree_t;
-    typedef boost::geometry::model::box<CDat_t> Box_t;
-
-    RTree_t rtree;
-	double mean_travel_time = 0;
-	int n = 0;
-	std::vector<std::vector<int>>::const_iterator row; 
-    std::vector<int>::const_iterator col; 
-
-	for (std::vector<std::vector<double>>::iterator row = op.mTravelTimes.begin(); row != op.mTravelTimes.end(); ++row){
-		for(std::vector<double>::iterator col = row->begin(); col != row->end(); ++col){
-			mean_travel_time += *col;
-			n++;
-		}
-	}
-	mean_travel_time = mean_travel_time / n;
-	std::cout << "mean_travel_time: " << mean_travel_time << std::endl;
-
-	for(std::vector<TA*>::iterator ta_it = op.mAttractions.begin(); ta_it != op.mAttractions.end(); ++ta_it){
-		rtree.insert(CDat_t( { (*ta_it)->point.pos.lat, (*ta_it)->point.pos.lon }, {0.0f} ));
-	}
-
-    //const size_t MinPts = CDat_t::SpatialDimensionCount_*2;
-    //const SpatialQueryTechnique UsersSpatialQueryTechnique = SpatialQueryTechnique::UseWithin;
-    const double Eps = 10.0;
-    
-    DBSCAN<RTree_t,CDat_t>(rtree,Eps);
-
-	//Print out the points with cluster info.
-    if(true){
-        constexpr auto RTreeSpatialQueryGetAll = [](const CDat_t &) -> bool { return true; };
-        RTree_t::const_query_iterator it;
-        it = rtree.qbegin(boost::geometry::index::satisfies( RTreeSpatialQueryGetAll ));
-        for( ; it != rtree.qend(); ++it){
-            std::cout << "  Point: " << boost::geometry::wkt(*it)
-                      << "\t\t Attribute[0]: " << it->Attributes[0]
-                      << "\t\t ClusterID: " << it->CID.ToText()
-                      << std::endl;
-        }
-
-		std::cout << "finished" << std::endl;
-    }
-
-	if(true){
-        constexpr auto RTreeSpatialQueryGetAll = [](const CDat_t &) -> bool { return true; };
-        std::ofstream svg("Visualized.svg");
-        boost::geometry::svg_mapper<CDat_t> mapper(svg, 1280, 1024);
-
-        //Add the items to the map. The virtual bounds will be computed to accomodate.
-        // Also keep a record of the distinct clusters encountered.
-        std::set<typename CDat_t::ClusterIDType_> RawCIDs;
-
-        RTree_t::const_query_iterator it;
-        it = rtree.qbegin(boost::geometry::index::satisfies( RTreeSpatialQueryGetAll ));
-        for( ; it != rtree.qend(); ++it){
-            mapper.add(*it);
-            RawCIDs.insert( it->CID.Raw );
-        }
-        std::cout << RawCIDs.size() << " distinct ClusterIDs encountered." << std::endl;
-
-        //Create a mapping between the ClusterIDs and a pseudo-random RGB colour.
-        size_t ColourSeed = 9137;
-        std::mt19937 re(ColourSeed);
-        std::uniform_real_distribution<> rdC(0.0, 1.0);
-        std::uniform_int_distribution<> rdA( 50, 210);
-        std::uniform_int_distribution<> rdB( 20, 125);
-        std::map<typename CDat_t::ClusterIDType_, std::string> ColoursA, ColoursB;
-        for(const auto RawCID : RawCIDs){
-            ColoursA[RawCID] = std::to_string((rdC(re) > 0.33) ? rdA(re) : 230) + std::string(",")
-                             + std::to_string((rdC(re) > 0.33) ? rdA(re) : 230) + std::string(",")
-                             + std::to_string((rdC(re) > 0.33) ? rdA(re) : 230);
-            ColoursB[RawCID] = std::to_string((rdC(re) > 0.33) ? rdB(re) :  10) + std::string(",")
-                             + std::to_string((rdC(re) > 0.33) ? rdB(re) :  10) + std::string(",")
-                             + std::to_string((rdC(re) > 0.33) ? rdB(re) :  10);
-        }
-
-        //Actually draw the items.
-        it = rtree.qbegin(boost::geometry::index::satisfies( RTreeSpatialQueryGetAll ));
-        for( ; it != rtree.qend(); ++it){
-            std::stringstream ss;
-            ss << "fill-opacity:0.80; "
-               << "fill:rgb(" << ColoursA[it->CID.Raw] << "); "
-               << "stroke-opacity:0.90; "
-               << "stroke:rgb(" << ColoursB[it->CID.Raw] << "); "
-               << "stroke-width:1";
-            //mapper.map(*it, "fill-opacity:0.75; fill:rgb(75,100,0); stroke:rgb(30,40,0); stroke-width:2", 5);
-            mapper.map(*it, ss.str(), 6);
-        }
-    }
-}
-
-std::vector<TimeWindow> ILS::kmeans(const std::vector<TA*> attractions) {
-	std::vector<TimeWindow> timeWindows;
-	return timeWindows;
-}
-
 std::map<std::string, std::vector<double>> ILS::getActivities(List<TA>& unvisited, std::vector<TimeWindow> intervals){
 	std::map<std::string, std::vector<double>> activities;
 	for(auto& n : unvisited) {
@@ -137,6 +36,113 @@ std::vector<TimeWindow> ILS::getIntervals(std::vector<TA*> unvisited, int interv
 		intervals.push_back(TimeWindow{start, end});
 		start+=dur;
 		end+=dur;
+	}
+
+	return intervals;
+}
+
+std::vector<TimeWindow> ILS::calcIntervals(std::vector<TA> unvisited, int intervals_num, double day_start_time, double day_close_time) {
+
+	std::vector<TimeWindow> intervals;
+	const size_t unvisited_size = unvisited.size();
+	double diff = day_close_time - day_start_time;
+	double dur = diff/intervals_num;
+
+	double a = 0.2;
+
+	double score, best_score = DBL_MAX;
+
+	uint32_t not_improved = 0, max_times_not_improved = 20;
+
+	std::vector<double> time_cuts, best_time_cuts;
+	double time_cut = day_start_time;
+	time_cuts.reserve(intervals_num+1);
+
+	//Initialize time cuts
+	time_cuts.push_back(day_start_time);
+	for(size_t i = 0; i < intervals_num; ++i){
+		time_cuts.push_back(time_cuts.back() + dur);
+	}
+
+	//Acceptance criterion
+	while(true) {
+
+		std::vector<Bin> bins;
+		bins.reserve(intervals_num);
+		for(uint32_t i = 0; i < intervals_num; ++i) {
+			bins.push_back(Bin{i, i+1});
+		}
+
+		for(auto& ta: unvisited) {
+			double max_activity = 0;
+			std::vector<Bin>::iterator best_bin;
+			for(std::vector<Bin>::iterator it = bins.begin(); it != bins.end(); ++it) {
+				const double left_time_cut = time_cuts[it->left_cut_index];
+				const double right_time_cut = time_cuts[it->right_cut_index];
+				const double activity = std::min(right_time_cut, ta.timeWindow.closeTime) - std::max(left_time_cut, ta.timeWindow.openTime);
+
+				if(activity > max_activity) {
+					best_bin = it;
+				}
+			}
+			best_bin->count++;
+		}
+		std::vector<Bin>::iterator most_used_bin = std::max_element(bins.begin(), bins.end(), [](Bin a, Bin b) {
+			return a.count < b.count;
+		});
+
+		std::vector<Bin>::iterator least_used_bin= std::min_element(bins.begin(), bins.end(), [](Bin a, Bin b) {
+			return a.count < b.count;
+		});
+
+		score = most_used_bin->count - least_used_bin->count;
+
+		if(score < best_score) {
+			best_score = score; //minimization
+			best_time_cuts = time_cuts;
+			not_improved = 0;
+			
+			//Improve intervals
+			const double bin_duration = time_cuts[most_used_bin->right_cut_index] - time_cuts[most_used_bin->left_cut_index];
+
+			double reduce_left = 0, reduce_right = 0;
+			const double reduce_amount = bin_duration * a;
+
+			//todo:: check at the start of the function if there is only one bin
+			if(most_used_bin > bins.begin() && most_used_bin < bins.end()){
+				std::vector<Bin>::iterator left_bin = most_used_bin-1;
+				std::vector<Bin>::iterator right_bin = most_used_bin+1;
+
+				if(left_bin->count == right_bin->count){
+					reduce_left = reduce_amount * 50/100;
+					reduce_right = reduce_left;
+				} else {
+					if(left_bin->count < right_bin->count) {
+						reduce_left = reduce_amount - (left_bin->count/right_bin->count)*reduce_amount;
+						reduce_right = reduce_amount - reduce_left;
+					} else {
+						reduce_right = reduce_amount - (right_bin->count/left_bin->count)*reduce_amount;
+						reduce_left = reduce_amount - reduce_right;
+					}
+				}
+			} else {
+				if(most_used_bin == bins.begin()){
+					reduce_right = reduce_amount;
+				} else {
+					reduce_left = reduce_amount;
+				}
+			}
+
+			time_cuts[most_used_bin->left_cut_index]+=reduce_left;
+			time_cuts[most_used_bin->right_cut_index]-=reduce_right;
+
+		} else {
+			break;
+		}
+	}
+
+	for(size_t i = 0; i < mIntervalsNum; ++i){
+		intervals.push_back(TimeWindow{time_cuts[i], time_cuts[i+1]});
 	}
 
 	return intervals;
@@ -302,6 +308,8 @@ void ILS::SolveNew(OP& op) {
 
 	// std::vector<TimeWindow> ivals = intervals(unvisitedVec, mIntervalsNum);
 
+
+	// std::vector<TimeWindow> intervals = calcIntervals(unvisitedVec, mIntervalsNum, op.mStartDepot->timeWindow.openTime, op.mEndDepot->timeWindow.closeTime);
 	std::vector<TimeWindow> intervals = getIntervals(op.mAttractions, mIntervalsNum, op.mStartDepot->timeWindow.openTime, op.mEndDepot->timeWindow.closeTime);
 	const std::map<std::string, std::vector<double>> activities = getActivities(unvisited, intervals);
 	std::map<std::string, std::vector<ILS::Usage>> reg = initRegistry(unvisited, intervals); 

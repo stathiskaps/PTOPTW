@@ -58,9 +58,17 @@ private:
 		Usage() : imported(1), solved(1), improved(1) {}
 	};
 
+	struct TimeCuts{
+		uint32_t left;
+		uint32_t right;
+	};
+
 	struct Bin{
-		List<TA> unvisited;
-		TimeWindow tw;
+		size_t left_cut_index;
+		size_t right_cut_index;
+		size_t count;
+
+		Bin(size_t left, size_t right): left_cut_index(left), right_cut_index(right), count(0) {}
 	};
 
 	struct SR{
@@ -116,8 +124,8 @@ private:
 	std::tuple<bool, double> CandidateStartDepotIsValid(const List<TA>&, const TA&, const double, const Vector2D<double>&);
 	void drawSolutions(const std::vector<Solution>& solutions);
 	std::vector<Point> getTargets(const std::vector<Solution>&, const int, const OP&);
-	std::vector<TimeWindow> kmeans(const std::vector<TA*>);
 	std::vector<TimeWindow> intervals(const std::vector<TA>&, const int);
+	std::vector<TimeWindow> calcIntervals(std::vector<TA>, int, double, double);
 	// bool compareByMetadata(const TA &a, const TA &b);
 	
 public:

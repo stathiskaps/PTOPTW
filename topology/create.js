@@ -134,7 +134,7 @@ const create = async () => {
     const dir = "./pois";
     fs.readdirSync(dir).forEach(filename => {
         const content = xlsx.parse(`${dir}/${filename}`);
-        let points = content[0].data.map(x => {return {lon: x[2], lat: x[3]}});
+        let points = content[0].data.map(x => {return {lat: x[3], lon: x[2]}});
         points = points.slice(0, 5);
         console.log(`pois length: ${points.length}`);
         pois[filename.split(".")[0]] = points;
@@ -159,9 +159,7 @@ const create = async () => {
         console.error(`Error while writing routes: ${pathName} => ${err}`)
     });
 
-
-
-    writeStream.write(`${totalValidPoints} ${totalValidPoints * totalValidPoints}\n`)
+    writeStream.write(`${totalValidPoints} ${totalValidPoints * totalValidPoints}\n`);
 
     for(const [k, v] of Object.entries(pois)) {
         await writeSights(v, writeStream);
