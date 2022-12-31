@@ -134,10 +134,9 @@ public:
     ILS();
 	ILS(int);
     ~ILS();
-	virtual void validate(const List<TA>&, const Vector2D<double>&);
-	virtual void validate(const Walks&, const Vector2D<double>&);
-	// virtual void validate(const Solution&, const Vector2D<double>&);
-	void validate(const std::vector<Solution>&, const Vector2D<double>&);
+	virtual void validate(const List<TA>&, const Vector2D<double>&, const bool);
+	virtual void validate(const Walks&, const Vector2D<double>&, const bool);
+	void validate(const std::vector<Solution>&, const Vector2D<double>&, const bool);
 	void SolveNew(OP&);
 
 };
@@ -153,9 +152,7 @@ private:
 	std::tuple<bool, double> insertionAfterIsValid(const TA&, const TA&, const double, const Vector2D<double>&) override;
 public:
 	using ILS::ILS; //inherit constructor
-	void validate(const List<List<TA>>&, const Vector2D<double>&);
-	void validate(const List<TA>&, const Vector2D<double>&) override;
-	// void validate(const Solution&, const Vector2D<double>&) override;
+	void validate(const List<TA>&, const Vector2D<double>&, const bool) override;
 };
 
 void displayBestSolutions(ILS ils);

@@ -26,11 +26,11 @@ getRandom = (min, max) => {
     return Math.floor(Math.random() * (max - min + 1) + min);
 }
 
-const readFile = async() => {
-    
-}
+var found = 0;
+var notFound = 0;
 
 const getRoute = async({lat:latX, lon:lonX}, {lat:latY, lon:lonY}) => {
+
     const res = await axios.get('http://localhost:8080/otp/routers/default/plan',{
         params: {
             fromPlace:`${lonX},${latX}`,
@@ -46,9 +46,14 @@ const getRoute = async({lat:latX, lon:lonX}, {lat:latY, lon:lonY}) => {
     })
     const {data:{plan: {itineraries}}} = res;
     if(itineraries?.length > 0){
+        found += 1;
         console.log(res);
         const duration = itineraries[0]?.duration;
         return duration;
+    } else {
+        console.log(`no itineraries for route (${lonX}, ${latX}) -> (${lonY}, ${latY})`);
+        console.log(params);
+        notFound += 1;
     }
     return 0;
 }
@@ -94,6 +99,9 @@ const writeRoutes = async(validPoints, writeStream) => {
         }
     }
 
+    console.log("found", found);
+    console.log("notFound", notFound);
+
     // const file = fs.createWriteStream('AthensRoutes.txt');
     // file.on('error', (error) => { console.log(error) });
     // routes.forEach(v => { file.write(v.join(', ') + '\n'); });
@@ -126,8 +134,7 @@ const create = async () => {
     const data = fs.readFileSync('./athens_box.geojson', 'utf8');
     const geojson = JSON.parse(data);
     const polygon = geojson.features[0].geometry.coordinates[0];
-    let pois = {};
-    let validPois = {};
+    let pois = [];
     let totalValidPoints = 0;
 
     const files = [];
@@ -136,21 +143,14 @@ const create = async () => {
         const content = xlsx.parse(`${dir}/${filename}`);
         let points = content[0].data.map(x => {return {lat: x[3], lon: x[2]}});
         points = points.slice(0, 5);
-        console.log(`pois length: ${points.length}`);
-        pois[filename.split(".")[0]] = points;
-    
+        pois.push(...points);
         // if (isFile) files.push({ filepath, name, ext, stat });
     });
     
 
-    for(const [k, v] of Object.entries(pois)) {
-        const validPoints = v.filter(x => {
-            return inside(x, polygon);
-        });
-        validPois[k] = validPoints;
-        totalValidPoints += validPoints.length;
-    }
-    console.log(totalValidPoints);
+    const validPois = pois.filter(x => {
+        return inside(x, polygon);
+    });
     
     writeStream.on('finish', () => {
         console.log(`wrote all routes to file ${pathName}`);
@@ -159,15 +159,20 @@ const create = async () => {
         console.error(`Error while writing routes: ${pathName} => ${err}`)
     });
 
-    writeStream.write(`${totalValidPoints} ${totalValidPoints * totalValidPoints}\n`);
+    writeStream.write(`${validPois.length} ${validPois.length * validPois.length}\n`);
 
-    for(const [k, v] of Object.entries(pois)) {
-        await writeSights(v, writeStream);
-    }
+    console.log(pois);
 
-    for(const [k, v] of Object.entries(pois)) {
-        await writeRoutes(v, writeStream);
-    }
+    await writeSights(validPois, writeStream);
+
+    await writeRoutes(validPois, writeStream);
+    // for(const [k, v] of Object.entries(pois)) {
+    //     await writeSights(v, writeStream);
+    // }
+
+    // for(const [k, v] of Object.entries(pois)) {
+    //     await writeRoutes(v, writeStream);
+    // }
     
     writeStream.end();
 }

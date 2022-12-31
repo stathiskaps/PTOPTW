@@ -93,13 +93,13 @@ double calcMeanVisitTime(std::vector<TA*> touristAttractions) {
 	return totalVisitDuration / (touristAttractions.size() - 1); //don't count the depot
 }
 
-void init(std::string filename, int numRoutes, int numIntervals) {
+void init(std::string author, std::string filename, int numRoutes, int numIntervals) {
 
 	std::vector<TA*> touristAttractions; //TODO:delete pointers
 
-	std::string path = "./instances/Cordeau/";
+	std::string filepath = "./instances/"+author+"/"+filename+".txt";
 
-	std::ifstream infile(path.append(filename + ".txt"));
+	std::ifstream infile(filepath);
 
 	std::string line;
 
@@ -202,6 +202,12 @@ void init(std::string filename, int numRoutes, int numIntervals) {
 
 int main(int argc, char** argv)
 {
+	if(argc < 5) {
+		std::cout << "Please run the program with the following arguments: "<< std::endl <<
+		 "./AMTOPTW <author> <filename> <number of walks> <number of sub-intervals> " << std::endl <<
+		 "e.g. ./AMTOPTW Cordeau pr11 4 4" << std::endl;
+		return 0;
+	}
 	// int n;
 	// printf("Please insert the number of cities [0,10000]: ");
 	// scanf("%d", &n);
@@ -221,19 +227,12 @@ int main(int argc, char** argv)
 
 	// glutInit(&argc, argv);
 
-	int k, numRoutes, numIntervals;
-	std::string filename;
+	std::string author = argv[1];
+	std::string filename = argv[2];
+	int num_of_walks = std::stoi(argv[3]);
+	int num_of_intervals = std::stoi(argv[4]);
 
-	std::cout << "Enter the file's name(without txt): ";
-	std::cin >> filename;
-
-	std::cout << "Enter the number of the routes: ";
-	std::cin >> numRoutes;
-
-	std::cout << "Enter the number of intervals that the problem will be divided: ";
-	std::cin >> numIntervals;
-
-	init(filename, numRoutes, numIntervals);
+	init(author, filename, num_of_walks, num_of_intervals);
 
 	return 0;
 }

@@ -44,6 +44,12 @@ std::vector<TimeWindow> ILS::getIntervals(std::vector<TA*> unvisited, int interv
 std::vector<TimeWindow> ILS::calcIntervals(std::vector<TA> unvisited, int intervals_num, double day_start_time, double day_close_time) {
 
 	std::vector<TimeWindow> intervals;
+
+	if(intervals_num == 1) {
+		intervals.push_back(TimeWindow{day_start_time, day_close_time});
+		return intervals;
+	}
+
 	const size_t unvisited_size = unvisited.size();
 	double diff = day_close_time - day_start_time;
 	double dur = diff/intervals_num;
@@ -108,7 +114,7 @@ std::vector<TimeWindow> ILS::calcIntervals(std::vector<TA> unvisited, int interv
 			double reduce_left = 0, reduce_right = 0;
 			const double reduce_amount = bin_duration * a;
 
-			//todo:: check at the start of the function if there is only one bin
+			//TODO:: check at the start of the function if there is only one bin
 			if(most_used_bin > bins.begin() && most_used_bin < bins.end()){
 				std::vector<Bin>::iterator left_bin = most_used_bin-1;
 				std::vector<Bin>::iterator right_bin = most_used_bin+1;
@@ -309,8 +315,8 @@ void ILS::SolveNew(OP& op) {
 	// std::vector<TimeWindow> ivals = intervals(unvisitedVec, mIntervalsNum);
 
 
-	// std::vector<TimeWindow> intervals = calcIntervals(unvisitedVec, mIntervalsNum, op.mStartDepot->timeWindow.openTime, op.mEndDepot->timeWindow.closeTime);
-	std::vector<TimeWindow> intervals = getIntervals(op.mAttractions, mIntervalsNum, op.mStartDepot->timeWindow.openTime, op.mEndDepot->timeWindow.closeTime);
+	std::vector<TimeWindow> intervals = calcIntervals(unvisitedVec, mIntervalsNum, op.mStartDepot->timeWindow.openTime, op.mEndDepot->timeWindow.closeTime);
+	// std::vector<TimeWindow> intervals = getIntervals(op.mAttractions, mIntervalsNum, op.mStartDepot->timeWindow.openTime, op.mEndDepot->timeWindow.closeTime);
 	const std::map<std::string, std::vector<double>> activities = getActivities(unvisited, intervals);
 	std::map<std::string, std::vector<ILS::Usage>> reg = initRegistry(unvisited, intervals); 
 
@@ -375,7 +381,7 @@ void ILS::SolveNew(OP& op) {
 		const size_t index = walk_it - best_solution.m_walks.begin();
 		updateTimes(*walk_it, walk_it->begin(), false, op.mTravelTimes, op.mTimeWindow);
 	}
-	validate(best_solution.m_walks, op.mTravelTimes);
+	validate(best_solution.m_walks, op.mTravelTimes, false);
 	std::cout << "Best score: " << best_score << std::endl;
 	std::cout << "Visits: " << best_solution.getVisits() << std::endl;
 
@@ -792,7 +798,7 @@ void ILS::SplitSearch(std::vector<Solution>& solutions, const std::vector<TimeWi
 		// }
 
 		std::cout << "Validating walks of solution " << i << std::endl;
-		validate(solutions[i].m_walks, op.mTravelTimes);
+		validate(solutions[i].m_walks, op.mTravelTimes, false);
 
 		std::vector<Point> targets = getTargets(solutions, i, op);
 
@@ -1088,21 +1094,21 @@ void ILS::updateMaxShifts(const List<TA>& li, const Vector2D<double>& travel_tim
 	}
 }
 
-void ILS::validate(const std::vector<Solution>& sols, const Vector2D<double>& travel_times){
+void ILS::validate(const std::vector<Solution>& sols, const Vector2D<double>& travel_times, const bool verbose){
 	for(auto sol_it = sols.begin(); sol_it != sols.end(); ++sol_it){
 		const int index = sol_it - sols.begin();
 		std::cout << "Checking solution [" << index << "]: ";
-		validate(sol_it->m_walks, travel_times);
+		validate(sol_it->m_walks, travel_times, verbose);
 	}
 }
 
-void ILS::validate(const std::vector<List<TA>>& walks, const Vector2D<double>& travel_times) {
+void ILS::validate(const std::vector<List<TA>>& walks, const Vector2D<double>& travel_times, const bool verbose) {
 	for (auto& walk : walks) {
-		validate(walk, travel_times);
+		validate(walk, travel_times, verbose);
 	}
 }
 
-void ILS::validate(const List<TA>& walk, const Vector2D<double>& travel_times) {
+void ILS::validate(const List<TA>& walk, const Vector2D<double>& travel_times, const bool verbose) {
 	walk.print("validating walk");
 	std::string msg{};
 	bool valid{ true };
@@ -1153,7 +1159,10 @@ void ILS::validate(const List<TA>& walk, const Vector2D<double>& travel_times) {
 		}
 	}
 
-	std::cout << (valid ? "walk is valid" : msg) << std::endl;
+	if(verbose) {
+		std::cout << (valid ? "walk is valid" : msg) << std::endl;
+	}
+	
 	if (!valid) {
 		std::cerr << "walk is invalid: exiting.. " << std::endl; 
 		std::exit(1);
@@ -1309,12 +1318,6 @@ void ILS_TOPTW::updateMaxShifts(const List<TA>& li, const Vector2D<double>& trav
 	}
 }
 
-void ILS_TOPTW::validate(const List<List<TA>>& walks, const Vector2D<double>& travel_times) {
-	for (auto& walk : walks) {
-		validate(walk, travel_times);
-	}
-}
-
 /// <summary>
 /// Validating walk:
 /// In order of a walk to be valid it needs to fullfill the following requirements:
@@ -1324,8 +1327,10 @@ void ILS_TOPTW::validate(const List<List<TA>>& walks, const Vector2D<double>& tr
 /// </summary>
 /// <param name="walk">Holds the walk that gets examined</param>
 /// <param name="ttMatrix">Holds the travel times between the points of the problem</param>
-void ILS_TOPTW::validate(const List<TA>& walk, const Vector2D<double>& travel_times) {
-	walk.print("validating walk");
+void ILS_TOPTW::validate(const List<TA>& walk, const Vector2D<double>& travel_times, const bool verbose) {
+	if(verbose){
+		walk.print("validating walk");
+	}
 	std::string msg{};
 	bool valid{ true };
 	List<TA>::iterator next{};
@@ -1385,7 +1390,10 @@ void ILS_TOPTW::validate(const List<TA>& walk, const Vector2D<double>& travel_ti
 		}
 	}
 
-	std::cout << (valid ? "walk is valid" : msg) << std::endl;
+	if(verbose){
+		std::cout << (valid ? "walk is valid" : msg) << std::endl;
+	}
+	
 	if (!valid) {
 		std::cerr << "walk is invalid: exiting.. " << std::endl;
 		std::exit(1);
