@@ -31,31 +31,33 @@ var notFound = 0;
 
 const getRoute = async({lat:latX, lon:lonX}, {lat:latY, lon:lonY}) => {
 
-    const res = await axios.get('http://localhost:8080/otp/routers/default/plan',{
-        params: {
-            fromPlace:`${lonX},${latX}`,
-            toPlace:`${lonY},${latY}`,
-            time:'7:54pm',
-            date:'12-23-2022',
-            mode:'CAR_PICKUP',
-            arriveBy:'false',
-            wheelchair:'false',
-            debugItineraryFilter:'false',
-            locale:'en'
-        }
-    })
+    if(latX == latY && lonX == lonY) {
+        return {valid: true, duration: 0};
+    }
+
+    const params = {
+        fromPlace:`${latX}, ${lonX}`,
+        toPlace:`${latY}, ${lonY}`,
+        time:'7:54pm',
+        date:'12-31-2022',
+        mode:'CAR_PICKUP',
+        arriveBy:'false',
+        wheelchair:'false',
+        debugItineraryFilter:'false',
+        locale:'en'
+    };
+
+    console.log(params);
+
+    const res = await axios.get('http://localhost:8080/otp/routers/default/plan',{ params });
+
+    // console.log(res)
     const {data:{plan: {itineraries}}} = res;
     if(itineraries?.length > 0){
-        found += 1;
-        console.log(res);
-        const duration = itineraries[0]?.duration;
-        return duration;
-    } else {
-        console.log(`no itineraries for route (${lonX}, ${latX}) -> (${lonY}, ${latY})`);
-        console.log(params);
-        notFound += 1;
+        const seconds = itineraries[0]?.duration;
+        return {valid: true, duration: seconds};
     }
-    return 0;
+    return {valid: false, duration:0};
 }
 
 
@@ -76,31 +78,40 @@ const VISIT_TIMES = [20, 23, 14, 13, 17, 30, 19, 10, 18];
 
 const SCORES = [6, 7, 10, 12, 13, 16, 18, 19, 21];
 
-const writeSights = (validPoints, writeStream) => {
-    for(const [i,point] of validPoints.entries()){
-        const timeWindow = TIME_WINDOWS[getRandom(0, 8)];
-        const visitTime = VISIT_TIMES[getRandom(0, 8)];
-        const profit = getRandom(5, 20);
-        const lat = (+point.lat).toFixed(5);
-        const lon = (+point.lon).toFixed(5);
-        const sight = `${i}\t${lat}\t${lon}\t${profit}\t${visitTime}\t${timeWindow.startTime}\t${timeWindow.endTime}`;
-        console.log(`Writing node: ${sight}`);
-        writeStream.write(`${sight}\n`);
+const writeSights = (points, writeStream) => {
+    let pointId = 1;
+    for(const [k, v] of Object.entries(points)) {
+        for(const point of v){
+            const timeWindow = TIME_WINDOWS[getRandom(0, 8)];
+            const visitTime = VISIT_TIMES[getRandom(0, 8)];
+            const profit = getRandom(5, 20);
+            const lat = (+point.lat).toFixed(5);
+            const lon = (+point.lon).toFixed(5);
+            const sight = `${pointId++} ${lat} ${lon} ${profit} ${visitTime} ${timeWindow.startTime} ${timeWindow.endTime}`;
+            console.log(`Writing node: ${sight}`);
+            writeStream.write(`${sight}\n`);
+        }
+
     }
 }
 
-const writeRoutes = async(validPoints, writeStream) => {
-    
-    for(const [i, pointX] of validPoints.entries()){
-        for(const [j,pointY] of validPoints.entries()){
-            const duration = await getRoute(pointX, pointY);
-            const route = `${i+j}\t${i}\t${j}\t${duration}\t0\t0\t1439`;
+const writeRoutes = async(points, writeStream) => {
+    let pool = [];
+    for(const [k, v] of Object.entries(points)){
+        pool.push(...v);
+    }
+    let routeId = 0;
+    for(const [i, pointX] of pool.entries()){
+        for(const [j,pointY] of pool.entries()){
+            const {valid, duration} = await getRoute(pointX, pointY);
+            if(!valid){
+                console.log(`invalid route for points ${JSON.stringify(pointX)} and ${JSON.stringify(pointY)}`);
+                process.exit()
+            }
+            const route = `D ${routeId++} ${i} ${j} ${duration}`;
             writeStream.write(`${route}\n`)
         }
     }
-
-    console.log("found", found);
-    console.log("notFound", notFound);
 
     // const file = fs.createWriteStream('AthensRoutes.txt');
     // file.on('error', (error) => { console.log(error) });
@@ -134,23 +145,25 @@ const create = async () => {
     const data = fs.readFileSync('./athens_box.geojson', 'utf8');
     const geojson = JSON.parse(data);
     const polygon = geojson.features[0].geometry.coordinates[0];
-    let pois = [];
+    let pois = {};
+    const validPois = {}; 
     let totalValidPoints = 0;
 
-    const files = [];
     const dir = "./pois";
     fs.readdirSync(dir).forEach(filename => {
         const content = xlsx.parse(`${dir}/${filename}`);
         let points = content[0].data.map(x => {return {lat: x[3], lon: x[2]}});
-        points = points.slice(0, 5);
-        pois.push(...points);
-        // if (isFile) files.push({ filepath, name, ext, stat });
+        points = points.slice(0, 1);
+        pois[filename.split(".")[0]] = points;
     });
-    
 
-    const validPois = pois.filter(x => {
-        return inside(x, polygon);
-    });
+    for(const [k, v] of Object.entries(pois)) {
+        validPois[k] = v.filter(x => {
+            return inside(x, polygon);
+        });
+        totalValidPoints += validPois[k].length;
+    }
+    
     
     writeStream.on('finish', () => {
         console.log(`wrote all routes to file ${pathName}`);
@@ -159,20 +172,11 @@ const create = async () => {
         console.error(`Error while writing routes: ${pathName} => ${err}`)
     });
 
-    writeStream.write(`${validPois.length} ${validPois.length * validPois.length}\n`);
-
-    console.log(pois);
+    writeStream.write(`${totalValidPoints} ${totalValidPoints * totalValidPoints}\n`);
 
     await writeSights(validPois, writeStream);
 
     await writeRoutes(validPois, writeStream);
-    // for(const [k, v] of Object.entries(pois)) {
-    //     await writeSights(v, writeStream);
-    // }
-
-    // for(const [k, v] of Object.entries(pois)) {
-    //     await writeRoutes(v, writeStream);
-    // }
     
     writeStream.end();
 }

@@ -5,6 +5,8 @@
 #include <vector>
 #include <random>
 #include <chrono>
+#include <unistd.h>
+#include <getopt.h>
 #include <cmath>
 #include <variant>
 #include <cassert>
@@ -13,6 +15,8 @@
 #include "OP.h"
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/graph/graphviz.hpp>
+
+enum InstanceType { fixed, custom };
 
 
 std::vector<Point> points;
@@ -93,11 +97,11 @@ double calcMeanVisitTime(std::vector<TA*> touristAttractions) {
 	return totalVisitDuration / (touristAttractions.size() - 1); //don't count the depot
 }
 
-void init(std::string author, std::string filename, int numRoutes, int numIntervals) {
+void init(std::string folder, std::string filename, int numRoutes, int numIntervals, InstanceType instance_type) {
 
 	std::vector<TA*> touristAttractions; //TODO:delete pointers
 
-	std::string filepath = "./instances/"+author+"/"+filename+".txt";
+	std::string filepath = "./instances/"+folder+"/"+filename+".txt";
 
 	std::ifstream infile(filepath);
 
@@ -108,14 +112,14 @@ void init(std::string author, std::string filename, int numRoutes, int numInterv
 	std::vector<std::string> poi_data;
 
 	int pointId = 0;
+	std::vector<double> travel_times;
 
 	while (std::getline(infile, line))
 	{
-		if (line.front() == '#') {
-			continue;
-		}
 		poi_data = split(line);
-		if (line.front() == 'R') {
+
+		switch (line.front()) {
+		case 'R': {
 			Point p = Point(pointId++, std::stod(poi_data[2]), std::stod(poi_data[3]));
 			Point edge1 = Point(pointId++, std::stod(poi_data[4]), std::stod(poi_data[5]));
 			Point edge2 = Point(pointId++, std::stod(poi_data[6]), std::stod(poi_data[7]));
@@ -134,37 +138,70 @@ void init(std::string author, std::string filename, int numRoutes, int numInterv
 				std::stoi(poi_data[12 + std::stoi(poi_data[11])]),
 				std::stoi(poi_data[13 + std::stoi(poi_data[11])])
 			));
+			break;
 		}
-		else {
+		case 'D': {
+			std::string from = poi_data[2], to = poi_data[3];
+			double duration = std::stod(poi_data[4]);
+			travel_times.push_back(duration);
+			break;
+		}
+		case '#': {
+			continue;
+			break;
+		}
+		default: {
 			if (poi_data[0].empty()) {
 				Point p = Point(pointId++, std::stod(poi_data[2]), std::stod(poi_data[3]));
 				points.push_back(p);
+				double open_time, close_time, visit_dur, profit;
+				if(instance_type == custom){
+					visit_dur = std::stoi(poi_data[3]);
+					profit = std::stoi(poi_data[4]);
+					open_time = std::stoi(poi_data[5]);
+					close_time = std::stoi(poi_data[6]);
+				} else {
+					visit_dur = std::stoi(poi_data[4]);
+					profit = std::stoi(poi_data[5]);
+					open_time = std::stoi(poi_data[8 + std::stoi(poi_data[7])]);
+					close_time = std::stoi(poi_data[9 + std::stoi(poi_data[7])]);
+				}
+
 				touristAttractions.push_back(new Sight(
 					id::generate(),
 					p,
-					std::stoi(poi_data[4]),
-					std::stoi(poi_data[5]),
-					std::stoi(poi_data[8 + std::stoi(poi_data[7])]),
-					std::stoi(poi_data[9 + std::stoi(poi_data[7])])
+					visit_dur,
+					profit,
+					open_time,
+					close_time
+
 				));
 			} else {
 				Point p = Point(pointId++, std::stod(poi_data[1]), std::stod(poi_data[2]));
 				points.push_back(p);
+				double open_time, close_time;
+				if(instance_type == custom){
+					open_time = std::stoi(poi_data[5]);
+					close_time = std::stoi(poi_data[6]);
+				} else {
+					open_time = std::stoi(poi_data[7 + std::stoi(poi_data[6])]);
+					close_time = std::stoi(poi_data[8 + std::stoi(poi_data[6])]);
+				}
+
 				touristAttractions.push_back(new Sight(
 					id::generate(),
 					p,
 					std::stoi(poi_data[3]),
 					std::stoi(poi_data[4]),
-					std::stoi(poi_data[7 + std::stoi(poi_data[6])]),
-					std::stoi(poi_data[8 + std::stoi(poi_data[6])])
+					open_time,
+					close_time
 				));
 			}
+			break;
 		}
-		// Strip of the comments.
-		
-	}
+		}
 
-	// raise(SIGINT);
+	}
 
 #if 1
 	std::cout << std::endl;
@@ -202,16 +239,110 @@ void init(std::string author, std::string filename, int numRoutes, int numInterv
 
 int main(int argc, char** argv)
 {
-	if(argc < 5) {
-		std::cout << "Please run the program with the following arguments: "<< std::endl <<
-		 "./AMTOPTW <author> <filename> <number of walks> <number of sub-intervals> " << std::endl <<
-		 "e.g. ./AMTOPTW Cordeau pr11 4 4" << std::endl;
-		return 0;
+
+	InstanceType instance_type = fixed; 
+
+	std::string folder;
+	std::string instance;
+	int num_of_walks;
+	int num_of_intervals;
+
+	int c;
+	int option_index = 0;
+	bool folder_option_provided = false, instance_option_provided = false, 
+		walks_option_provided = false, subs_option_provided = false;
+	static struct option long_options[] = {
+		{"help", no_argument, 0, 'h'},
+		{"custom", no_argument, 0, 'c'},
+		{"folder", required_argument, 0, 'f'},
+		{"instance", required_argument, 0, 'i'},
+		{"walks", required_argument, 0, 'w'},
+		{"subs", required_argument, 0, 's'},
+		{0, 0, 0, 0}
+	};
+
+	while ((c = getopt_long(argc, argv, "hcf:i:w:s:", long_options, &option_index)) != -1) {
+		switch (c) {
+		case 'h': {
+			std::cout << "Please run the program with the following options: "<< std::endl <<
+			"./AMTOPTW -f <folder> -i <instance> -w <number of walks> -i <number of sub-intervals> " << std::endl <<
+			"or" << std::endl <<
+			"./AMTOPTW -folder=\"<folder>\" --instance=\"<instance>\" --walks=<num_of_walks> --intervals=<num_of_intervals>" << std::endl << 
+			"e.g. ./AMTOPTW -f Cordeau -i pr11 -w 4 -s 4" << std::endl << 
+			"Also, you can add the option -c without any arguments if you want to use custom travel times from a custom made topology" << std::endl;
+
+			return 0;
+		}
+		case 'c':{
+			std::cout << "Will use custom times" << std::endl;
+			instance_type = custom;
+			break;
+		}
+		case 'f': {
+			if(optarg) {
+				folder = optarg;
+				folder_option_provided = true;
+			} else {
+				std::cerr << "Error: argument for option -f is required" << std::endl;
+				exit(EXIT_FAILURE);
+			}
+			break;
+		}
+		case 'i': {
+			if(optarg) {
+				instance = optarg;
+				instance_option_provided = true;
+			} else{
+				std::cerr << "Error: argument for option -i is required" << std::endl;
+				exit(EXIT_FAILURE);
+			}
+			break;
+		}
+		case 'w': {
+			if(optarg) {
+				num_of_walks = std::stoi(optarg);
+				walks_option_provided = true;
+			} else{
+				std::cerr << "Error: argument for option -w is required" << std::endl;
+				exit(EXIT_FAILURE);
+			}
+			break;
+		}
+		case 's': {
+			if(optarg) {
+				num_of_intervals = std::stoi(optarg);
+				subs_option_provided = true;
+			} else{
+				std::cerr << "Error: argument for option -s is required" << std::endl;
+				exit(EXIT_FAILURE);
+			}
+			break;
+		}
+		default:
+			break;
+		}
 	}
-	// int n;
-	// printf("Please insert the number of cities [0,10000]: ");
-	// scanf("%d", &n);
-	// printf("\n");
+
+	if (!folder_option_provided) {
+		std::cerr << "Error: Option -f is required" << std::endl;
+		exit(EXIT_FAILURE);
+	}
+
+	if (!instance_option_provided) {
+		std::cerr << "Error: Option -i is required" << std::endl;
+		exit(EXIT_FAILURE);
+	}
+
+	if (!walks_option_provided) {
+		std::cerr << "Error: Option -w is required" << std::endl;
+		exit(EXIT_FAILURE);
+	}
+
+	if (!subs_option_provided) {
+		std::cerr << "Error: Option -s is required" << std::endl;
+		exit(EXIT_FAILURE);
+	}
+
 	// glutInit(&argc, argv);
 	// glutInitDisplayMode( GLUT_RGB | GLUT_DOUBLE );
 	// glutInitWindowSize(WINDOW_WIDTH, WINDOW_HEIGHT);
@@ -227,12 +358,7 @@ int main(int argc, char** argv)
 
 	// glutInit(&argc, argv);
 
-	std::string author = argv[1];
-	std::string filename = argv[2];
-	int num_of_walks = std::stoi(argv[3]);
-	int num_of_intervals = std::stoi(argv[4]);
-
-	init(author, filename, num_of_walks, num_of_intervals);
+	init(folder, instance, num_of_walks, num_of_intervals, instance_type);
 
 	return 0;
 }
