@@ -49,34 +49,6 @@ void reshape(GLsizei width, GLsizei height) {  // GLsizei for non-negative integ
    }
 }
 
-void createGraph(){
-	struct Vertex { int foo; };
-    struct Edge { std::string blah; };
-
-    using namespace boost;
-    using graph_t  = adjacency_list<listS, vecS, directedS, Vertex, Edge >;
-    using vertex_t = graph_traits<graph_t>::vertex_descriptor;
-    using edge_t   = graph_traits<graph_t>::edge_descriptor;
-
-    //Instantiate a graph
-    graph_t g;
-
-    // Create two vertices in that graph
-    vertex_t u = boost::add_vertex(Vertex{123}, g);
-    vertex_t v = boost::add_vertex(Vertex{456}, g);
-
-    // Create an edge conecting those two vertices
-    boost::add_edge(u, v, Edge{"Hello"}, g);
-
-    boost::write_graphviz(std::cout, g, [&] (auto& out, auto v) {
-       out << "[label=\"" << g[v].foo << "\"]";
-      },
-      [&] (auto& out, auto e) {
-       out << "[label=\"" << g[e].blah << "\"]";
-    });
-    std::cout << std::flush;
-}
-
 std::vector<std::string> split(const std::string& line) {
 	std::string buf;                 // Have a buffer string
 	std::stringstream ss(line);       // Insert the string into a stream
@@ -234,11 +206,7 @@ void init(std::string folder, std::string filename, int numRoutes, int numInterv
 }
 
 
-
-
-
-int main(int argc, char** argv)
-{
+int main(int argc, char** argv) {
 
 	InstanceType instance_type = fixed; 
 
@@ -352,11 +320,10 @@ int main(int argc, char** argv)
 	// glutIdleFunc(displayOther);
   	// glutReshapeFunc( onResize );
 	// glutKeyboardFunc( onKeyDown ) ;
-	// Init(n);
 	
 	// glutMainLoop();
 
-	// glutInit(&argc, argv);
+	glutInit(&argc, argv);
 
 	init(folder, instance, num_of_walks, num_of_intervals, instance_type);
 

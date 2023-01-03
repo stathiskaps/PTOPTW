@@ -6,6 +6,8 @@ ILS::ILS(int intervalsNum) : mIntervalsNum(intervalsNum) {
 	metrics.local_search = std::vector<double>(intervalsNum, 0);
 	metrics.split_unvisited = 0.0;
 	metrics.shake = 0.0;
+	metrics.final_pos = 0;
+	metrics.middle_pos = 0;
 }
 
 ILS::~ILS() {}
@@ -24,24 +26,7 @@ std::map<std::string, std::vector<double>> ILS::getActivities(List<TA>& unvisite
 	return activities;
 }
 
-std::vector<TimeWindow> ILS::getIntervals(std::vector<TA*> unvisited, int intervals_num, double day_start_time, double day_close_time){
-	std::vector<TimeWindow> intervals;
-	double diff = day_close_time - day_start_time;
-	double dur = diff/intervals_num;
-
-	double start = day_start_time;
-	double end = day_start_time + dur;
-
-	for(size_t i = 0; i < intervals_num; ++i){
-		intervals.push_back(TimeWindow{start, end});
-		start+=dur;
-		end+=dur;
-	}
-
-	return intervals;
-}
-
-std::vector<TimeWindow> ILS::calcIntervals(std::vector<TA> unvisited, int intervals_num, double day_start_time, double day_close_time) {
+std::vector<TimeWindow> ILS::getIntervals(std::vector<TA> unvisited, int intervals_num, double day_start_time, double day_close_time) {
 
 	std::vector<TimeWindow> intervals;
 
@@ -199,102 +184,37 @@ void ILS::InitSolutions(std::vector<Solution>& sols, const std::vector<TimeWindo
 		updateTimes(walk, walk.begin(), false, op.mTravelTimes, intervals[0]);
 	}
 
-	// for(auto& walk : last_sol->m_walks) {
-	// 	walk.push_back(*op.mEndDepot);
-	// 	walk.back().timeWindow = TimeWindow{intervals[sols.size()-1].openTime, intervals[sols.size()-1].closeTime};
-	// 	updateTimes(walk, walk.begin(), false, op.mTravelTimes, intervals[sols.size() - 1]);
-	// }
-
-	// for(std::vector<Solution>::iterator sol_it = sols.begin(); sol_it != sols.end(); ++sol_it){
-	// 	const int sol_index = sol_it - sols.begin();
-	// 	for(std::vector<List<TA>>::iterator walk_it = sol_it->m_walks.begin(); walk_it != sol_it->m_walks.end(); ++walk_it){
-	// 		walk_it->push_front(*op.mStartDepot);
-	// 		walk_it->push_back(*op.mEndDepot);
-	// 		walk_it->front().timeWindow = TimeWindow{intervals[sol_index].openTime, intervals[sol_index].closeTime};
-	// 		walk_it->back().timeWindow = TimeWindow{intervals[sol_index].openTime, intervals[sol_index].closeTime};
-	// 		updateTimes(*walk_it, walk_it->begin(), intervals[sol_index].openTime, false, op.mTravelTimes);
-	// 	}
-	// }
 }
 
-bool compareByMetadata(const TA &a, const TA &b)
-{
-    return (((a.timeWindow.openTime + a.timeWindow.closeTime) / 2) + a.timeWindow.duration()) < (((b.timeWindow.openTime + b.timeWindow.closeTime) / 2) + b.timeWindow.duration());
+ILS* g_CurrentInstance;
+
+extern "C"
+void drawCallback(){
+	g_CurrentInstance->draw();
 }
 
-double maxCenter(const std::vector<TA>& v) {
-	double max = DBL_MIN;
-	for(auto &ta : v){
-		if(ta.timeWindow.center() > max){
-			max = ta.timeWindow.center();
-		}
-	}
-	return max;
+void ILS::setupDrawCallback(){
+	::g_CurrentInstance = this;
+	::glutDisplayFunc(::drawCallback);
 }
-
-double maxLength(const std::vector<TA>& v){
-	double max = DBL_MIN;
-	for(auto& ta : v){
-		if(ta.timeWindow.duration() > max) {
-			max = ta.timeWindow.duration();
-		}
-	}
-	return max;
-}
-
-bool constraintsAreSatisfied(const TA ta, const TimeWindow interval){
-	return std::min(ta.timeWindow.closeTime, interval.closeTime) - std::max(ta.timeWindow.openTime, interval.openTime) >= ta.timeWindow.duration()/2;
-}
-
-std::vector<TimeWindow> ILS::intervals(const std::vector<TA>& nodes, const int maxIntervals) {
-	std::vector<TimeWindow> intervals;
-	std::vector<TA> sorted = nodes;
-	std::sort(sorted.begin(), sorted.end(), compareByMetadata);
-
-	double intervalStart = 0.0;
-
-	std::vector<TA> unclassified = sorted;
-
-	while(intervals.size() < maxIntervals) {
-		const int remainingIntervals = maxIntervals - intervals.size();
-		const int numToClassify = (int)unclassified.size() / remainingIntervals;
-		std::vector<TA>::const_iterator first = unclassified.begin();
-		std::vector<TA>::const_iterator last = unclassified.begin() + numToClassify - 1;
-		std::vector<TA> nodesToClassify(first, last);
-		double intervalEnd = std::max(intervalStart + maxLength(nodesToClassify), maxCenter(nodesToClassify));
-		TimeWindow interval = {intervalStart, intervalEnd};
-		intervals.push_back(interval);
-
-		for(std::vector<TA>::const_iterator it = first; it != last;) {
-			if(constraintsAreSatisfied(*it, interval)) {
-				unclassified.erase(it);
-			} else {
-				++it;
-			}
-		}
-		
-	}
-
-	return intervals;
-}
-
 
 void ILS::SolveNew(OP& op) {
 
-	std::cout.setstate(std::ios_base::failbit);
+	// std::cout.setstate(std::ios_base::failbit);
+	
+	myInit();
+	// Set the OpenGL display mode
+	glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB);
+	// Set the initial window size
+	glutInitWindowSize(WINDOW_WIDTH, WINDOW_HEIGHT);
+	// Create the window with the given title
+	glutCreateWindow("Best Solution");
 
-	// // Set the OpenGL display mode
-	// glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB);
-	// // Set the initial window size
-	// glutInitWindowSize(WINDOW_WIDTH, WINDOW_HEIGHT);
-	// // Create the window with the given title
-	// glutCreateWindow("Best Solution");
+	//Set the display callback function
+	setupDrawCallback();
+	glutReshapeFunc(onResize);
 
-	// Set the display callback function
-	// glutDisplayFunc([this](ILS ils) { displayBestSolutions(ils) });
-	// glutReshapeFunc(resize);
-
-	// // Enter the GLUT main loop
+	// Enter the GLUT main loop
 	// std::thread glutThread(glutMainLoop);
 
 	auto start = std::chrono::high_resolution_clock::now();
@@ -312,16 +232,11 @@ void ILS::SolveNew(OP& op) {
 		unvisitedVec.push_back(*ta);
 	}
 
-	// std::vector<TimeWindow> ivals = intervals(unvisitedVec, mIntervalsNum);
-
-
-	std::vector<TimeWindow> intervals = calcIntervals(unvisitedVec, mIntervalsNum, op.mStartDepot->timeWindow.openTime, op.mEndDepot->timeWindow.closeTime);
-	// std::vector<TimeWindow> intervals = getIntervals(op.mAttractions, mIntervalsNum, op.mStartDepot->timeWindow.openTime, op.mEndDepot->timeWindow.closeTime);
+	std::vector<TimeWindow> intervals = getIntervals(unvisitedVec, mIntervalsNum, op.mStartDepot->timeWindow.openTime, op.mEndDepot->timeWindow.closeTime);
 	const std::map<std::string, std::vector<double>> activities = getActivities(unvisited, intervals);
 	std::map<std::string, std::vector<ILS::Usage>> reg = initRegistry(unvisited, intervals); 
 
 	int counter{}, times_not_improved{ 0 }, best_score{ INT_MIN };
-	Solution best_solution;
 
 	std::vector<ILS::SR> shake_settings;
 	for(size_t i = 0; i < mIntervalsNum; ++i){
@@ -342,15 +257,10 @@ void ILS::SolveNew(OP& op) {
 	while (times_not_improved < MAX_TIMES_NOT_IMPROVED) {
 		counter++;
 
-		std::cout << "Revision " << counter << std::endl;
+		// std::cout << "Revision " << counter << std::endl;
 		
-		printSolutions("Solutions before splitting unvisited: ", proc_solutions);
 		splitUnvisitedList(proc_solutions, pool, mIntervalsNum, reg, activities);
 		SplitSearch(proc_solutions, intervals, op, reg);
-		// printSolutions("Solutions after splitsearch ", proc_solutions);
-
-		// std::cout << "Split search execution time (rev " << std::to_string(counter) << "): " << std::chrono::duration <double, std::milli> (split_search_diff).count() << " ms" << std::endl;
-
 		int score = collectScores(proc_solutions);
 
 		if (score > best_score) {
@@ -367,13 +277,11 @@ void ILS::SolveNew(OP& op) {
 		}
 
 		int removed_counter = SplitShake(proc_solutions, shake_settings, op, max_to_remove, intervals);
-		// std::cout << "Removed " << removed_counter << " during split shake" << std::endl;
 		gatherUnvisited(proc_solutions, pool);
 
 	}
 	auto end = std::chrono::high_resolution_clock::now();
 	auto elapsed_time = std::chrono::duration_cast<std::chrono::duration<double>>(end - start).count();
-	// auto diff = end - start;
 
 	std::cout.clear();
 	best_solution = connectSolutions(best_solutions, op.m_walks_num);
@@ -393,13 +301,12 @@ void ILS::SolveNew(OP& op) {
 	}
 
 	std::cout << std::endl;
-	std::cout << "Split Unvisited List: ";
-	std::cout << metrics.split_unvisited << " seconds" << std::endl;
-	std::cout << std::endl;
+	std::cout << "Split Unvisited List: " << metrics.split_unvisited << " seconds\n" << std::endl;
 
-	std::cout << "Shake: ";
-	std::cout << metrics.shake << " seconds" << std::endl;
-	std::cout << std::endl;
+	std::cout << "Shake: " << metrics.shake << " seconds\n" << std::endl;
+
+	std::cout << "Total Times middle position was best: " << metrics.middle_pos << "\n" << std::endl;
+	std::cout << "Total Times final position was best: " << metrics.final_pos << "\n" << std::endl;
 
 	std::cout << "Total execution time: " << elapsed_time << " seconds" << std::endl;
 	std::cout << "-------------------------------------" << std::endl;
@@ -409,6 +316,7 @@ void ILS::SolveNew(OP& op) {
 	std::cout << std::endl;
 
 	// Wait for the GLUT thread to finish
+	glutMainLoop();
     // glutThread.join();
 }
 
@@ -418,6 +326,7 @@ void ILS::gatherUnvisited(std::vector<Solution>& solutions, List<TA>& pool){
 		pool.append(sol.m_unvisited);
 		sol.m_unvisited.clear();
 	}
+	std::cout << std::endl;
 }
 
 std::vector<List<TA>> ILS::splitUnvisitedList(std::vector<Solution>& solutions, List<TA>& pool, int intervals_num, std::map<std::string, std::vector<ILS::Usage>>& reg, std::map<std::string, std::vector<double>> activities) {
@@ -471,9 +380,8 @@ std::vector<List<TA>> ILS::splitUnvisitedList(std::vector<Solution>& solutions, 
 Solution ILS::connectSolutions(std::vector<Solution>& sols, const size_t walks_num) {
 	Solution solution;
 	//Connect unvisited
-	for (auto& s : sols) {
-		gatherUnvisited(sols, solution.m_unvisited);
-	}
+
+	gatherUnvisited(sols, solution.m_unvisited);
 	for (size_t i = 0; i < walks_num; ++i) {
 		List<TA> walk;
 		for (auto& s : sols) {
@@ -782,22 +690,6 @@ void ILS::SplitSearch(std::vector<Solution>& solutions, const std::vector<TimeWi
 			AddStartDepots(solutions, intervals, i, op);
 		}
 
-		// if (first_solution) {
-		// 	AddEndDepots(solutions, intervals, i, op);
-		// } 
-		// else if (last_solution) {
-		// 	AddStartDepots(solutions, intervals, i, op);
-		// }
-		// else if (middle_solution){
-		// 	AddStartDepots(solutions, intervals, i, op);
-		// 	AddEndDepots(solutions, intervals, i, op);
-		// }
-
-		// for (size_t j = 0; j < solutions[i].m_walks.size(); ++j) { //foreach walk
-		// 	updateTimes(solutions[i].m_walks[j], solutions[i].m_walks[j].begin(), false, op.mTravelTimes, intervals[i]);
-		// }
-
-		std::cout << "Validating walks of solution " << i << std::endl;
 		validate(solutions[i].m_walks, op.mTravelTimes, false);
 
 		std::vector<Point> targets = getTargets(solutions, i, op);
@@ -818,11 +710,6 @@ void ILS::SplitSearch(std::vector<Solution>& solutions, const std::vector<TimeWi
 		auto elapsed_time = std::chrono::duration_cast<std::chrono::duration<double>>(end - start).count();
 		metrics.local_search[i] += elapsed_time;
 
-		// if (i < solutions.size() - 1) {
-		// 	for (auto& walk : solutions[i].m_walks) {
-		// 		walk.pop_back();
-		// 	} 
-		// }
 	}
 }
 
@@ -924,7 +811,6 @@ std::vector<std::string> ILS::construct(Solution& sol, const Vector2D<double>& t
 	const TimeWindow time_budget) {
 	
 	std::vector<std::string> inserted_ids;
-	const double a = 2.0;
 	if (sol.m_unvisited.empty()) {
 		return inserted_ids;
 	}
@@ -1271,13 +1157,17 @@ std::tuple<Walks::iterator, List<TA>::iterator, double, int, int> ILS_TOPTW::get
 			+ ta.visitDuration
 			+ distance_to_next_target * (insertion_pos_index/possible_positions);
 
+
 		if(dep_time <= ta.timeWindow.closeTime && dep_time <= time_budget.closeTime) {
 			if (shift < min_shift) {
+				metrics.final_pos++;
 				best_walk = walk_it; 
 				best_pos = right;
 				min_shift = shift;
 				arr_point_id = ta.point.id;
 				dep_point_id = ta.point.id;
+			} else {
+				metrics.middle_pos++;
 			}
 		}
 	}
@@ -1400,8 +1290,109 @@ void ILS_TOPTW::validate(const List<TA>& walk, const Vector2D<double>& travel_ti
 	}
 }
 
-void displayBestSolutions(ILS ils){
-	for(auto sol_it = ils.best_solutions.begin(); sol_it != ils.best_solutions.end(); ++sol_it){
+void ILS::drawSolution(const Solution& sol){
 
+	const float factor = 2.0f;
+
+	//Write vertices
+	for(List<TA>::iterator ta_it = sol.m_unvisited.begin(); ta_it != sol.m_unvisited.end(); ++ta_it) {
+		glPointSize(20.0f);
+		glColor3f(1.0f, 1.0f, 1.0f);
+		glBegin(GL_POINTS);
+		glVertex2d(ta_it.iter->data.point.pos.lat*factor, ta_it.iter->data.point.pos.lon*factor);
+		glEnd();
+
+		glPointSize(18.0f);
+		glColor3ub(170, 170, 170); //grey
+		glBegin(GL_POINTS);
+		glVertex2d(ta_it.iter->data.point.pos.lat*factor, ta_it.iter->data.point.pos.lon*factor);
+		glEnd();
 	}
+	
+	for(std::vector<Walk>::const_iterator walk_it = sol.m_walks.begin(); walk_it != sol.m_walks.end(); ++walk_it) {
+		for(List<TA>::iterator ta_it = walk_it->begin(); ta_it != walk_it->end(); ++ta_it) {
+			glPointSize(20.0f);
+			glColor3f(1.0f, 1.0f, 1.0f);
+			glBegin(GL_POINTS);
+			glVertex2d(ta_it.iter->data.point.pos.lat*factor, ta_it.iter->data.point.pos.lon*factor);
+			glEnd();
+
+			glPointSize(18.0f);
+			glColor3ub(200, 103, 51); //orange
+			glBegin(GL_POINTS);
+			glVertex2d(ta_it.iter->data.point.pos.lat*factor, ta_it.iter->data.point.pos.lon*factor);
+			glEnd();
+		}
+	}
+
+	//Write routes
+	// glColor3ub(200, 200, 200);
+	glLineWidth(2.0);
+	for(std::vector<Walk>::const_iterator walk_it = sol.m_walks.begin(); walk_it != sol.m_walks.end(); ++walk_it) {
+		glBegin(GL_LINE_LOOP);
+		for(List<TA>::iterator ta_it = walk_it->begin(); ta_it != walk_it->end(); ++ta_it) {
+			glVertex2d(ta_it.iter->data.point.pos.lat*factor, ta_it.iter->data.point.pos.lon*factor);
+		}
+		glEnd();
+	}
+
+
+	//Write labels
+	glColor3ub(255, 255, 255); //white
+
+	for(List<TA>::iterator ta_it = sol.m_unvisited.begin(); ta_it != sol.m_unvisited.end(); ++ta_it) {
+		double lat = ta_it.iter->data.point.pos.lat*factor;
+		double lon = ta_it.iter->data.point.pos.lon*factor;
+		std::string id = std::to_string(ta_it.iter->data.point.id);
+		int length = id.size();
+
+
+		glRasterPos2d(lat-length, lon-1);
+		// Use a loop to draw each character of the text string
+		for (const auto& c : id) {
+			glutBitmapCharacter(GLUT_BITMAP_8_BY_13, c);
+		}
+	}
+
+	for(std::vector<Walk>::const_iterator walk_it = sol.m_walks.begin(); walk_it != sol.m_walks.end(); ++walk_it) {
+		for(List<TA>::iterator ta_it = walk_it->begin(); ta_it != walk_it->end(); ++ta_it) {
+			double lat = ta_it.iter->data.point.pos.lat*factor;
+			double lon = ta_it.iter->data.point.pos.lon*factor;
+			std::string id = std::to_string(ta_it.iter->data.point.id);
+			int length = id.size();
+
+
+			glRasterPos2d(lat-length, lon-1);
+			// Use a loop to draw each character of the text string
+			for (const auto& c : id) {
+				glutBitmapCharacter(GLUT_BITMAP_8_BY_13, c);
+			}
+		}
+	}
+
+}
+
+void ILS::draw(){
+
+	// Clear the screen to black
+	glClearColor(0.0, 0.0, 0.0 , 1.0);
+	glClear(GL_COLOR_BUFFER_BIT);
+	glLoadIdentity();
+
+	const float pointSize = 20.0f;
+	
+	// Use glPointSize() to set the size of the points
+	glPointSize(pointSize);
+	// Set the drawing color to orange
+	glColor3ub(200, 103, 51);
+
+	drawSolution(best_solution);
+
+	// for(auto sol_it = best_solutions.begin(); sol_it != best_solutions.end(); ++sol_it){
+	// 	drawSolution(*sol_it);
+	// }
+
+	// Flush the OpenGL buffers to the screen
+	glFlush();
+	std::cout << std::endl;
 }

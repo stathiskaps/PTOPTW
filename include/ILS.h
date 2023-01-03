@@ -1,3 +1,4 @@
+#pragma once
 #include <iostream>
 #include <vector>
 #include <map>
@@ -24,8 +25,6 @@
 
 #ifndef ILS_H
 #define ILS_H
-
-
 
 #define last_solution i==solutions.size()-1
 #define first_solution i==0
@@ -84,15 +83,20 @@ private:
 		std::vector<double> local_search;
 		double split_unvisited;
 		double shake;
+		int final_pos, middle_pos;
 	};
 
-	Metrics metrics;
+
 	int mIntervalsNum;
 	void dbScan(OP& op);
 	void AddStartDepots(std::vector<Solution>&, const std::vector<TimeWindow>&, const int, const OP&);
 	void AddEndDepots(std::vector<Solution>&, const std::vector<TimeWindow>&, const int, OP&);
 	bool compareTimeWindowCenter(const List<TA>::iterator&, const List<TA>::iterator&);
+	static ILS* currentInstance;
 
+	static void drawCallback(){
+		currentInstance->draw();
+	}
 
 	// virtual std::tuple<List<TA>::iterator, double, int, int> getBestPos(const TA&, const List<TA>&, const Vector2D<double>&);
 	virtual std::tuple<Walks::iterator, List<TA>::iterator, double, int, int> getBestPos(const TA&, Walks&, const Vector2D<double>&, const std::vector<double>, const TimeWindow);
@@ -102,7 +106,6 @@ private:
 	virtual std::tuple<bool, double> insertionAfterIsValid(const TA&, const TA&, const double, const Vector2D<double>&);
 	std::map<std::string, std::vector<Usage>> initRegistry(List<TA>&, std::vector<TimeWindow>);
 	std::map<std::string, std::vector<double>> getActivities(List<TA>&, std::vector<TimeWindow>);
-	std::vector<TimeWindow> getIntervals(std::vector<TA*>, int, double, double);
 	void SplitSearch(std::vector<Solution>&, const std::vector<TimeWindow>&, OP&, std::map<std::string, std::vector<Usage>>&);
 	void gatherUnvisited(std::vector<Solution>&, List<TA>&);
 	std::vector<List<TA>> splitUnvisitedList(std::vector<Solution>&, List<TA>&, int, std::map<std::string, std::vector<ILS::Usage>>&, std::map<std::string, std::vector<double>>);
@@ -124,13 +127,17 @@ private:
 	std::tuple<bool, double> CandidateStartDepotIsValid(const List<TA>&, const TA&, const double, const Vector2D<double>&);
 	void drawSolutions(const std::vector<Solution>& solutions);
 	std::vector<Point> getTargets(const std::vector<Solution>&, const int, const OP&);
-	std::vector<TimeWindow> intervals(const std::vector<TA>&, const int);
-	std::vector<TimeWindow> calcIntervals(std::vector<TA>, int, double, double);
-	// bool compareByMetadata(const TA &a, const TA &b);
+	std::vector<TimeWindow> getIntervals(std::vector<TA>, int, double, double);
+	void setupDrawCallback();
+
 	
+protected:
+	Metrics metrics;
 public:
 	std::vector<Solution> best_solutions;
-
+	Solution best_solution;
+	void draw();
+	void drawSolution(const Solution&);
     ILS();
 	ILS(int);
     ~ILS();
@@ -155,6 +162,6 @@ public:
 	void validate(const List<TA>&, const Vector2D<double>&, const bool) override;
 };
 
-void displayBestSolutions(ILS ils);
+
 
 #endif

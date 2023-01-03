@@ -1,6 +1,6 @@
 #include "Graphics.h"
 
-void resize(int w, int h) {	
+void onResize(int w, int h) {	
 	int windowWidth = glutGet(GLUT_WINDOW_WIDTH);
 	int windowHeight = glutGet(GLUT_WINDOW_HEIGHT);
 
@@ -13,17 +13,16 @@ void resize(int w, int h) {
 
 	glViewport(0, 0, windowWidth, windowHeight);
 
-
 	glMatrixMode( GL_PROJECTION );
 	glLoadIdentity();
 
-
 	glOrtho(-100 * aspectRatio, 100 * aspectRatio, -100, 100, -1, 1);
-	glMatrixMode( GL_MODELVIEW);
+	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 }
 
 void myInit(){
+	glShadeModel(GL_SMOOTH);
     glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glEnable(GL_LINE_SMOOTH);

@@ -5,8 +5,9 @@
 #define WINDOW_WIDTH  800
 #define WINDOW_HEIGHT 800
 
-void resize(int w, int h);
+void onResize(int w, int h);
 void myInit();
+
 // void display() {
 // 	// Clear the screen to black
 // 	glClearColor(0.0, 0.0, 0.0 , 1.0);
