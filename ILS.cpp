@@ -74,6 +74,7 @@ std::vector<TimeWindow> ILS::getIntervals(std::vector<TA> unvisited, int interva
 
 				if(activity > max_activity) {
 					best_bin = it;
+					max_activity = activity;
 				}
 			}
 			best_bin->count++;
@@ -133,7 +134,7 @@ std::vector<TimeWindow> ILS::getIntervals(std::vector<TA> unvisited, int interva
 	}
 
 	for(size_t i = 0; i < mIntervalsNum; ++i){
-		intervals.push_back(TimeWindow{time_cuts[i], time_cuts[i+1]});
+		intervals.push_back(TimeWindow{best_time_cuts[i], best_time_cuts[i+1]});
 	}
 
 	return intervals;
@@ -200,19 +201,19 @@ void ILS::setupDrawCallback(){
 
 void ILS::SolveNew(OP& op) {
 
-	// std::cout.setstate(std::ios_base::failbit);
+	std::cout.setstate(std::ios_base::failbit);
 	
-	myInit();
-	// Set the OpenGL display mode
-	glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB);
-	// Set the initial window size
-	glutInitWindowSize(WINDOW_WIDTH, WINDOW_HEIGHT);
-	// Create the window with the given title
-	glutCreateWindow("Best Solution");
+	// myInit();
+	// 	// Set the OpenGL display mode
+	// glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB);
+	// // Set the initial window size
+	// glutInitWindowSize(WINDOW_WIDTH, WINDOW_HEIGHT);
+	// // Create the window with the given title
+	// glutCreateWindow("Best Solution");
 
-	//Set the display callback function
-	setupDrawCallback();
-	glutReshapeFunc(onResize);
+	// //Set the display callback function
+	// setupDrawCallback();
+	// glutReshapeFunc(onResize);
 
 	// Enter the GLUT main loop
 	// std::thread glutThread(glutMainLoop);
@@ -316,7 +317,7 @@ void ILS::SolveNew(OP& op) {
 	std::cout << std::endl;
 
 	// Wait for the GLUT thread to finish
-	glutMainLoop();
+	// glutMainLoop();
     // glutThread.join();
 }
 

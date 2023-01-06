@@ -323,7 +323,7 @@ int main(int argc, char** argv) {
 	
 	// glutMainLoop();
 
-	glutInit(&argc, argv);
+	// glutInit(&argc, argv);
 
 	init(folder, instance, num_of_walks, num_of_intervals, instance_type);
 
