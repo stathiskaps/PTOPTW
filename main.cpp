@@ -187,7 +187,7 @@ void init(std::string folder, std::string filename, int numRoutes, int numInterv
 	OP op = OP(touristAttractions, points, start_depot, end_depot, numRoutes, end_depot->timeWindow.openTime, end_depot->timeWindow.closeTime);
 
 	ILS_TOPTW ilstoptw = ILS_TOPTW(numIntervals);
-	ilstoptw.SolveNew(op);
+	ilstoptw.Solve(op);
 
 	/*OPTW optw(touristAttractions, ttMatrix, depot, OPEN_DAY_TIME, CLOSE_DAY_TIME);
 	Solution sol = optw.solve();

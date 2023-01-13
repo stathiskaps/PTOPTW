@@ -54,8 +54,8 @@ const getRoute = async({lat:latX, lon:lonX}, {lat:latY, lon:lonY}) => {
     // console.log(res)
     const {data:{plan: {itineraries}}} = res;
     if(itineraries?.length > 0){
-        const seconds = itineraries[0]?.duration;
-        return {valid: true, duration: seconds};
+        const minutes = Math.ceil(itineraries[0]?.duration/60);
+        return {valid: true, duration: minutes};
     }
     return {valid: false, duration:0};
 }
@@ -153,7 +153,7 @@ const create = async () => {
     fs.readdirSync(dir).forEach(filename => {
         const content = xlsx.parse(`${dir}/${filename}`);
         let points = content[0].data.map(x => {return {lat: x[3], lon: x[2]}});
-        points = points.slice(0, 1);
+        points = points.slice(0, 2);
         pois[filename.split(".")[0]] = points;
     });
 

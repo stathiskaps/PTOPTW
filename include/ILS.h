@@ -99,7 +99,8 @@ private:
 	}
 
 	// virtual std::tuple<List<TA>::iterator, double, int, int> getBestPos(const TA&, const List<TA>&, const Vector2D<double>&);
-	virtual std::tuple<Walks::iterator, List<TA>::iterator, double, int, int> getBestPos(const TA&, Walks&, const Vector2D<double>&, const std::vector<double>, const TimeWindow);
+	virtual std::tuple<Walks::iterator, List<TA>::iterator, double, int, int> getBestPos(const TA&, Walks&, const Vector2D<double>&, 
+		const std::vector<double>, const TimeWindow, const bool);
 	virtual void updateTimes(List<TA>&, const List<TA>::iterator&, const bool, const Vector2D<double>&, const TimeWindow);
 	virtual std::tuple<bool, double> insertionBetweenIsValid(const TA&, const TA&, const TA&, const Vector2D<double>&);
 	virtual std::tuple<bool, double> insertionBeforeIsValid(const TA& , const TA&, const double, const Vector2D<double>&);
@@ -114,7 +115,7 @@ private:
 	int SplitShake(std::vector<Solution>&, std::vector<ILS::SR>&, OP&, const int&, const std::vector<TimeWindow>);
 	int Shake(Solution&, int&, int&, OP&, const int&, const TimeWindow);
 	virtual void updateMaxShifts(const List<TA>&, const Vector2D<double>&, const TimeWindow);
-	std::vector<std::string> construct(Solution&, const Vector2D<double>&, const std::vector<Point>, const TimeWindow);
+	std::vector<std::string> construct(Solution&, const Vector2D<double>&, const std::vector<Point>, const TimeWindow, const bool);
 	int collectScores(std::vector<Solution>);
 	Solution connectSolutions(std::vector<Solution>&, const size_t);
 	inline int collectProfit (const List<TA>::iterator&, const List<TA>::iterator&) const;
@@ -144,14 +145,15 @@ public:
 	virtual void validate(const List<TA>&, const Vector2D<double>&, const bool);
 	virtual void validate(const Walks&, const Vector2D<double>&, const bool);
 	void validate(const std::vector<Solution>&, const Vector2D<double>&, const bool);
-	void SolveNew(OP&);
+	void Solve(OP&);
 
 };
 
 class ILS_TOPTW : public ILS {
 private:
 	// std::tuple<List<TA>::iterator, double, int, int> getBestPos(const TA&, const List<TA>&, const Vector2D<double>&) override;
-	std::tuple<Walks::iterator, List<TA>::iterator, double, int, int> getBestPos(const TA&, Walks&, const Vector2D<double>&, const std::vector<double>, const TimeWindow) override;
+	std::tuple<Walks::iterator, List<TA>::iterator, double, int, int> getBestPos(const TA&, Walks&, const Vector2D<double>&, 
+	const std::vector<double>, const TimeWindow, const bool) override;
 	void updateTimes(List<TA>&, const List<TA>::iterator&, const bool, const Vector2D<double>&, const TimeWindow) override;
 	void updateMaxShifts(const List<TA>&, const Vector2D<double>&, const TimeWindow) override;
 	std::tuple<bool, double> insertionBetweenIsValid(const TA&, const TA&, const TA&, const Vector2D<double>&) override;

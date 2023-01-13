@@ -121,6 +121,23 @@ public:
         init();
     }
 
+    std::pair<List<T>, List<T>> split(iterator it) {
+        List<T> leftPart, rightPart;
+
+        if(it == end()) {
+            leftPart = List<T>(begin(), it);
+            rightPart = List<T>();
+        } else if(it == begin()) {
+            leftPart = List<T>();
+            rightPart = List<T>(it, end()-1);
+        } else {
+            leftPart = List<T>(begin(), it);
+            rightPart = List<T>(it, end());
+        }
+
+        return {leftPart, rightPart};
+    }
+
     void destroy() {
         for (Node* nextNode{}, * currentNode(head->next); currentNode != head; currentNode = nextNode) {
             nextNode = currentNode->next;
@@ -178,6 +195,19 @@ public:
         }
     }
 
+    bool eraseId(std::string id) {
+        for(Node* currentNode(head->next); currentNode != head; currentNode = currentNode->next){
+            if(currentNode->data.id == id) {
+                currentNode->previous->next = currentNode->next;
+                currentNode->next->previous = currentNode->previous;
+                delete currentNode;
+                --numberOfElements;
+                return true;
+            }
+        }
+        return false;
+    }
+
     iterator erase(const iterator& posToDelete) {
         iterator result = posToDelete;
         ++result;
@@ -206,7 +236,14 @@ public:
         return result;
     }
 
-
+    void trim_left(size_t n){
+        size_t counter = 0;
+        for(iterator it = begin(); it != end(); ++it){
+            if(counter++ < n){
+                erase(it);
+            }
+        }
+    }
 
     List<T> copy_part(iterator& first, const iterator& last) {
         List<T> part;

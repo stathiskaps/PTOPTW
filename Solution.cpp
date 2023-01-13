@@ -21,6 +21,15 @@ Solution::Solution(TA start, TA end, List<TA> unvisited, double startTime, doubl
     }
 }
 
+void Solution::print(std::string tag){
+    std::cout << tag << std::endl;
+
+    m_unvisited.print("Unvisited");
+    for(size_t i = 0; i < m_walks.size(); ++i) {
+        m_walks[i].print("Walk "+std::to_string(i));
+    }
+}
+
 int Solution::getScores(){
     int sum{}; 
     for (auto& w : m_walks) {

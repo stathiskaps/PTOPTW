@@ -27,6 +27,7 @@ public:
 	int getVisits();
 	int getMinWalkSize() const;
 	void draw(std::string, std::string);
+	void print(std::string);
 
 
 
