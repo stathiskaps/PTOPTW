@@ -271,8 +271,10 @@ void ILS::Solve(OP& op) {
 		// }
 
 		if (score > best_score) {
+			std::cout << "found better solution" << std::endl;
 			best_score = score;
 			best_solutions = proc_solutions;
+			validate(best_solutions, op.mTravelTimes, true);
 			for(auto& sr : shake_settings){
 				sr.R = 1;
 			}
@@ -296,7 +298,7 @@ void ILS::Solve(OP& op) {
 		const size_t index = walk_it - best_solution.m_walks.begin();
 		updateTimes(*walk_it, walk_it->begin(), false, op.mTravelTimes, op.mTimeWindow);
 	}
-	validate(best_solution.m_walks, op.mTravelTimes, false);
+	validate(best_solution.m_walks, op.mTravelTimes, true);
 	std::cout << "Best score: " << best_score << std::endl;
 	std::cout << "Visits: " << best_solution.getVisits() << std::endl;
 
@@ -413,28 +415,20 @@ int ILS::collectScores(std::vector<Solution> sols) {
 
 void ILS::PrepareForShake(std::vector<Solution>& sols){
 	for(std::vector<Solution>::iterator sol_it = sols.begin(); sol_it != sols.end(); ++sol_it){
-		if(sol_it == sols.begin()){ //first sol
+		if(sol_it != sols.begin()){
 			for(std::vector<List<TA>>::iterator walk_it = sol_it->m_walks.begin(); walk_it != sol_it->m_walks.end(); ++walk_it){
-				walk_it->push_back(walk_it->back());
-				walk_it->back().id = DUMMY_ID;;
-			}
-		} 
-		else if (sol_it == sols.end() - 1){ //last sol
-			for(std::vector<List<TA>>::iterator walk_it = sol_it->m_walks.begin(); walk_it != sol_it->m_walks.end(); ++walk_it){
-				walk_it->push_front(walk_it->front());
-				walk_it->front().id = DUMMY_ID;
-			}
-		} 
-		else { //middle sol
-			for(std::vector<List<TA>>::iterator walk_it = sol_it->m_walks.begin(); walk_it != sol_it->m_walks.end(); ++walk_it){
-				// if(walk_it->empty()) continue;
-				walk_it->push_back(walk_it->back());
-				walk_it->back().id = DUMMY_ID;;
-
 				walk_it->push_front(walk_it->front());
 				walk_it->front().id = DUMMY_ID;
 			}
 		}
+
+		if(sol_it != sols.end() - 1) {
+			for(std::vector<List<TA>>::iterator walk_it = sol_it->m_walks.begin(); walk_it != sol_it->m_walks.end(); ++walk_it){
+				walk_it->push_back(walk_it->back());
+				walk_it->back().id = DUMMY_ID;;
+			}
+		}
+
 	}
 }
 
@@ -747,7 +741,7 @@ void ILS::SplitSearch(std::vector<Solution>& solutions, const std::vector<TimeWi
 					if(!walks.second.empty() && temp.arrTime < intervals[i].openTime){
 						const double dep_time = temp.dep_time(intervals[i].openTime);
 						if(temp.maxShift < intervals[i].openTime - temp.arrTime || dep_time > temp.timeWindow.closeTime){
-							walks.second.trim_left(1);
+							walks.second.pop_front();
 						} else {
 							std::cout << "Will shift walk by " << intervals[i].openTime - temp.arrTime << " time units to the right" << std::endl;
 						}
@@ -1365,6 +1359,7 @@ void ILS_TOPTW::validate(const List<TA>& walk, const Vector2D<double>& travel_ti
 	}
 	
 	if (!valid) {
+		std::cerr << msg << std::endl;
 		std::cerr << "walk is invalid: exiting.. " << std::endl;
 		std::exit(1);
 	}
