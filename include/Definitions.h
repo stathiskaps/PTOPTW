@@ -20,6 +20,8 @@
 #define DEPOT_ID "depot"
 #define START_DEPOT_ID "start_depot"
 #define DUMMY_START_DEPOT "dummy_start_depot"
+#define PREV_LAST_COPY "prev_last_copy"
+#define CURR_FIRST_COPY "curr_first_copy"
 #define END_DEPOT_ID "end_depot"
 #define CANDIDATE_END_DEPOT_ID "candidate_end_depot"
 #define DUMMY_END_DEPOT_ID "dummy_end_depot"

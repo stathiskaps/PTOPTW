@@ -100,7 +100,7 @@ private:
 
 	// virtual std::tuple<List<TA>::iterator, double, int, int> getBestPos(const TA&, const List<TA>&, const Vector2D<double>&);
 	virtual std::tuple<Walks::iterator, List<TA>::iterator, double, int, int> getBestPos(const TA&, Walks&, const Vector2D<double>&, 
-		const std::vector<double>, const TimeWindow, const bool);
+	const std::vector<double>, const TimeWindow, const bool);
 	virtual void updateTimes(List<TA>&, const List<TA>::iterator&, const bool, const Vector2D<double>&, const TimeWindow);
 	virtual std::tuple<bool, double> insertionBetweenIsValid(const TA&, const TA&, const TA&, const Vector2D<double>&);
 	virtual std::tuple<bool, double> insertionBeforeIsValid(const TA& , const TA&, const double, const Vector2D<double>&);
@@ -129,6 +129,8 @@ private:
 	void drawSolutions(const std::vector<Solution>& solutions);
 	std::vector<Point> getTargets(const std::vector<Solution>&, const int, const OP&);
 	std::vector<TimeWindow> getIntervals(std::vector<TA>, int, double, double);
+	TA getPreviousTA(std::vector<Solution>&, const int, const size_t);
+	void RemoveUnfeasibleVisits(std::vector<Solution>&, const int, const size_t);
 	void setupDrawCallback();
 
 	

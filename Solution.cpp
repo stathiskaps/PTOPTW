@@ -21,12 +21,12 @@ Solution::Solution(TA start, TA end, List<TA> unvisited, double startTime, doubl
     }
 }
 
-void Solution::print(std::string tag){
+void Solution::print(std::string tag, const bool verbose){
     std::cout << tag << std::endl;
 
-    m_unvisited.print("Unvisited");
+    m_unvisited.print("Unvisited", false);
     for(size_t i = 0; i < m_walks.size(); ++i) {
-        m_walks[i].print("Walk "+std::to_string(i));
+        m_walks[i].print("Walk "+std::to_string(i), verbose);
     }
 }
 

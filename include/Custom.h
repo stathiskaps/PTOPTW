@@ -30,10 +30,6 @@ class List {
         Node() {}
         Node(Node* const n, Node* const p) : next(n), previous(p) {}
         Node(Node* const n, Node* const p, const T& d) : next(n), previous(p), data(d) {}
-
-        void print(){
-            std::cout << data.id << " ";
-        }
     };
 
     
@@ -104,12 +100,56 @@ public:
         last->next = nullptr;
     }
 
-    void print(std::string tag) const{
-        std::cout << tag << ": ";
+    void print(std::string tag, bool verbose) const{
+        std::cout << tag << ": " <<std::endl;
+        std::cout << "TA:\t";
         for(iterator it = begin(); it != end(); ++it){
-            it.iter->print();
+            std::cout << it.iter->data.id << "\t";
         }
+        std::cout << std::endl;
+
+        if(!verbose){
+            return;
+        }
+
+        std::cout << "arrTime:\t";
+        for(iterator it = begin(); it != end(); ++it){
+            std::cout << it.iter->data.arrTime << "\t";
+        }
+        std::cout << std::endl;
+
+        std::cout << "openTime\t";
+        for(iterator it=begin(); it!=end(); ++it){
+            std::cout << it.iter->data.timeWindow.openTime << "\t";
+        }
+        std::cout << std::endl;
+
+        std::cout << "depTime:\t";
+        for(iterator it = begin(); it != end(); ++it){
+            std::cout << it.iter->data.depTime << "\t";
+        }
+        std::cout << std::endl;
+
+        std::cout << "closeTime\t";
+        for(iterator it=begin(); it!= end(); ++it){
+            std::cout << it.iter->data.timeWindow.closeTime << "\t";
+        }
+        std::cout << std::endl;
+        
+        std::cout << "maxShift:\t";
+        for(iterator it = begin(); it != end(); ++it){
+            std::cout << it.iter->data.maxShift << "\t";
+        }
+        std::cout << std::endl;
+
+        std::cout << "waitDur:\t";
+        for(iterator it = begin(); it != end(); ++it){
+            std::cout << it.iter->data.waitDuration << "\t";
+        }
+        std::cout << std::endl;
+
         std::cout << "(size: " << size() << ")" << std::endl;
+        std::cout << std::endl;
     }
 
     void clear() {
