@@ -193,6 +193,17 @@ void ILS::InitSolutions(std::vector<Solution>& sols, const std::vector<TimeWindo
 
 }
 
+void ILS::validateUnifiedSolution(const std::vector<Solution>& solutions, size_t walks_num, const Vector2D<double>& travel_times, const TimeWindow time_budget){
+	for (size_t i = 0; i < walks_num; ++i) {
+		List<TA> walk;
+		for (auto& s : solutions) {
+			walk.append(s.m_walks[i]);
+		}
+		updateTimes(walk, walk.begin(), false, travel_times, time_budget);
+		validate(walk, travel_times, false);
+	}
+}
+
 ILS* g_CurrentInstance;
 
 extern "C"
@@ -203,6 +214,17 @@ void drawCallback(){
 void ILS::setupDrawCallback(){
 	::g_CurrentInstance = this;
 	::glutDisplayFunc(::drawCallback);
+}
+
+size_t ILS::countNodes(const std::vector<Solution>& sols){
+	size_t counter {};
+	for(auto& sol : sols){
+		for(auto& walk : sol.m_walks){
+			counter += walk.size();
+		}
+		counter += sol.m_unvisited.size();
+	}
+	return counter;
 }
 
 void ILS::Solve(OP& op) {
@@ -226,7 +248,7 @@ void ILS::Solve(OP& op) {
 
 	auto start = std::chrono::high_resolution_clock::now();
 	const int num_locations = op.mAttractions.size();
-	const int max_to_remove = num_locations / (3 * op.m_walks_num);
+	const int max_to_remove = num_locations / (3 * op.m_walks_num * mIntervalsNum);
 
 	std::vector<TA> unvisitedVec;
 	List<TA> unvisited;
@@ -265,30 +287,13 @@ void ILS::Solve(OP& op) {
 		std::cout << "Revision " << counter << std::endl;
 		
 		splitUnvisitedList(proc_solutions, pool, mIntervalsNum, reg, activities);
-		for (size_t i = 0; i < op.m_walks_num; ++i) {
-			List<TA> walk;
-			for (auto& s : proc_solutions) {
-				walk.append(s.m_walks[i]);
-			}
-			updateTimes(walk, walk.begin(), false, op.mTravelTimes, time_budget);
-			validate(walk, op.mTravelTimes, true);
-		}
-		SplitSearch(proc_solutions, intervals, op, reg);
+		validateUnifiedSolution(proc_solutions, op.m_walks_num, op.mTravelTimes, time_budget);
+		SplitSearch(proc_solutions, pool, intervals, op, reg);
+		validateUnifiedSolution(proc_solutions, op.m_walks_num, op.mTravelTimes, time_budget);
 		int score = collectScores(proc_solutions);
-
-
-		for (size_t i = 0; i < op.m_walks_num; ++i) {
-			List<TA> walk;
-			for (auto& s : proc_solutions) {
-				walk.append(s.m_walks[i]);
-			}
-			updateTimes(walk, walk.begin(), false, op.mTravelTimes, time_budget);
-			validate(walk, op.mTravelTimes, true);
-		}
 
 		if (score > best_score) {
 			bestCounter = counter;
-			std::cout << "found better solution" << std::endl;
 			best_score = score;
 			best_solutions = proc_solutions;
 			validate(best_solutions, op.mTravelTimes, true);
@@ -303,6 +308,7 @@ void ILS::Solve(OP& op) {
 		}
 
 		int removed_counter = SplitShake(proc_solutions, shake_settings, op, max_to_remove, intervals);
+		pool.clear(); //TODO: comment this when using middle solutions
 		gatherUnvisited(proc_solutions, pool);
 
 	}
@@ -311,12 +317,10 @@ void ILS::Solve(OP& op) {
 
 	std::cout.clear();
 	best_solution = connectSolutions(best_solutions, op.m_walks_num);
-	best_solution.print("Best solution before updating times", true);
 	for(auto walk_it = best_solution.m_walks.begin(); walk_it != best_solution.m_walks.end(); ++walk_it){
 		const size_t index = walk_it - best_solution.m_walks.begin();
 		updateTimes(*walk_it, walk_it->begin(), false, op.mTravelTimes, op.mTimeWindow);
 	}
-	best_solution.print("Best solution after updating times", true);
 	std::cout << "Best counter: " << bestCounter << std::endl;
 
 	validate(best_solution.m_walks, op.mTravelTimes, true);
@@ -353,7 +357,7 @@ void ILS::Solve(OP& op) {
 }
 
 void ILS::gatherUnvisited(std::vector<Solution>& solutions, List<TA>& pool){
-	pool.clear();
+	// pool.clear();
 	for(auto& sol : solutions){
 		pool.append(sol.m_unvisited);
 		sol.m_unvisited.clear();
@@ -426,7 +430,7 @@ Solution ILS::connectSolutions(std::vector<Solution>& sols, const size_t walks_n
 	return solution;
 }
 
-int ILS::collectScores(std::vector<Solution> sols) {
+int ILS::collectScores(const std::vector<Solution>& sols) const {
 	int total_score{};
 	for (auto& sol : sols) {
 		total_score += sol.getScores();
@@ -515,7 +519,7 @@ int ILS::Shake(Solution& sol, int& S, int& R, OP& op, const int& max_to_remove, 
 		part.clear();
 		updateTimes(*walk_it, next, false, op.mTravelTimes, time_budget);
 	}
-	S += R;
+	S += 1;
 	R++;
 
 	return removed_counter;
@@ -587,35 +591,44 @@ void ILS::AddStartDepots(std::vector<Solution>& solutions, const std::vector<Tim
 
 	TimeWindow timeBudget = TimeWindow{intervals[i].openTime, intervals[i].closeTime};
 	for (size_t j = 0; j < solutions[i].m_walks.size(); ++j) {
+		int prev_sol_index = i-1;
+		
 		if(first_solution){ //we have already added a start depot at first solution's walks
 			return;
 		}
 
-		const TA prev_last = getPreviousTA(solutions, i, j);
+		while(solutions[prev_sol_index].m_walks[j].empty() && prev_sol_index >= 0){
+			prev_sol_index--;
+			continue;
+		}
 
-		if(!solutions[i].m_walks[j].empty()) {
-			TA &curr_first = solutions[i].m_walks[j].front();
-			double start_time = std::max(prev_last.depTime+op.mTravelTimes[prev_last.point.id][curr_first.point.id], intervals[i].openTime);
-			updateTimes(solutions[i].m_walks[j], solutions[i].m_walks[j].begin(), false, op.mTravelTimes, TimeWindow{start_time, intervals[i].closeTime});
-			RemoveUnfeasibleVisits(solutions, i, j); //TODO: the nodes should return back to the unsited list
-			if(!solutions[i].m_walks[j].empty()){
-				solutions[i].m_walks[j].push_front(curr_first);
-				solutions[i].m_walks[j].front().neutralize(CURR_FIRST_COPY);
-				solutions[i].m_walks[j].front().timeWindow = intervals[i];
+		if(prev_sol_index == -1){
+			throw std::runtime_error("didn't find a valid previous walk to get a startDepot");
+		}
+
+		TA &prev_last = solutions[prev_sol_index].m_walks[j].back();
+		TA candidate = prev_last;
+		candidate.neutralize(DUMMY_START_DEPOT);
+		candidate.timeWindow = intervals[i];
+
+		//left trim invalid nodes
+		if(!solutions[i].m_walks[j].empty()) { 
+			List<TA>::iterator curr = solutions[i].m_walks[j].begin();
+			while(curr != solutions[i].m_walks[j].end()){
+				auto [valid, _] = CandidateStartDepotIsValid(solutions[i].m_walks[j], candidate, intervals[i].openTime, op.mTravelTimes);
+				if(!valid){
+					solutions[i].m_unvisited.push_back(curr.iter->data);
+					curr = solutions[i].m_walks[j].erase(curr);
+					updateTimes(solutions[i].m_walks[j], curr, false, op.mTravelTimes, intervals[i]);
+					//TODO: check extreme occasion that dep time of the dummy depot is greater than close time of time window
+				} else {
+					break;
+				}
 			}
 		}
 
-		if(solutions[i].m_walks[j].empty()){
-			solutions[i].m_walks[j].push_front(prev_last);
-			TA &first = solutions[i].m_walks[j].front();
-			first.neutralize(PREV_LAST_COPY);
-			first.timeWindow = intervals[i];
-			updateTimes(solutions[i].m_walks[j], solutions[i].m_walks[j].begin(), false, op.mTravelTimes, intervals[i]);
-			if(first.maxShift < 0){
-				throw std::runtime_error("Infeasible node");
-			}
-		}
-
+		solutions[i].m_walks[j].push_front(candidate);
+		updateTimes(solutions[i].m_walks[j], solutions[i].m_walks[j].begin(), false, op.mTravelTimes, intervals[i]);
 	}
 }
 
@@ -714,10 +727,11 @@ std::vector<Point> ILS::getTargets(const std::vector<Solution>& solutions, const
 
 }
 
-void ILS::SplitSearch(std::vector<Solution>& solutions, const std::vector<TimeWindow>& intervals, OP& op, std::map<std::string, std::vector<ILS::Usage>>& reg) {
+void ILS::SplitSearch(std::vector<Solution>& solutions, List<TA>& pool, const std::vector<TimeWindow>& intervals, OP& op, std::map<std::string, std::vector<ILS::Usage>>& reg) {
 
 	const int min_size = 3;
 	const int solutions_size = solutions.size();
+	int counter1{}, counter2{}, tempScore1{}, tempScore2{};
 
 	for (int i = 0; i < solutions.size(); ++i) {
 
@@ -730,6 +744,7 @@ void ILS::SplitSearch(std::vector<Solution>& solutions, const std::vector<TimeWi
 
 		std::vector<Point> targets = getTargets(solutions, i, op);
 		std::vector<std::string> ids = construct(solutions[i], op.mTravelTimes, targets, intervals[i], !(last_solution));
+		counter1 += ids.size();
 
 		for (auto& id : ids) {
 			reg[id].at(i).solved++;
@@ -737,114 +752,117 @@ void ILS::SplitSearch(std::vector<Solution>& solutions, const std::vector<TimeWi
 
 		if (i > 0) {
 
-			for (size_t j = 0; j < solutions[i].m_walks.size(); ++j){
-				if(solutions[i].m_walks[j].empty()){
-					continue;
-				}
+			//Make a local search betweem current solution and previous
+			for (size_t j = 0; j < solutions[i].m_walks.size(); ++j) {
 
-				if(solutions[i].m_walks[j].front().id == PREV_LAST_COPY){
-					solutions[i].m_walks[j].pop_front();
+				solutions[i].m_walks[j].pop_front();
+				if(!solutions[i].m_walks[j].empty()){
 					const TA prev_last = getPreviousTA(solutions, i, j);
 					TA &curr_first = solutions[i].m_walks[j].front();
 					double start_time = std::max(prev_last.depTime+op.mTravelTimes[prev_last.point.id][curr_first.point.id], intervals[i].openTime);
-					updateTimes(solutions[i].m_walks[j], solutions[i].m_walks[j].begin(), false, op.mTravelTimes, TimeWindow{start_time, intervals[i].closeTime});					
-				} else if(solutions[i].m_walks[j].front().id == CURR_FIRST_COPY){
-					solutions[i].m_walks[j].pop_front();
-				} else {
-					throw std::runtime_error("Not valid start depot");
+					updateTimes(solutions[i].m_walks[j], solutions[i].m_walks[j].begin(), false, op.mTravelTimes, TimeWindow{start_time, intervals[i].closeTime});
 				}
-				
-
-
-				//TODO: This makes sense to do it if only the walk was empty before construct 
-				//If walk wasn't empty, the times are already correctly configured related to the prvious solution
-				//so we shouldn't repeat this process
-				// const double walk_index = walk_it - solutions[i].m_walks.begin();
-				// TA& prev_last = solutions[i].m_walks[walk_index].last();
-				// TA& curr_first = walk_it->front();
-				// double start_time = std::max(prev_last.depTime+op.mTravelTimes[prev_last.point.id][curr_first.point.id], intervals[i].openTime);
-				// updateTimes(*walk_it, walk_it->begin(), false, op.mTravelTimes, TimeWindow{start_time, intervals[i].closeTime});
 			}
-
-			// //Make a local search betweem current solution and previous
-			// for (size_t j = 0; j < solutions[i].m_walks.size(); ++j) {
-			// 	if(solutions[i-1].m_walks[j].size() > 2 && solutions[i].m_walks[j].size() > 2) {
-			// 		Solution sol;
-			// 		Walk walk;
-			// 		TA& first = solutions[i-1].m_walks[j].back();
-			// 		TA& last = solutions[i].m_walks[j].front();
-			// 		TimeWindow interval = {first.depTime, last.depTime + last.maxShift};
-			// 		walk.push_front(first);
-			// 		walk.push_back(last);
-			// 		updateTimes(walk, walk.begin(), false, op.mTravelTimes, interval);
-			// 		sol.m_walks.push_back(walk);
-
-			// 		sol.m_unvisited.append(solutions[i-1].m_unvisited);
-			// 		sol.m_unvisited.append(solutions[i].m_unvisited);
-					
-			// 		std::vector<Point> fake_targets = std::vector<Point>(solutions[i].m_walks.size(), Point());
-
-			// 		std::vector<std::string> inserted_ids = construct(sol, op.mTravelTimes, fake_targets, interval, false);
-
-			// 		bool changed_previous = false, changed_current = false;
-
-			// 		List<TA>::iterator it;
-			// 		for(it = sol.m_walks[j].begin()+1; it != sol.m_walks[j].end()-1; ++it) {
-			// 			if(it.iter->data.depTime > intervals[i].openTime){
-			// 				break;
-			// 			}
-			// 		}
-			// 		std::pair<List<TA>, List<TA>> walks = sol.m_walks[j].split(it);
-					
-			// 		const TA& temp = walks.second.front();
-			// 		if(!walks.second.empty() && temp.arrTime < intervals[i].openTime){
-			// 			const double dep_time = temp.dep_time(intervals[i].openTime);
-			// 			if(temp.maxShift < intervals[i].openTime - temp.arrTime || dep_time > temp.timeWindow.closeTime){
-			// 				walks.second.pop_front();
-			// 			} else {
-			// 				std::cout << "Will shift walk by " << intervals[i].openTime - temp.arrTime << " time units to the right" << std::endl;
-			// 			}
-			// 		}
-
-			// 		for(List<TA>::iterator it = walks.first.begin() + 1; it != walks.first.end(); ++it){
-			// 			solutions[i-1].m_walks[j].push_back(*it);
-			// 			if(!solutions[i-1].m_unvisited.eraseId(it.iter->data.id) && !solutions[i].m_unvisited.eraseId(it.iter->data.id)) {
-			// 				throw std::runtime_error("unvisited node "+it.iter->data.id+" wasn't found");
-			// 			}
-			// 			reg[it.iter->data.id].at(i-1).solved++;
-			// 			changed_previous = true;
-			// 		}
-
-			// 		for(List<TA>::iterator it = walks.second.end() - 2; it != walks.second.end(); --it){
-			// 			solutions[i].m_walks[j].push_front(*it);
-			// 			if(!solutions[i-1].m_unvisited.eraseId(it.iter->data.id) && !solutions[i].m_unvisited.eraseId(it.iter->data.id)) {
-			// 				throw std::runtime_error("unvisited node "+it.iter->data.id+" wasn't found");
-			// 			}
-			// 			reg[it.iter->data.id].at(i).solved++;
-			// 			changed_current = true;
-			// 		}
-
-			// 		if(changed_previous){
-			// 			updateTimes(solutions[i-1].m_walks[j], solutions[i-1].m_walks[j].begin(), false, op.mTravelTimes, intervals[i-1]);
-			// 		}
-
-			// 		if(changed_current) {
-			// 			updateTimes(solutions[i].m_walks[j], solutions[i].m_walks[j].begin(), false, op.mTravelTimes, intervals[i]);
-			// 		}
-
-			// 		// std::cout << std::endl;
-
-			// 	}
-			// }
 		}
 
-		// validate(solutions[i].m_walks, op.mTravelTimes, false);
+		validate(solutions[i].m_walks, op.mTravelTimes, false);
 
 		auto end = std::chrono::high_resolution_clock::now();
 		auto elapsed_time = std::chrono::duration_cast<std::chrono::duration<double>>(end - start).count();
 		metrics.local_search[i] += elapsed_time;
 
 	}
+	
+	tempScore1 = collectScores(solutions);
+	std::cout << "Inserted " << std::to_string(counter1) << " nodes at phase 1, score: " << std::to_string(tempScore1) << std::endl;
+
+	// for(size_t i = 1; i < solutions.size(); ++i){
+	// 	for(size_t j = 0; j < solutions[i].m_walks.size(); ++j){
+	// 		if(solutions[i-1].m_walks[j].size() > 2 && solutions[i].m_walks[j].size() > 2) {
+
+	// 			TA& prev_last = solutions[i-1].m_walks[j].back();
+	// 			TA& curr_first = solutions[i].m_walks[j].front();
+	// 			TimeWindow interval = {prev_last.depTime, curr_first.depTime + curr_first.maxShift - 1};
+	// 			//TODO:  instead of append and clear, there should be something better
+	// 			List<TA> unvisited;
+	// 			unvisited.append(solutions[i-1].m_unvisited);
+	// 			unvisited.append(solutions[i].m_unvisited);
+	// 			solutions[i-1].m_unvisited.clear();
+	// 			solutions[i].m_unvisited.clear();
+
+	// 			Solution sol{prev_last, curr_first, unvisited, 1};
+	// 			updateTimes(sol.m_walks[0], sol.m_walks[0].begin(), false, op.mTravelTimes, interval);
+				
+	// 			std::cout << "Will check middle solution of " << std::to_string(sol.m_unvisited.size()) << 
+	// 				" nodes, with interval of " << std::to_string(interval.duration()) << " minutes" << std::endl;
+	// 			std::vector<Point> fake_targets = std::vector<Point>(solutions[i].m_walks.size(), Point());
+	// 			std::vector<std::string> inserted_ids = construct(sol, op.mTravelTimes, fake_targets, interval, false);
+	// 			counter2 += inserted_ids.size();
+
+	// 			bool changed_previous = false, changed_current = false;
+
+	// 			//split solution at the element that has deptime greater than 
+	// 			List<TA>::iterator it;
+	// 			for(it = sol.m_walks[0].begin()+1; it != sol.m_walks[0].end()-1; ++it) {
+	// 				if(it.iter->data.depTime > intervals[i].openTime){
+	// 					break;
+	// 				}
+	// 			}
+	// 			std::pair<List<TA>, List<TA>> walks = sol.m_walks[0].split(it);
+
+	// 			std::cout << "Nodes with dep time less than " << intervals[i].openTime << ": " << walks.first.size() << std::endl;
+	// 			std::cout << "Nodes with dep time greater than " << intervals[i].openTime << ": " << walks.second.size() << std::endl;
+
+				
+	// 			//remove middle node if cannot be added to either solution
+	// 			TA& temp = walks.second.front();
+	// 			if(!walks.second.empty() && temp.arrTime < intervals[i].openTime){
+	// 				const double dep_time = temp.dep_time(intervals[i].openTime);
+	// 				if(temp.maxShift < intervals[i].openTime - temp.arrTime || dep_time > temp.timeWindow.closeTime){
+	// 					walks.second.pop_front();
+	// 					std::cout << "Found a node that is active during the intervals[i].openTime, but cannot be shifted later so will be removed" << std::endl;
+	// 				} else {
+	// 					std::cout << "Found a node that is active during the intervals[i].openTime but can be its visit can be delayed" << std::endl;
+	// 				}
+	// 			}
+
+	// 			//push temp walk to real solution
+	// 			for(List<TA>::iterator it = walks.first.begin() + 1; it != walks.first.end(); ++it){
+	// 				solutions[i-1].m_walks[j].push_back(*it);
+	// 				std::cout << "Inserted " << it.iter->data.id << " at solution " << i-1 << " before " << intervals[i].openTime << std::endl;
+	// 				reg[it.iter->data.id].at(i-1).solved++;
+	// 				changed_previous = true;
+	// 			}
+
+
+				
+	// 			for(List<TA>::iterator it = walks.second.end() - 2; it != walks.second.end(); --it){
+	// 				solutions[i].m_walks[j].push_front(*it);
+	// 				std::cout << "Inserted " << it.iter->data.id << " at solution " << i << " after " << intervals[i].openTime << std::endl;
+	// 				reg[it.iter->data.id].at(i).solved++;
+	// 				changed_current = true;
+	// 			}
+
+	// 			pool.append(sol.m_unvisited);
+
+	// 			if(changed_previous){
+	// 				updateTimes(solutions[i-1].m_walks[j], solutions[i-1].m_walks[j].begin(), false, op.mTravelTimes, intervals[i-1]);
+	// 			}
+
+	// 			if(changed_current) {
+	// 				updateTimes(solutions[i].m_walks[j], solutions[i].m_walks[j].begin(), false, op.mTravelTimes, intervals[i]);
+	// 			}
+
+	// 		}
+	// 	}
+	// }
+
+	// tempScore2 = collectScores(solutions);
+	// std::cout << "Inserted " << std::to_string(counter2) << " nodes at phase 2, score: " << std::to_string(tempScore2) << std::endl;
+	// if(tempScore2 > tempScore1){
+	// 	std::cout << "Solution was improved at phase 2" << std::endl;
+	// }
+	
 }
 
 void ILS::drawSolutions(const std::vector<Solution>& solutions){

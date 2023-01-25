@@ -107,7 +107,7 @@ private:
 	virtual std::tuple<bool, double> insertionAfterIsValid(const TA&, const TA&, const double, const Vector2D<double>&);
 	std::map<std::string, std::vector<Usage>> initRegistry(List<TA>&, std::vector<TimeWindow>);
 	std::map<std::string, std::vector<double>> getActivities(List<TA>&, std::vector<TimeWindow>);
-	void SplitSearch(std::vector<Solution>&, const std::vector<TimeWindow>&, OP&, std::map<std::string, std::vector<Usage>>&);
+	void SplitSearch(std::vector<Solution>&, List<TA>& pool, const std::vector<TimeWindow>&, OP&, std::map<std::string, std::vector<Usage>>&);
 	void gatherUnvisited(std::vector<Solution>&, List<TA>&);
 	std::vector<List<TA>> splitUnvisitedList(std::vector<Solution>&, List<TA>&, int, std::map<std::string, std::vector<ILS::Usage>>&, std::map<std::string, std::vector<double>>);
 	bool hasWeightedCentroid(const Solution& sol, const int, const int);
@@ -116,7 +116,7 @@ private:
 	int Shake(Solution&, int&, int&, OP&, const int&, const TimeWindow);
 	virtual void updateMaxShifts(const List<TA>&, const Vector2D<double>&, const TimeWindow);
 	std::vector<std::string> construct(Solution&, const Vector2D<double>&, const std::vector<Point>, const TimeWindow, const bool);
-	int collectScores(std::vector<Solution>);
+	int collectScores(const std::vector<Solution>&) const;
 	Solution connectSolutions(std::vector<Solution>&, const size_t);
 	inline int collectProfit (const List<TA>::iterator&, const List<TA>::iterator&) const;
 	void printSolution(const std::string, const Solution& sol);
@@ -131,6 +131,8 @@ private:
 	std::vector<TimeWindow> getIntervals(std::vector<TA>, int, double, double);
 	TA getPreviousTA(std::vector<Solution>&, const int, const size_t);
 	void RemoveUnfeasibleVisits(std::vector<Solution>&, const int, const size_t);
+	void validateUnifiedSolution(const std::vector<Solution>&, size_t, const Vector2D<double>&, const TimeWindow);
+	size_t countNodes(const std::vector<Solution>& sols);
 	void setupDrawCallback();
 
 	

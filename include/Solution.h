@@ -20,10 +20,11 @@ class Solution {
 public:
 	Solution();
 	~Solution();
-	Solution(List<TA> unvisited);
-	Solution(TA start, TA end, List<TA> unvisited, double startTime, double endTime, int walksNum); 
+	Solution(List<TA>);
+	Solution(TA, TA, List<TA>, double, double, int); 
+	Solution(TA, TA, List<TA>, size_t);
 
-	int getScores();
+	int getScores() const;
 	int getVisits();
 	int getMinWalkSize() const;
 	void draw(std::string, std::string);

@@ -21,6 +21,12 @@ Solution::Solution(TA start, TA end, List<TA> unvisited, double startTime, doubl
     }
 }
 
+Solution::Solution(TA start, TA end, List<TA> unvisited, size_t walks) : m_unvisited(unvisited){
+    for(size_t i = 0; i < walks; ++i){
+         m_walks.push_back(List<TA>{start, end});
+    }
+}
+
 void Solution::print(std::string tag, const bool verbose){
     std::cout << tag << std::endl;
 
@@ -30,7 +36,7 @@ void Solution::print(std::string tag, const bool verbose){
     }
 }
 
-int Solution::getScores(){
+int Solution::getScores() const{
     int sum{}; 
     for (auto& w : m_walks) {
         for (auto& p : w) {

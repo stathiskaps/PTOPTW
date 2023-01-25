@@ -226,8 +226,7 @@ typedef struct TouristAttraction {
 	double dep_time(const double arr_time) const {
 		const double wait_duration = std::max(0.0, this->timeWindow.openTime - arr_time);
 		const double start_of_visit_time = arr_time + wait_duration;
-		const double dep_time = start_of_visit_time + this->visitDuration;
-		return dep_time;
+		return start_of_visit_time + this->visitDuration;
 	}
 
 	double euclidean_distance(TouristAttraction ta) { 
