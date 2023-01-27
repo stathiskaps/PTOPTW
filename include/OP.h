@@ -12,7 +12,7 @@ private:
 	std::vector<TA*> mAttractions;
 	std::vector<Point> mPoints;
 	std::vector<std::vector<double>> mTravelTimes;
-	TA *mStartDepot, *mEndDepot;
+	TA mStartDepot, mEndDepot;
 	int m_walks_num;
 	TimeWindow mTimeWindow;
 
@@ -21,8 +21,8 @@ private:
 public:
 	OP();
 	~OP();
-	OP(std::vector<TA*>, std::vector<Point>, TA*, TA*, int, double, double);
-	OP(std::vector<TA*>, std::vector<Point>, TA*, TA*, int, double, double, std::vector<std::vector<double>>);
+	OP(std::vector<TA*>, std::vector<Point>, TA, TA, int, double, double);
+	OP(std::vector<TA*>, std::vector<Point>, TA, TA, int, double, double, std::vector<std::vector<double>>);
 	void AddPointToGraph(Point&);
 	void PrintTravelTimes(std::string);
 

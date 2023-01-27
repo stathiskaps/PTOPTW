@@ -5,12 +5,10 @@ OP::OP() {
 }
 
 OP::~OP() {
-	delete mStartDepot;
-	delete mEndDepot;
 }
 
 OP::OP(std::vector<TA*> attractions, std::vector<Point> points, 
-	TA* startDepot, TA* endDepot, int walksNum, 
+	TA startDepot, TA endDepot, int walksNum, 
 	double startTime, double endTime) : mAttractions(attractions), mPoints(points), m_walks_num(walksNum) {
 	std::tuple<std::vector<std::vector<double>>, double> tuple = calcTravelTimes(points); //TODO: delete pointer
 	mTravelTimes = std::get<0>(tuple);
@@ -20,11 +18,12 @@ OP::OP(std::vector<TA*> attractions, std::vector<Point> points,
 }
 
 OP::OP(std::vector<TA*> attractions, std::vector<Point> points, 
-	TA* startDepot, TA* endDepot, int walksNum, 
-	double startTime, double endTime, std::vector<std::vector<double>> travelTimes) : 
-	mAttractions(attractions), mPoints(points), m_walks_num(walksNum), 
-	mTravelTimes(travelTimes), mStartDepot(startDepot), mEndDepot(endDepot),
-	mTimeWindow(TimeWindow{startTime, endTime}) {
+	TA startDepot, TA endDepot, int walksNum, 
+	double startTime, double endTime, 
+	std::vector<std::vector<double>> travelTimes) : mAttractions(attractions), mPoints(points), m_walks_num(walksNum), mTravelTimes(travelTimes) {
+	mStartDepot = startDepot;
+	mEndDepot = endDepot;
+	mTimeWindow = TimeWindow{startTime, endTime};
 }
 
 std::tuple<std::vector<std::vector<double>>, double> OP::calcTravelTimes(std::vector<Point>& points){

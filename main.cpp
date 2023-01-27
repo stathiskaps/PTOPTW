@@ -125,11 +125,10 @@ void init(std::string folder, std::string filename, int numRoutes, int numInterv
 
 #if 1
 	std::cout << std::endl;
-	TA* depot = touristAttractions[0];
-	TA* start_depot = depot->clone();
-	start_depot->id = START_DEPOT_ID;
-	TA* end_depot = depot->clone();
-	end_depot->id = END_DEPOT_ID;
+	TA start_depot(*touristAttractions[0]);
+	TA end_depot(*touristAttractions[0]);
+	start_depot.id = START_DEPOT_ID;
+	end_depot.id = END_DEPOT_ID;
 	touristAttractions.erase(touristAttractions.begin());
 
 	OP op;
@@ -142,9 +141,9 @@ void init(std::string folder, std::string filename, int numRoutes, int numInterv
 		for(auto& d : durations){
 			travel_times[d.from][d.to] = d.duration;
 		}
-		op = OP(touristAttractions, points, start_depot, end_depot, numRoutes, end_depot->timeWindow.openTime, end_depot->timeWindow.closeTime, travel_times);
+		op = OP(touristAttractions, points, start_depot, end_depot, numRoutes, end_depot.timeWindow.openTime, end_depot.timeWindow.closeTime, travel_times);
 	} else {
-		op = OP(touristAttractions, points, start_depot, end_depot, numRoutes, end_depot->timeWindow.openTime, end_depot->timeWindow.closeTime);
+		op = OP(touristAttractions, points, start_depot, end_depot, numRoutes, end_depot.timeWindow.openTime, end_depot.timeWindow.closeTime);
 	}
 	
 

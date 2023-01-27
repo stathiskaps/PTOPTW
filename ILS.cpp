@@ -180,13 +180,13 @@ void ILS::InitSolutions(std::vector<Solution>& sols, const std::vector<TimeWindo
 	std::vector<Solution>::iterator first_sol = sols.begin(), last_sol = sols.end() - 1;
 
 	for(auto& walk : first_sol->m_walks) {
-		walk.push_front(*op.mStartDepot);
+		walk.push_front(op.mStartDepot);
 		walk.front().timeWindow = TimeWindow{intervals[0].openTime, intervals[0].closeTime};
 		updateTimes(walk, walk.begin(), false, op.mTravelTimes, intervals[0]);
 	}
 
 	for(auto& walk : last_sol->m_walks) {
-		walk.push_back(*op.mEndDepot);
+		walk.push_back(op.mEndDepot);
 		walk.back().timeWindow = TimeWindow{intervals[intervals.size()-1].openTime, intervals[intervals.size()-1].closeTime};
 		updateTimes(walk, walk.begin(), false, op.mTravelTimes, intervals[intervals.size()-1]);
 	}
@@ -257,9 +257,9 @@ void ILS::Solve(OP& op) {
 		unvisitedVec.push_back(*ta);
 	}
 
-	const TimeWindow time_budget{op.mStartDepot->timeWindow.openTime, op.mEndDepot->timeWindow.closeTime};
+	const TimeWindow time_budget{op.mStartDepot.timeWindow.openTime, op.mEndDepot.timeWindow.closeTime};
 
-	std::vector<TimeWindow> intervals = getIntervals(unvisitedVec, mIntervalsNum, op.mStartDepot->timeWindow.openTime, op.mEndDepot->timeWindow.closeTime);
+	std::vector<TimeWindow> intervals = getIntervals(unvisitedVec, mIntervalsNum, op.mStartDepot.timeWindow.openTime, op.mEndDepot.timeWindow.closeTime);
 	const std::map<std::string, std::vector<double>> activities = getActivities(unvisited, intervals);
 	std::map<std::string, std::vector<ILS::Usage>> reg = initRegistry(unvisited, intervals); 
 
@@ -658,8 +658,8 @@ void ILS::AddEndDepots(std::vector<Solution>& solutions, const std::vector<TimeW
 		}
 
 		if (last_solution || next_sol_index == solutions.size()) {
-			if(solutions[i].m_walks[j].back().id != op.mEndDepot->id){
-				candidateEndPoint = op.mEndDepot->point;
+			if(solutions[i].m_walks[j].back().id != op.mEndDepot.id){
+				candidateEndPoint = op.mEndDepot.point;
 			}
 		}
 		else {
@@ -707,7 +707,7 @@ std::vector<Point> ILS::getTargets(const std::vector<Solution>& solutions, const
 		}
 
 		if(next_sol_index == solutions.size()){
-			Point p = op.mEndDepot->point;
+			Point p = op.mEndDepot.point;
 			p.id = TARGET_POINT_ID;
 			targets.push_back(p);
 			continue;
