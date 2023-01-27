@@ -231,17 +231,17 @@ void ILS::Solve(OP& op) {
 
 	// std::cout.setstate(std::ios_base::failbit);
 	
-	// myInit();
-	// // Set the OpenGL display mode
-	// glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB);
-	// // Set the initial window size
-	// glutInitWindowSize(WINDOW_WIDTH, WINDOW_HEIGHT);
-	// // Create the window with the given title
-	// glutCreateWindow("Best Solution");
-
-	// //Set the display callback function
-	// setupDrawCallback();
-	// glutReshapeFunc(onResize);
+	Graphics::myInit();
+	// Set the OpenGL display mode
+	glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB);
+	// Set the initial window size
+	glutInitWindowSize(WINDOW_WIDTH, WINDOW_HEIGHT);
+	// Create the window with the given title
+	glutCreateWindow("Best Solution");
+	glutMouseFunc(Graphics::mouseButton);
+	//Set the display callback function
+	setupDrawCallback();
+	glutReshapeFunc(Graphics::onResize);
 
 	// // Enter the GLUT main loop
 	// std::thread glutThread(glutMainLoop);
@@ -352,7 +352,7 @@ void ILS::Solve(OP& op) {
 	std::cout << std::endl;
 
 	// Wait for the GLUT thread to finish
-	// glutMainLoop();
+	glutMainLoop();
     // glutThread.join();
 }
 
@@ -1446,16 +1446,18 @@ void ILS::drawSolution(const Solution& sol){
 
 	const float factor = 2.0f;
 
-	//Write vertices
+	//Draw vertices
 	for(List<TA>::iterator ta_it = sol.m_unvisited.begin(); ta_it != sol.m_unvisited.end(); ++ta_it) {
 		glPointSize(20.0f);
 		glColor3f(1.0f, 1.0f, 1.0f);
+		// Graphics::drawFilledCircle(ta_it.iter->data.point.pos.lat*factor, ta_it.iter->data.point.pos.lon*factor, 11);
 		glBegin(GL_POINTS);
 		glVertex2d(ta_it.iter->data.point.pos.lat*factor, ta_it.iter->data.point.pos.lon*factor);
 		glEnd();
 
 		glPointSize(18.0f);
 		glColor3ub(170, 170, 170); //grey
+		// Graphics::drawFilledCircle(ta_it.iter->data.point.pos.lat*factor, ta_it.iter->data.point.pos.lon*factor, 10);
 		glBegin(GL_POINTS);
 		glVertex2d(ta_it.iter->data.point.pos.lat*factor, ta_it.iter->data.point.pos.lon*factor);
 		glEnd();
@@ -1463,6 +1465,7 @@ void ILS::drawSolution(const Solution& sol){
 	
 	for(std::vector<Walk>::const_iterator walk_it = sol.m_walks.begin(); walk_it != sol.m_walks.end(); ++walk_it) {
 		for(List<TA>::iterator ta_it = walk_it->begin(); ta_it != walk_it->end(); ++ta_it) {
+			const size_t i = walk_it - sol.m_walks.begin();
 			glPointSize(20.0f);
 			glColor3f(1.0f, 1.0f, 1.0f);
 			glBegin(GL_POINTS);
@@ -1470,17 +1473,18 @@ void ILS::drawSolution(const Solution& sol){
 			glEnd();
 
 			glPointSize(18.0f);
-			glColor3ub(200, 103, 51); //orange
+			glColor3ub(Graphics::colors[i].r, Graphics::colors[i].g, Graphics::colors[i].b); //orange
 			glBegin(GL_POINTS);
 			glVertex2d(ta_it.iter->data.point.pos.lat*factor, ta_it.iter->data.point.pos.lon*factor);
 			glEnd();
 		}
 	}
 
-	//Write routes
-	// glColor3ub(200, 200, 200);
+	//Draw routes
 	glLineWidth(2.0);
 	for(std::vector<Walk>::const_iterator walk_it = sol.m_walks.begin(); walk_it != sol.m_walks.end(); ++walk_it) {
+		const size_t i = walk_it - sol.m_walks.begin();
+		glColor3ub(Graphics::colors[i].r, Graphics::colors[i].g, Graphics::colors[i].b);
 		glBegin(GL_LINE_LOOP);
 		for(List<TA>::iterator ta_it = walk_it->begin(); ta_it != walk_it->end(); ++ta_it) {
 			glVertex2d(ta_it.iter->data.point.pos.lat*factor, ta_it.iter->data.point.pos.lon*factor);
@@ -1489,7 +1493,7 @@ void ILS::drawSolution(const Solution& sol){
 	}
 
 
-	//Write labels
+	//Draw labels
 	glColor3ub(255, 255, 255); //white
 
 	for(List<TA>::iterator ta_it = sol.m_unvisited.begin(); ta_it != sol.m_unvisited.end(); ++ta_it) {
@@ -1498,11 +1502,10 @@ void ILS::drawSolution(const Solution& sol){
 		std::string id = std::to_string(ta_it.iter->data.point.id);
 		int length = id.size();
 
-
-		glRasterPos2d(lat-length, lon-1);
+		glRasterPos2d(lat-length-1, lon-1);
 		// Use a loop to draw each character of the text string
 		for (const auto& c : id) {
-			glutBitmapCharacter(GLUT_BITMAP_8_BY_13, c);
+			glutBitmapCharacter(GLUT_BITMAP_TIMES_ROMAN_10, c);
 		}
 	}
 
@@ -1514,10 +1517,10 @@ void ILS::drawSolution(const Solution& sol){
 			int length = id.size();
 
 
-			glRasterPos2d(lat-length, lon-1);
+			glRasterPos2d(lat-length-1, lon-1);
 			// Use a loop to draw each character of the text string
 			for (const auto& c : id) {
-				glutBitmapCharacter(GLUT_BITMAP_8_BY_13, c);
+				glutBitmapCharacter(GLUT_BITMAP_TIMES_ROMAN_10, c);
 			}
 		}
 	}
@@ -1526,10 +1529,14 @@ void ILS::drawSolution(const Solution& sol){
 
 void ILS::draw(){
 
+	Graphics::myInit();
+
 	// Clear the screen to black
 	glClearColor(0.0, 0.0, 0.0 , 1.0);
 	glClear(GL_COLOR_BUFFER_BIT);
 	glLoadIdentity();
+
+	glScalef(Graphics::zoom, Graphics::zoom, 1.0);
 
 	const float pointSize = 20.0f;
 	

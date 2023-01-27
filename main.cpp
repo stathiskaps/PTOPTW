@@ -13,41 +13,13 @@
 #include "Definitions.h"
 #include "ILS.h"
 #include "OP.h"
-#include <boost/graph/adjacency_list.hpp>
-#include <boost/graph/graphviz.hpp>
 
 enum InstanceType { fixed, custom };
 
-
-std::vector<Point> points;
-
-/* Initialize OpenGL Graphics */
-void initGL() {
-   // Set "clearing" or background color
-   glClearColor(0.0f, 0.0f, 0.0f, 1.0f); // Black and opaque
-}
-
-/* Handler for window re-size event. Called back when the window first appears and
-   whenever the window is re-sized with its new width and height */
-void reshape(GLsizei width, GLsizei height) {  // GLsizei for non-negative integer
-   // Compute aspect ratio of the new window
-   if (height == 0) height = 1;                // To prevent divide by 0
-   GLfloat aspect = (GLfloat)width / (GLfloat)height;
- 
-   // Set the viewport to cover the new window
-   glViewport(0, 0, width, height);
- 
-   // Set the aspect ratio of the clipping area to match the viewport
-   glMatrixMode(GL_PROJECTION);  // To operate on the Projection matrix
-   glLoadIdentity();             // Reset the projection matrix
-   if (width >= height) {
-     // aspect >= 1, set the height from -1 to 1, with larger width
-      gluOrtho2D(-1.0 * aspect, 1.0 * aspect, -1.0, 1.0);
-   } else {
-      // aspect < 1, set the width to -1 to 1, with larger height
-     gluOrtho2D(-1.0, 1.0, -1.0 / aspect, 1.0 / aspect);
-   }
-}
+struct RouteDuration{
+	int id, from, to;
+	double duration;
+};
 
 std::vector<std::string> split(const std::string& line) {
 	std::string buf;                 // Have a buffer string
@@ -72,11 +44,10 @@ double calcMeanVisitTime(std::vector<TA*> touristAttractions) {
 void init(std::string folder, std::string filename, int numRoutes, int numIntervals, InstanceType instance_type) {
 
 	std::vector<TA*> touristAttractions; //TODO:delete pointers
+	std::vector<Point> points;
 
 	std::string filepath = "./instances/"+folder+"/"+filename+".txt";
-
 	std::ifstream infile(filepath);
-
 	std::string line;
 
 	std::getline(infile, line);
@@ -84,7 +55,7 @@ void init(std::string folder, std::string filename, int numRoutes, int numInterv
 	std::vector<std::string> poi_data;
 
 	int pointId = 0;
-	std::vector<double> travel_times;
+	std::vector<RouteDuration> durations;
 
 	while (std::getline(infile, line))
 	{
@@ -113,9 +84,9 @@ void init(std::string folder, std::string filename, int numRoutes, int numInterv
 			break;
 		}
 		case 'D': {
-			std::string from = poi_data[2], to = poi_data[3];
+			int id = std::stoi(poi_data[1]), from = std::stoi(poi_data[2]), to = std::stoi(poi_data[3]);
 			double duration = std::stod(poi_data[4]);
-			travel_times.push_back(duration);
+			durations.push_back(RouteDuration{id, from , to, duration});
 			break;
 		}
 		case '#': {
@@ -126,47 +97,24 @@ void init(std::string folder, std::string filename, int numRoutes, int numInterv
 			if (poi_data[0].empty()) {
 				Point p = Point(pointId++, std::stod(poi_data[2]), std::stod(poi_data[3]));
 				points.push_back(p);
-				double open_time, close_time, visit_dur, profit;
-				if(instance_type == custom){
-					visit_dur = std::stoi(poi_data[3]);
-					profit = std::stoi(poi_data[4]);
-					open_time = std::stoi(poi_data[5]);
-					close_time = std::stoi(poi_data[6]);
-				} else {
-					visit_dur = std::stoi(poi_data[4]);
-					profit = std::stoi(poi_data[5]);
-					open_time = std::stoi(poi_data[8 + std::stoi(poi_data[7])]);
-					close_time = std::stoi(poi_data[9 + std::stoi(poi_data[7])]);
-				}
-
 				touristAttractions.push_back(new Sight(
 					id::generate(),
 					p,
-					visit_dur,
-					profit,
-					open_time,
-					close_time
-
+					std::stoi(poi_data[4]),
+					std::stoi(poi_data[5]),
+					std::stoi(poi_data[8 + std::stoi(poi_data[7])]),
+					std::stoi(poi_data[9 + std::stoi(poi_data[7])])
 				));
 			} else {
 				Point p = Point(pointId++, std::stod(poi_data[1]), std::stod(poi_data[2]));
 				points.push_back(p);
-				double open_time, close_time;
-				if(instance_type == custom){
-					open_time = std::stoi(poi_data[5]);
-					close_time = std::stoi(poi_data[6]);
-				} else {
-					open_time = std::stoi(poi_data[7 + std::stoi(poi_data[6])]);
-					close_time = std::stoi(poi_data[8 + std::stoi(poi_data[6])]);
-				}
-
 				touristAttractions.push_back(new Sight(
 					id::generate(),
 					p,
 					std::stoi(poi_data[3]),
 					std::stoi(poi_data[4]),
-					open_time,
-					close_time
+					std::stoi(poi_data[7 + std::stoi(poi_data[6])]),
+					std::stoi(poi_data[8 + std::stoi(poi_data[6])])
 				));
 			}
 			break;
@@ -184,17 +132,25 @@ void init(std::string folder, std::string filename, int numRoutes, int numInterv
 	end_depot->id = END_DEPOT_ID;
 	touristAttractions.erase(touristAttractions.begin());
 
-	OP op = OP(touristAttractions, points, start_depot, end_depot, numRoutes, end_depot->timeWindow.openTime, end_depot->timeWindow.closeTime);
+	OP op;
+	if(instance_type == custom){
+		const size_t length = std::sqrt(durations.size());
+		std::vector<std::vector<double>> travel_times (length);
+		for(size_t i = 0; i < length; ++i){
+			travel_times[i] = std::vector<double> (length);
+		}
+		for(auto& d : durations){
+			travel_times[d.from][d.to] = d.duration;
+		}
+		op = OP(touristAttractions, points, start_depot, end_depot, numRoutes, end_depot->timeWindow.openTime, end_depot->timeWindow.closeTime, travel_times);
+	} else {
+		op = OP(touristAttractions, points, start_depot, end_depot, numRoutes, end_depot->timeWindow.openTime, end_depot->timeWindow.closeTime);
+	}
+	
 
 	ILS_TOPTW ilstoptw = ILS_TOPTW(numIntervals);
 	ilstoptw.Solve(op);
 
-	/*OPTW optw(touristAttractions, ttMatrix, depot, OPEN_DAY_TIME, CLOSE_DAY_TIME);
-	Solution sol = optw.solve();
-	bool valid = optw.validate();
-	std::string msg = valid ? "yes" : "no";
-	std::cout << "valid solution? " << msg << std::endl;
-	sol.print();*/
 #endif
 
 	for (auto p : touristAttractions) {
@@ -323,7 +279,7 @@ int main(int argc, char** argv) {
 	
 	// glutMainLoop();
 
-	// glutInit(&argc, argv);
+	glutInit(&argc, argv);
 
 	init(folder, instance, num_of_walks, num_of_intervals, instance_type);
 

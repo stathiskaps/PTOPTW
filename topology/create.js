@@ -4,8 +4,6 @@ const axios = require('axios').default;
 const fs = require('fs');
 
 
-
-
 class BoundingBox {
     constructor(botLat, topLat, leftLon, rightLon){
         this.botLat = botLat;
@@ -87,7 +85,7 @@ const writeSights = (points, writeStream) => {
             const profit = getRandom(5, 20);
             const lat = (+point.lat).toFixed(5);
             const lon = (+point.lon).toFixed(5);
-            const sight = `${pointId++} ${lat} ${lon} ${profit} ${visitTime} ${timeWindow.startTime} ${timeWindow.endTime}`;
+            const sight = `${pointId++} ${lat} ${lon} ${profit} ${visitTime} 0 0 ${timeWindow.startTime} ${timeWindow.endTime}`;
             console.log(`Writing node: ${sight}`);
             writeStream.write(`${sight}\n`);
         }
@@ -109,7 +107,7 @@ const writeRoutes = async(points, writeStream) => {
                 process.exit()
             }
             const route = `D ${routeId++} ${i} ${j} ${duration}`;
-            writeStream.write(`${route}\n`)
+            writeStream.write(`${route}\n`);
         }
     }
 
@@ -153,7 +151,7 @@ const create = async () => {
     fs.readdirSync(dir).forEach(filename => {
         const content = xlsx.parse(`${dir}/${filename}`);
         let points = content[0].data.map(x => {return {lat: x[3], lon: x[2]}});
-        points = points.slice(0, 2);
+        points = points.slice(0, 4);
         pois[filename.split(".")[0]] = points;
     });
 
@@ -173,6 +171,7 @@ const create = async () => {
     });
 
     writeStream.write(`${totalValidPoints} ${totalValidPoints * totalValidPoints}\n`);
+    writeStream.write(`0 0\n`);
 
     await writeSights(validPois, writeStream);
 

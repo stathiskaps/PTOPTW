@@ -12,7 +12,7 @@
 #include <fmt/ranges.h>
 #include <chrono>
 #include <algorithm>
-#include <plog/Log.h> // Step1: include the headers
+#include <plog/Log.h>
 #include "plog/Initializers/RollingFileInitializer.h"
 #include "List.h"
 #include "Solution.h"
@@ -20,8 +20,6 @@
 #include "OP.h"
 #include "Custom.h"
 #include "Graphics.h"
-//#include "boost/geometry.hpp"
-#include "ygor/YgorClustering.hpp"
 
 #ifndef ILS_H
 #define ILS_H
