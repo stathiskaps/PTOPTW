@@ -229,7 +229,7 @@ size_t ILS::countNodes(const std::vector<Solution>& sols){
 
 void ILS::Solve(OP& op) {
 
-	// std::cout.setstate(std::ios_base::failbit);
+	std::cout.setstate(std::ios_base::failbit);
 	
 	Graphics::myInit();
 	// Set the OpenGL display mode
@@ -247,8 +247,6 @@ void ILS::Solve(OP& op) {
 	// std::thread glutThread(glutMainLoop);
 
 	auto start = std::chrono::high_resolution_clock::now();
-	const int num_locations = op.mAttractions.size();
-	const int max_to_remove = num_locations / (3 * op.m_walks_num * mIntervalsNum);
 
 	std::vector<TA> unvisitedVec;
 	List<TA> unvisited;
@@ -307,7 +305,7 @@ void ILS::Solve(OP& op) {
 			times_not_improved++;
 		}
 
-		int removed_counter = SplitShake(proc_solutions, shake_settings, op, max_to_remove, intervals);
+		int removed_counter = SplitShake(proc_solutions, shake_settings, op, intervals);
 		pool.clear(); //TODO: comment this when using middle solutions
 		gatherUnvisited(proc_solutions, pool);
 
@@ -389,6 +387,7 @@ std::vector<List<TA>> ILS::splitUnvisitedList(std::vector<Solution>& solutions, 
 		std::vector<double>::iterator duratio_it;
 		for(usage_it = reg[ta.id].begin(), duratio_it = activities[ta.id].begin(); usage_it != reg[ta.id].end() ; ++usage_it, ++duratio_it){
 			double score = *duratio_it * (usage_it->solved / static_cast<double>(usage_it->imported));
+			// double score = *duratio_it;
 			if (score>best_score){
 				best_score = score;
 				best_it = usage_it;
@@ -471,13 +470,13 @@ void ILS::RemoveDummyNodes(std::vector<Solution>& sols){
 	}
 }
 
-int ILS::SplitShake(std::vector<Solution>& sols, std::vector<ILS::SR>& shake_settings, OP& op, const int& max_to_remove, const std::vector<TimeWindow> intervals){
+int ILS::SplitShake(std::vector<Solution>& sols, std::vector<ILS::SR>& shake_settings, OP& op, const std::vector<TimeWindow> intervals){
 	auto start = std::chrono::high_resolution_clock::now();
 	int removed_counter = 0;
 	PrepareForShake(sols);
 	for(auto sol_it = sols.begin(); sol_it != sols.end(); ++sol_it){
 		const int sol_index = sol_it - sols.begin();
-		int removed = Shake(*sol_it, shake_settings[sol_index].S, shake_settings[sol_index].R, op, max_to_remove, intervals[sol_index]);
+		int removed = Shake(*sol_it, shake_settings[sol_index].S, shake_settings[sol_index].R, op, intervals[sol_index]);
 		removed_counter += removed;
 	}
 	RemoveDummyNodes(sols);
@@ -487,25 +486,23 @@ int ILS::SplitShake(std::vector<Solution>& sols, std::vector<ILS::SR>& shake_set
 	return removed_counter;
 }
 
-int ILS::Shake(Solution& sol, int& S, int& R, OP& op, const int& max_to_remove, const TimeWindow time_budget) {
+int ILS::Shake(Solution& sol, int& S, int& R, OP& op, const TimeWindow time_budget) {
 	int minWalkSize = sol.getMinWalkSize();
+	int num_locations = 0;
+	for(auto& walk : sol.m_walks){
+		num_locations += walk.size();
+	}
+	const int max_to_remove = num_locations / (3 * sol.m_walks.size());
+
 	int removed_counter = 0;
-	//std::cout << "maxToRemove: " << max_to_remove << "\t";
-	//std::cout << "minWalkSize: " << minWalkSize << "\t";
 	if (S >= minWalkSize - 2) {
 		S = 1;
 		R = 1;
 	}
 
-	// if (S < 1) S = 1;
-
 	if (R == max_to_remove) {
 		R = 1;
 	}
-	//std::cout << "S: " << S << "\t";
-	//std::cout << "R: " << R << "\t" << std::endl;
-
-	
 
 	for (auto walk_it = sol.m_walks.begin(); walk_it != sol.m_walks.end(); ++walk_it) {
 		const size_t index = walk_it - sol.m_walks.begin();
@@ -519,7 +516,7 @@ int ILS::Shake(Solution& sol, int& S, int& R, OP& op, const int& max_to_remove, 
 		part.clear();
 		updateTimes(*walk_it, next, false, op.mTravelTimes, time_budget);
 	}
-	S += 1;
+	S += R;
 	R++;
 
 	return removed_counter;

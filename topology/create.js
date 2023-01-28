@@ -58,7 +58,7 @@ const getRoute = async({lat:latX, lon:lonX}, {lat:latY, lon:lonY}) => {
     return {valid: false, duration:0};
 }
 
-
+const TimeBudget = {openTime: 0, closeTime: 1260};
 
 const TIME_WINDOWS = [
     {startTime: 540, endTime: 960},
@@ -78,6 +78,9 @@ const SCORES = [6, 7, 10, 12, 13, 16, 18, 19, 21];
 
 const writeSights = (points, writeStream) => {
     let pointId = 1;
+    const depot = `0 37.97616 23.73530 0 0 0 0 ${TimeBudget.openTime} ${TimeBudget.closeTime}`;
+    writeStream.write(`${depot}\n`);
+    
     for(const [k, v] of Object.entries(points)) {
         for(const point of v){
             const timeWindow = TIME_WINDOWS[getRandom(0, 8)];
@@ -137,7 +140,6 @@ function inside(point, polygon) {
 };
 
 const create = async () => {
-
     const writeStream = fs.createWriteStream('AthensTopology.txt');
     const pathName = writeStream.path;
     const data = fs.readFileSync('./athens_box.geojson', 'utf8');
@@ -161,7 +163,6 @@ const create = async () => {
         });
         totalValidPoints += validPois[k].length;
     }
-    
     
     writeStream.on('finish', () => {
         console.log(`wrote all routes to file ${pathName}`);

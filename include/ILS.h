@@ -110,8 +110,8 @@ private:
 	std::vector<List<TA>> splitUnvisitedList(std::vector<Solution>&, List<TA>&, int, std::map<std::string, std::vector<ILS::Usage>>&, std::map<std::string, std::vector<double>>);
 	bool hasWeightedCentroid(const Solution& sol, const int, const int);
 	inline Point getWeightedCentroid(const List<TA>::iterator&, const List<TA>::iterator&, const int);
-	int SplitShake(std::vector<Solution>&, std::vector<ILS::SR>&, OP&, const int&, const std::vector<TimeWindow>);
-	int Shake(Solution&, int&, int&, OP&, const int&, const TimeWindow);
+	int SplitShake(std::vector<Solution>&, std::vector<ILS::SR>&, OP&, const std::vector<TimeWindow>);
+	int Shake(Solution&, int&, int&, OP&, const TimeWindow);
 	virtual void updateMaxShifts(const List<TA>&, const Vector2D<double>&, const TimeWindow);
 	std::vector<std::string> construct(Solution&, const Vector2D<double>&, const std::vector<Point>, const TimeWindow, const bool);
 	int collectScores(const std::vector<Solution>&) const;
