@@ -261,39 +261,38 @@ void ILS::Solve(OP& op) {
 	const std::map<std::string, std::vector<double>> activities = getActivities(unvisited, intervals);
 	std::map<std::string, std::vector<ILS::Usage>> reg = initRegistry(unvisited, intervals); 
 
-	int counter{}, times_not_improved{ 0 }, best_score{ INT_MIN }, bestCounter{};
+	int times_not_improved{ 0 }, best_score{ INT_MIN }, bestCounter{};
+	size_t counter{};
+	const size_t split_every_n_iterations = 10;
 
 	std::vector<ILS::SR> shake_settings;
 	for(size_t i = 0; i < mIntervalsNum; ++i){
 		shake_settings.push_back(ILS::SR{1, 1});
 	}
 
-	std::vector<Solution> proc_solutions(mIntervalsNum, Solution());
+	std::vector<Solution> process_solutions(mIntervalsNum, Solution());
 	//Initialize solutions
-	for (auto& s : proc_solutions) {
+	for (auto& s : process_solutions) {
 		for (size_t i = 0; i < op.m_walks_num; ++i) {
 			s.m_walks.push_back(List<TA>());
 		}
 	}
-	InitSolutions(proc_solutions, intervals, op);
+	InitSolutions(process_solutions, intervals, op);
 	List<TA> pool = std::move(unvisited);
-
+	const size_t split_iteration = 10;
  
 	while (times_not_improved < MAX_TIMES_NOT_IMPROVED) {
-		counter++;
 
-		std::cout << "Revision " << counter << std::endl;
-		
-		splitUnvisitedList(proc_solutions, pool, mIntervalsNum, reg, activities);
-		validateUnifiedSolution(proc_solutions, op.m_walks_num, op.mTravelTimes, time_budget);
-		SplitSearch(proc_solutions, pool, intervals, op, reg);
-		validateUnifiedSolution(proc_solutions, op.m_walks_num, op.mTravelTimes, time_budget);
-		int score = collectScores(proc_solutions);
+		splitUnvisitedList(process_solutions, pool, mIntervalsNum, reg, activities);
+		validateUnifiedSolution(process_solutions, op.m_walks_num, op.mTravelTimes, time_budget);
+		SplitSearch(process_solutions, pool, intervals, op, reg);
+		validateUnifiedSolution(process_solutions, op.m_walks_num, op.mTravelTimes, time_budget);
+		int score = collectScores(process_solutions);
 
 		if (score > best_score) {
 			bestCounter = counter;
 			best_score = score;
-			best_solutions = proc_solutions;
+			best_solutions = process_solutions;
 			validate(best_solutions, op.mTravelTimes, true);
 			for(auto& sr : shake_settings){
 				sr.R = 1;
@@ -305,9 +304,11 @@ void ILS::Solve(OP& op) {
 			times_not_improved++;
 		}
 
-		int removed_counter = SplitShake(proc_solutions, shake_settings, op, intervals);
-		pool.clear(); //TODO: comment this when using middle solutions
-		gatherUnvisited(proc_solutions, pool);
+		int removed_counter = SplitShake(process_solutions, shake_settings, op, intervals);
+		pool.clear();
+		gatherUnvisited(process_solutions, pool);
+
+		counter++;
 
 	}
 	auto end = std::chrono::high_resolution_clock::now();
@@ -344,7 +345,8 @@ void ILS::Solve(OP& op) {
 	std::cout << "-------------------------------------" << std::endl;
 	std::cout << std::endl;
 
-	std::cout << best_score << "\t" << elapsed_time << "\t" << best_solution.getVisits() << std::endl;
+	
+	std::cout << best_score << "\t" << elapsed_time << "\t" << best_solution.getVisits() << "\t" << std::endl;
 	std::cout << std::endl;
 
 	// Wait for the GLUT thread to finish
@@ -384,8 +386,8 @@ std::vector<List<TA>> ILS::splitUnvisitedList(std::vector<Solution>& solutions, 
 		std::vector<ILS::Usage>::iterator usage_it;
 		std::vector<double>::iterator duratio_it;
 		for(usage_it = reg[ta.id].begin(), duratio_it = activities[ta.id].begin(); usage_it != reg[ta.id].end() ; ++usage_it, ++duratio_it){
-			double score = *duratio_it * (usage_it->solved / static_cast<double>(usage_it->imported));
-			// double score = *duratio_it;
+			// double score = *duratio_it * (usage_it->solved / static_cast<double>(usage_it->imported));
+			double score = *duratio_it;
 			if (score>best_score){
 				best_score = score;
 				best_it = usage_it;
@@ -515,7 +517,7 @@ int ILS::Shake(Solution& sol, int& S, int& R, OP& op, const TimeWindow time_budg
 		updateTimes(*walk_it, next, false, op.mTravelTimes, time_budget);
 	}
 	S += R;
-	R++;
+	R += 1;
 
 	return removed_counter;
 }
@@ -771,6 +773,7 @@ void ILS::SplitSearch(std::vector<Solution>& solutions, List<TA>& pool, const st
 	tempScore1 = collectScores(solutions);
 	std::cout << "Inserted " << std::to_string(counter1) << " nodes at phase 1, score: " << std::to_string(tempScore1) << std::endl;
 
+	//TODO: comment out pool.clear() at Solve function when I use this code
 	// for(size_t i = 1; i < solutions.size(); ++i){
 	// 	for(size_t j = 0; j < solutions[i].m_walks.size(); ++j){
 	// 		if(solutions[i-1].m_walks[j].size() > 2 && solutions[i].m_walks[j].size() > 2) {
