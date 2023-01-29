@@ -231,17 +231,17 @@ void ILS::Solve(OP& op) {
 
 	std::cout.setstate(std::ios_base::failbit);
 	
-	Graphics::myInit();
-	// Set the OpenGL display mode
-	glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB);
-	// Set the initial window size
-	glutInitWindowSize(WINDOW_WIDTH, WINDOW_HEIGHT);
-	// Create the window with the given title
-	glutCreateWindow("Best Solution");
-	glutMouseFunc(Graphics::mouseButton);
-	//Set the display callback function
-	setupDrawCallback();
-	glutReshapeFunc(Graphics::onResize);
+	// Graphics::myInit();
+	// // Set the OpenGL display mode
+	// glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB);
+	// // Set the initial window size
+	// glutInitWindowSize(WINDOW_WIDTH, WINDOW_HEIGHT);
+	// // Create the window with the given title
+	// glutCreateWindow("Best Solution");
+	// glutMouseFunc(Graphics::mouseButton);
+	// //Set the display callback function
+	// setupDrawCallback();
+	// glutReshapeFunc(Graphics::onResize);
 
 	// // Enter the GLUT main loop
 	// std::thread glutThread(glutMainLoop);
@@ -321,11 +321,9 @@ void ILS::Solve(OP& op) {
 	}
 	std::cout << "Best counter: " << bestCounter << std::endl;
 
-	validate(best_solution.m_walks, op.mTravelTimes, true);
+	validate(best_solution.m_walks, op.mTravelTimes, false);
 	std::cout << "Best score: " << best_score << std::endl;
 	std::cout << "Visits: " << best_solution.getVisits() << std::endl;
-
-	best_solution.print("Best solution", true);
 
 	std::cout << std::endl;
 	std::cout << "-------------Metrics-----------------" << std::endl;
@@ -350,7 +348,7 @@ void ILS::Solve(OP& op) {
 	std::cout << std::endl;
 
 	// Wait for the GLUT thread to finish
-	glutMainLoop();
+	// glutMainLoop();
     // glutThread.join();
 }
 

@@ -179,19 +179,19 @@ int main(int argc, char** argv) {
 		{"custom", no_argument, 0, 'c'},
 		{"folder", required_argument, 0, 'f'},
 		{"instance", required_argument, 0, 'i'},
-		{"walks", required_argument, 0, 'w'},
-		{"subs", required_argument, 0, 's'},
+		{"walks", required_argument, 0, 'm'},
+		{"solutions", required_argument, 0, 's'},
 		{0, 0, 0, 0}
 	};
 
-	while ((c = getopt_long(argc, argv, "hcf:i:w:s:", long_options, &option_index)) != -1) {
+	while ((c = getopt_long(argc, argv, "hcf:i:m:s:", long_options, &option_index)) != -1) {
 		switch (c) {
 		case 'h': {
 			std::cout << "Please run the program with the following options: "<< std::endl <<
-			"./AMTOPTW -f <folder> -i <instance> -w <number of walks> -i <number of sub-intervals> " << std::endl <<
+			"./AMTOPTW -f <folder> -i <instance> -m <number of walks> -s <number of sub-intervals> " << std::endl <<
 			"or" << std::endl <<
 			"./AMTOPTW -folder=\"<folder>\" --instance=\"<instance>\" --walks=<num_of_walks> --intervals=<num_of_intervals>" << std::endl << 
-			"e.g. ./AMTOPTW -f Cordeau -i pr11 -w 4 -s 4" << std::endl << 
+			"e.g. ./AMTOPTW -f Cordeau -i pr11 -m 4 -s 4" << std::endl << 
 			"Also, you can add the option -c without any arguments if you want to use custom travel times from a custom made topology" << std::endl;
 
 			return 0;
@@ -221,7 +221,7 @@ int main(int argc, char** argv) {
 			}
 			break;
 		}
-		case 'w': {
+		case 'm': {
 			if(optarg) {
 				num_of_walks = std::stoi(optarg);
 				walks_option_provided = true;
@@ -257,7 +257,7 @@ int main(int argc, char** argv) {
 	}
 
 	if (!walks_option_provided) {
-		std::cerr << "Error: Option -w is required" << std::endl;
+		std::cerr << "Error: Option -m is required" << std::endl;
 		exit(EXIT_FAILURE);
 	}
 
@@ -278,7 +278,7 @@ int main(int argc, char** argv) {
 	
 	// glutMainLoop();
 
-	glutInit(&argc, argv);
+	// glutInit(&argc, argv);
 
 	init(folder, instance, num_of_walks, num_of_intervals, instance_type);
 
