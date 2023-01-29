@@ -12,11 +12,8 @@
 #include <fmt/ranges.h>
 #include <chrono>
 #include <algorithm>
-#include <plog/Log.h>
-#include "plog/Initializers/RollingFileInitializer.h"
 #include "List.h"
 #include "Solution.h"
-#include "Divider.h"
 #include "OP.h"
 #include "Custom.h"
 #include "Graphics.h"
@@ -84,25 +81,20 @@ private:
 		int final_pos, middle_pos;
 	};
 
-
 	int mIntervalsNum;
-	void dbScan(OP& op);
-	void AddStartDepots(std::vector<Solution>&, const std::vector<TimeWindow>&, const int, const OP&);
-	void AddEndDepots(std::vector<Solution>&, const std::vector<TimeWindow>&, const int, OP&);
-	bool compareTimeWindowCenter(const List<TA>::iterator&, const List<TA>::iterator&);
 	static ILS* currentInstance;
 
 	static void drawCallback(){
 		currentInstance->draw();
 	}
 
-	// virtual std::tuple<List<TA>::iterator, double, int, int> getBestPos(const TA&, const List<TA>&, const Vector2D<double>&);
-	virtual std::tuple<Walks::iterator, List<TA>::iterator, double, int, int> getBestPos(const TA&, Walks&, const Vector2D<double>&, 
-	const std::vector<double>, const TimeWindow, const bool);
-	virtual void updateTimes(List<TA>&, const List<TA>::iterator&, const bool, const Vector2D<double>&, const TimeWindow);
-	virtual std::tuple<bool, double> insertionBetweenIsValid(const TA&, const TA&, const TA&, const Vector2D<double>&);
-	virtual std::tuple<bool, double> insertionBeforeIsValid(const TA& , const TA&, const double, const Vector2D<double>&);
-	virtual std::tuple<bool, double> insertionAfterIsValid(const TA&, const TA&, const double, const Vector2D<double>&);
+	void AddStartDepots(std::vector<Solution>&, const std::vector<TimeWindow>&, const int, const OP&);
+	void AddEndDepots(std::vector<Solution>&, const std::vector<TimeWindow>&, const int, OP&);
+	bool compareTimeWindowCenter(const List<TA>::iterator&, const List<TA>::iterator&);
+	std::tuple<Walks::iterator, List<TA>::iterator, double, int, int> getBestPos(const TA&, Walks&, const Vector2D<double>&, 
+		const std::vector<double>, const TimeWindow, const bool);
+	void updateTimes(List<TA>&, const List<TA>::iterator&, const bool, const Vector2D<double>&, const TimeWindow);
+	void updateMaxShifts(const List<TA>&, const Vector2D<double>&, const TimeWindow);
 	std::map<std::string, std::vector<Usage>> initRegistry(List<TA>&, std::vector<TimeWindow>);
 	std::map<std::string, std::vector<double>> getActivities(List<TA>&, std::vector<TimeWindow>);
 	void SplitSearch(std::vector<Solution>&, List<TA>& pool, const std::vector<TimeWindow>&, OP&, std::map<std::string, std::vector<Usage>>&);
@@ -112,7 +104,6 @@ private:
 	inline Point getWeightedCentroid(const List<TA>::iterator&, const List<TA>::iterator&, const int);
 	int SplitShake(std::vector<Solution>&, std::vector<ILS::SR>&, OP&, const std::vector<TimeWindow>);
 	int Shake(Solution&, int&, int&, OP&, const TimeWindow);
-	virtual void updateMaxShifts(const List<TA>&, const Vector2D<double>&, const TimeWindow);
 	std::vector<std::string> construct(Solution&, const Vector2D<double>&, const std::vector<Point>, const TimeWindow, const bool);
 	int collectScores(const std::vector<Solution>&) const;
 	Solution connectSolutions(std::vector<Solution>&, const size_t);
@@ -124,16 +115,14 @@ private:
 	void InitSolutions(std::vector<Solution>&, const std::vector<TimeWindow> intervals, const OP& op);
 	std::tuple<bool, double> CandidateEndDepotIsValid(const List<TA>&, const TA, TimeWindow);
 	std::tuple<bool, double> CandidateStartDepotIsValid(const List<TA>&, const TA&, const double, const Vector2D<double>&);
-	void drawSolutions(const std::vector<Solution>& solutions);
 	std::vector<Point> getTargets(const std::vector<Solution>&, const int, const OP&);
 	std::vector<TimeWindow> getIntervals(std::vector<TA>, int, double, double);
 	TA getPreviousTA(std::vector<Solution>&, const int, const size_t);
 	void RemoveUnfeasibleVisits(std::vector<Solution>&, const int, const size_t);
-	void validateUnifiedSolution(const std::vector<Solution>&, size_t, const Vector2D<double>&, const TimeWindow);
+	void connectAndValidateSolutions(const std::vector<Solution>&, size_t, const Vector2D<double>&, const TimeWindow);
 	size_t countNodes(const std::vector<Solution>& sols);
 	void setupDrawCallback();
 
-	
 protected:
 	Metrics metrics;
 public:
@@ -144,26 +133,11 @@ public:
     ILS();
 	ILS(int);
     ~ILS();
-	virtual void validate(const List<TA>&, const Vector2D<double>&, const bool);
-	virtual void validate(const Walks&, const Vector2D<double>&, const bool);
+	void validate(const List<TA>&, const Vector2D<double>&, const bool);
+	void validate(const Walks&, const Vector2D<double>&, const bool);
 	void validate(const std::vector<Solution>&, const Vector2D<double>&, const bool);
 	void Solve(OP&);
 
-};
-
-class ILS_TOPTW : public ILS {
-private:
-	// std::tuple<List<TA>::iterator, double, int, int> getBestPos(const TA&, const List<TA>&, const Vector2D<double>&) override;
-	std::tuple<Walks::iterator, List<TA>::iterator, double, int, int> getBestPos(const TA&, Walks&, const Vector2D<double>&, 
-	const std::vector<double>, const TimeWindow, const bool) override;
-	void updateTimes(List<TA>&, const List<TA>::iterator&, const bool, const Vector2D<double>&, const TimeWindow) override;
-	void updateMaxShifts(const List<TA>&, const Vector2D<double>&, const TimeWindow) override;
-	std::tuple<bool, double> insertionBetweenIsValid(const TA&, const TA&, const TA&, const Vector2D<double>&) override;
-	std::tuple<bool, double> insertionBeforeIsValid(const TA& , const TA&, const double, const Vector2D<double>&) override;
-	std::tuple<bool, double> insertionAfterIsValid(const TA&, const TA&, const double, const Vector2D<double>&) override;
-public:
-	using ILS::ILS; //inherit constructor
-	void validate(const List<TA>&, const Vector2D<double>&, const bool) override;
 };
 
 

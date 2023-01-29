@@ -193,7 +193,7 @@ void ILS::InitSolutions(std::vector<Solution>& sols, const std::vector<TimeWindo
 
 }
 
-void ILS::validateUnifiedSolution(const std::vector<Solution>& solutions, size_t walks_num, const Vector2D<double>& travel_times, const TimeWindow time_budget){
+void ILS::connectAndValidateSolutions(const std::vector<Solution>& solutions, size_t walks_num, const Vector2D<double>& travel_times, const TimeWindow time_budget){
 	for (size_t i = 0; i < walks_num; ++i) {
 		List<TA> walk;
 		for (auto& s : solutions) {
@@ -284,9 +284,9 @@ void ILS::Solve(OP& op) {
 	while (times_not_improved < MAX_TIMES_NOT_IMPROVED) {
 
 		splitUnvisitedList(process_solutions, pool, mIntervalsNum, reg, activities);
-		validateUnifiedSolution(process_solutions, op.m_walks_num, op.mTravelTimes, time_budget);
+		connectAndValidateSolutions(process_solutions, op.m_walks_num, op.mTravelTimes, time_budget);
 		SplitSearch(process_solutions, pool, intervals, op, reg);
-		validateUnifiedSolution(process_solutions, op.m_walks_num, op.mTravelTimes, time_budget);
+		connectAndValidateSolutions(process_solutions, op.m_walks_num, op.mTravelTimes, time_budget);
 		int score = collectScores(process_solutions);
 
 		if (score > best_score) {
@@ -772,190 +772,7 @@ void ILS::SplitSearch(std::vector<Solution>& solutions, List<TA>& pool, const st
 	
 	tempScore1 = collectScores(solutions);
 	std::cout << "Inserted " << std::to_string(counter1) << " nodes at phase 1, score: " << std::to_string(tempScore1) << std::endl;
-
-	//TODO: comment out pool.clear() at Solve function when I use this code
-	// for(size_t i = 1; i < solutions.size(); ++i){
-	// 	for(size_t j = 0; j < solutions[i].m_walks.size(); ++j){
-	// 		if(solutions[i-1].m_walks[j].size() > 2 && solutions[i].m_walks[j].size() > 2) {
-
-	// 			TA& prev_last = solutions[i-1].m_walks[j].back();
-	// 			TA& curr_first = solutions[i].m_walks[j].front();
-	// 			TimeWindow interval = {prev_last.depTime, curr_first.depTime + curr_first.maxShift - 1};
-	// 			//TODO:  instead of append and clear, there should be something better
-	// 			List<TA> unvisited;
-	// 			unvisited.append(solutions[i-1].m_unvisited);
-	// 			unvisited.append(solutions[i].m_unvisited);
-	// 			solutions[i-1].m_unvisited.clear();
-	// 			solutions[i].m_unvisited.clear();
-
-	// 			Solution sol{prev_last, curr_first, unvisited, 1};
-	// 			updateTimes(sol.m_walks[0], sol.m_walks[0].begin(), false, op.mTravelTimes, interval);
-				
-	// 			std::cout << "Will check middle solution of " << std::to_string(sol.m_unvisited.size()) << 
-	// 				" nodes, with interval of " << std::to_string(interval.duration()) << " minutes" << std::endl;
-	// 			std::vector<Point> fake_targets = std::vector<Point>(solutions[i].m_walks.size(), Point());
-	// 			std::vector<std::string> inserted_ids = construct(sol, op.mTravelTimes, fake_targets, interval, false);
-	// 			counter2 += inserted_ids.size();
-
-	// 			bool changed_previous = false, changed_current = false;
-
-	// 			//split solution at the element that has deptime greater than 
-	// 			List<TA>::iterator it;
-	// 			for(it = sol.m_walks[0].begin()+1; it != sol.m_walks[0].end()-1; ++it) {
-	// 				if(it.iter->data.depTime > intervals[i].openTime){
-	// 					break;
-	// 				}
-	// 			}
-	// 			std::pair<List<TA>, List<TA>> walks = sol.m_walks[0].split(it);
-
-	// 			std::cout << "Nodes with dep time less than " << intervals[i].openTime << ": " << walks.first.size() << std::endl;
-	// 			std::cout << "Nodes with dep time greater than " << intervals[i].openTime << ": " << walks.second.size() << std::endl;
-
-				
-	// 			//remove middle node if cannot be added to either solution
-	// 			TA& temp = walks.second.front();
-	// 			if(!walks.second.empty() && temp.arrTime < intervals[i].openTime){
-	// 				const double dep_time = temp.dep_time(intervals[i].openTime);
-	// 				if(temp.maxShift < intervals[i].openTime - temp.arrTime || dep_time > temp.timeWindow.closeTime){
-	// 					walks.second.pop_front();
-	// 					std::cout << "Found a node that is active during the intervals[i].openTime, but cannot be shifted later so will be removed" << std::endl;
-	// 				} else {
-	// 					std::cout << "Found a node that is active during the intervals[i].openTime but can be its visit can be delayed" << std::endl;
-	// 				}
-	// 			}
-
-	// 			//push temp walk to real solution
-	// 			for(List<TA>::iterator it = walks.first.begin() + 1; it != walks.first.end(); ++it){
-	// 				solutions[i-1].m_walks[j].push_back(*it);
-	// 				std::cout << "Inserted " << it.iter->data.id << " at solution " << i-1 << " before " << intervals[i].openTime << std::endl;
-	// 				reg[it.iter->data.id].at(i-1).solved++;
-	// 				changed_previous = true;
-	// 			}
-
-
-				
-	// 			for(List<TA>::iterator it = walks.second.end() - 2; it != walks.second.end(); --it){
-	// 				solutions[i].m_walks[j].push_front(*it);
-	// 				std::cout << "Inserted " << it.iter->data.id << " at solution " << i << " after " << intervals[i].openTime << std::endl;
-	// 				reg[it.iter->data.id].at(i).solved++;
-	// 				changed_current = true;
-	// 			}
-
-	// 			pool.append(sol.m_unvisited);
-
-	// 			if(changed_previous){
-	// 				updateTimes(solutions[i-1].m_walks[j], solutions[i-1].m_walks[j].begin(), false, op.mTravelTimes, intervals[i-1]);
-	// 			}
-
-	// 			if(changed_current) {
-	// 				updateTimes(solutions[i].m_walks[j], solutions[i].m_walks[j].begin(), false, op.mTravelTimes, intervals[i]);
-	// 			}
-
-	// 		}
-	// 	}
-	// }
-
-	// tempScore2 = collectScores(solutions);
-	// std::cout << "Inserted " << std::to_string(counter2) << " nodes at phase 2, score: " << std::to_string(tempScore2) << std::endl;
-	// if(tempScore2 > tempScore1){
-	// 	std::cout << "Solution was improved at phase 2" << std::endl;
-	// }
-	
 }
-
-void ILS::drawSolutions(const std::vector<Solution>& solutions){
-	Bounds bounds;
-	const double radius = 2;
-	const std::string filename = "Solutions.svg";
-	std::vector<std::string> colors = {"black", "steelblue", "firebrick", "darkgray", "midnightblue"};
-	int sol_counter{};
-	for(auto& sol : solutions){
-		for(List<TA>::iterator ta_it = sol.m_unvisited.begin(); ta_it != sol.m_unvisited.end(); ++ta_it){
-			if(ta_it.iter->data.point.pos.lat < bounds.minLat){
-				bounds.minLat = ta_it.iter->data.point.pos.lat;
-			}
-			if(ta_it.iter->data.point.pos.lat > bounds.maxLat){
-				bounds.maxLat = ta_it.iter->data.point.pos.lat;
-			}
-			if(ta_it.iter->data.point.pos.lon < bounds.minLon){
-				bounds.minLon = ta_it.iter->data.point.pos.lon;
-			}
-			if(ta_it.iter->data.point.pos.lon > bounds.maxLon){
-				bounds.maxLon = ta_it.iter->data.point.pos.lon;
-			}
-		}
-
-		for(auto& walk : sol.m_walks){
-			for(List<TA>::iterator ta_it = walk.begin(); ta_it != walk.end(); ++ta_it){
-				if(ta_it.iter->data.point.pos.lat < bounds.minLat){
-					bounds.minLat = ta_it.iter->data.point.pos.lat;
-				}
-				if(ta_it.iter->data.point.pos.lat > bounds.maxLat){
-					bounds.maxLat = ta_it.iter->data.point.pos.lat;
-				}
-				if(ta_it.iter->data.point.pos.lon < bounds.minLon){
-					bounds.minLon = ta_it.iter->data.point.pos.lon;
-				}
-				if(ta_it.iter->data.point.pos.lon > bounds.maxLon){
-					bounds.maxLon = ta_it.iter->data.point.pos.lon;
-				}
-			}
-		}
-	}
-
-	// Open an output stream to write the SVG file
-    std::ofstream out(filename);
-
-	// Write the SVG file header
-    out << "<svg viewBox=\"" << bounds.minLat - radius << " " << bounds.minLon - radius << " " <<
-	bounds.maxLat - bounds.minLat + radius*2 << " " << bounds.maxLon - bounds.minLon + radius*2 <<
-	"\" xmlns=\"http://www.w3.org/2000/svg\">" << std::endl;
-
-	// Write the routes as lines in the SVG file
-	for(auto sol_it = solutions.begin(); sol_it != solutions.end(); ++sol_it){
-		const int index = sol_it - solutions.begin();
-		for(auto& walk : sol_it->m_walks){
-			List<TA>::iterator left, right;
-			for(left = walk.begin(), right = walk.begin() + 1; right != walk.end(); ++left, ++right){
-				out << "<line x1=\"" << left.iter->data.point.pos.lat << "\" y1=\"" << left.iter->data.point.pos.lon <<
-				"\" x2=\"" << right.iter->data.point.pos.lat << "\" y2=\"" << right.iter->data.point.pos.lon << "\" stroke=\" "<< colors[index] << "\" stroke-width=\"0.5\" />" << std::endl;
-			}
-		}
-	}
-
-	//Write nodes
-	for(auto sol_it = solutions.begin(); sol_it != solutions.end(); ++sol_it){
-		const int index = sol_it - solutions.begin();
-		for(List<TA>::iterator ta_it = sol_it->m_unvisited.begin(); ta_it != sol_it->m_unvisited.end(); ++ta_it){
-        	out << "<circle cx=\"" << ta_it.iter->data.point.pos.lat << "\" cy=\"" << ta_it.iter->data.point.pos.lon  << "\" fill=\"" << colors[index] << "\" r=\"" << radius << "\" />" << std::endl;
-		}
-		for(auto& walk : sol_it->m_walks){
-			for(List<TA>::iterator ta_it = walk.begin(); ta_it != walk.end(); ++ta_it){
-				out << "<circle cx=\"" << ta_it.iter->data.point.pos.lat << "\" cy=\"" << ta_it.iter->data.point.pos.lon  << "\" fill=\"" << colors[index] << "\" r=\"" << radius << "\" />" << std::endl;
-			}
-		}
-	}
-
-	//Write texts
-	for(auto sol_it = solutions.begin(); sol_it != solutions.end(); ++sol_it){
-		const int index = sol_it - solutions.begin();
-		for(List<TA>::iterator ta_it = sol_it->m_unvisited.begin(); ta_it != sol_it->m_unvisited.end(); ++ta_it){
-        	out << "<text x=\""<< ta_it.iter->data.point.pos.lat << "\" y=\""<< ta_it.iter->data.point.pos.lon << "\" text-anchor=\"middle\" font-size=\"2px\" fill=\"white\" alignment-baseline=\"middle\">" << ta_it.iter->data.point.id  << "</text>" << std::endl;
-    	}
-		for(auto& walk : sol_it->m_walks){
-			for(List<TA>::iterator ta_it = walk.begin(); ta_it != walk.end(); ++ta_it){
-				out << "<text x=\""<< ta_it.iter->data.point.pos.lat << "\" y=\""<< ta_it.iter->data.point.pos.lon << "\" text-anchor=\"middle\" font-size=\"2px\" fill=\"white\" alignment-baseline=\"middle\">" << ta_it.iter->data.point.id  << "</text>" << std::endl;
-			}
-		}
-	}
-
-	// Write the SVG file footer
-    out << "</svg>" << std::endl;
-
-    // Close the output stream
-    out.close();
-}
-
 
 std::vector<std::string> ILS::construct(Solution& sol, const Vector2D<double>& travel_times, const std::vector<Point> targets, 
 	const TimeWindow time_budget, const bool open) {
@@ -1038,218 +855,8 @@ std::vector<std::string> ILS::construct(Solution& sol, const Vector2D<double>& t
 	return inserted_ids;
 }
 
-std::tuple<bool, double> ILS::insertionBetweenIsValid(const TA& left, const TA& ta, const TA& right, 
-	const Vector2D<double>& travel_times){
-	double shift = travel_times[left.depPointId][ta.point.id]
-		+ ta.visitDuration
-		+ travel_times[ta.point.id][right.arrPointId]
-		- travel_times[left.depPointId][right.arrPointId];
-	return { shift <= right.maxShift, shift };
-}
 
-//Check if inserting ta before node K is valid
-std::tuple<bool, double> ILS::insertionBeforeIsValid(const TA& ta, const TA& right, const double start_time, const Vector2D<double>& travel_times){
-	double shift = ta.visitDuration
-		+ travel_times[ta.point.id][right.arrPointId];
-	return { shift <= right.maxShift, shift };
-}
-
-//Check if inserting ta after node K is valid. Close time of route is needed.
-std::tuple<bool, double> ILS::insertionAfterIsValid(const TA& left, const TA& ta, const double close_time, const Vector2D<double>& travel_times){
-	double shift = travel_times[left.depPointId][ta.point.id]
-		+ ta.visitDuration;
-
-	double arr_time = left.depTime + travel_times[left.depPointId][ta.point.id];
-	double dep_time = arr_time + ta.visitDuration;
-
-	return { dep_time < close_time, shift };
-}
-
-std::tuple<Walks::iterator, List<TA>::iterator, double, int, int> ILS::getBestPos(const TA& ta, Walks& walks, 
-	const Vector2D<double>& travel_times, const std::vector<double> distances, const TimeWindow time_budget, const bool open) {
-
-	Walks::iterator best_walk{ walks.end() };
-	List<TA>::iterator best_pos{ walks.front().end() };
-	int arr_point_id{ DEFAULT_POINT_ID }, dep_point_id{ DEFAULT_POINT_ID };
-	double min_shift{ DBL_MAX };
-
-
-	for (Walks::iterator walk_it = walks.begin(); walk_it != walks.end(); ++walk_it) {
-		if (walk_it->empty()) {
-			std::cerr << "walk is empty, minimum size: 1" << std::endl;
-			std::exit(1);
-		}
-
-		double shift{};
-		List<TA>::iterator left{ walk_it->begin() }, right{ walk_it->begin() + 1 };
-		int temp_arr_point_id{ DEFAULT_POINT_ID }, temp_dep_point_id{ DEFAULT_POINT_ID };
-
-		while (right != walk_it->end()) {
-			auto [valid, shift] = insertionBetweenIsValid(left.iter->data, ta, right.iter->data, travel_times);
-			if(valid){
-				if (shift < min_shift) {
-					best_walk = walk_it;
-					best_pos = right;
-					min_shift = shift;
-					arr_point_id = ta.point.id;
-					dep_point_id = ta.point.id;
-				}
-			}
-			left++; right++;
-		}
-	}
-	
-	return { best_walk, best_pos, min_shift, arr_point_id, dep_point_id };
-}
-
-void ILS::updateTimes(List<TA>& walk, const List<TA>::iterator& start_pos, 
-	const bool smart, const Vector2D<double>& travel_times, const TimeWindow time_budget) {
-	//update times first
-	List<TA>::iterator it{ start_pos };
-
-	while (it != walk.end()) {
-		it.iter->data.arrTime = it.iter->previous->data.depTime + travel_times[it.iter->previous->data.depPointId][it.iter->data.arrPointId];
-		it.iter->data.startOfVisitTime = it.iter->data.arrTime;
-		it.iter->data.depTime = it.iter->data.startOfVisitTime + it.iter->data.visitDuration;
-		++it;
-	}
-
-	updateMaxShifts(walk, travel_times, time_budget);
-}
-
-void ILS::updateMaxShifts(const List<TA>& li, const Vector2D<double>& travel_times, const TimeWindow time_budget) {
-	List<TA>::iterator it{ li.end() - 1 };
-	it.iter->data.maxShift = std::min(it.iter->data.timeWindow.closeTime - it.iter->data.depTime, time_budget.closeTime - it.iter->data.depTime);
-	if(it.iter->data.maxShift < 0) {
-		throw std::runtime_error("invalid maxshift number");
-	}
-	it--;
-	while(it != li.end()){
-		it.iter->data.maxShift = (it + 1).iter->data.maxShift;
-		it--;
-	}
-}
-
-void ILS::validate(const std::vector<Solution>& sols, const Vector2D<double>& travel_times, const bool verbose){
-	for(auto sol_it = sols.begin(); sol_it != sols.end(); ++sol_it){
-		const int index = sol_it - sols.begin();
-		std::cout << "Checking solution [" << index << "]: ";
-		validate(sol_it->m_walks, travel_times, verbose);
-	}
-}
-
-void ILS::validate(const std::vector<List<TA>>& walks, const Vector2D<double>& travel_times, const bool verbose) {
-	for (auto& walk : walks) {
-		validate(walk, travel_times, verbose);
-	}
-}
-
-void ILS::validate(const List<TA>& walk, const Vector2D<double>& travel_times, const bool verbose) {
-	walk.print("validating walk", verbose);
-	std::string msg{};
-	bool valid{ true };
-	List<TA>::iterator next{};
-	for (List<TA>::iterator it = { walk.begin() }; it != walk.end(); ++it) {
-		if (it.iter->data.startOfVisitTime != it.iter->data.arrTime + it.iter->data.waitDuration) {
-			msg = "StartOfVisitTime(" 
-				+ std::to_string(it.iter->data.startOfVisitTime) 
-				+ ") != arrTime(" 
-				+ std::to_string(it.iter->data.arrTime) 
-				+ ")" 
-				+ " + waitDuration(" 
-				+ std::to_string(it.iter->data.waitDuration) 
-				+ ")";
-			valid = false;
-			break;
-		}
-
-		if (it.iter->data.depTime != it.iter->data.startOfVisitTime + it.iter->data.visitDuration) {
-			msg = "depTime(" 
-				+ std::to_string(it.iter->data.depTime) 
-				+ ") != startOfVisitTime(" 
-				+ std::to_string(it.iter->data.startOfVisitTime) 
-				+ ") + visitDuration(" 
-				+ std::to_string(it.iter->data.visitDuration) 
-				+ ")";
-			valid = false;
-			break;
-		}
-
-		next = it + 1;
-		if (next != walk.end()) {
-			if (next.iter->data.arrTime != it.iter->data.depTime + travel_times[it.iter->data.depPointId][next.iter->data.arrPointId]) {
-				msg = "next->arrTime(" 
-					+ std::to_string(next.iter->data.arrTime) 
-					+ ") != depTime(" 
-					+ std::to_string(it.iter->data.depTime) 
-					+ ") + timeTravel[" 
-					+ std::to_string(it.iter->data.depPointId) 
-					+ "][" 
-					+ std::to_string(next.iter->data.arrPointId) 
-					+ "](" 
-					+ std::to_string(travel_times[it.iter->data.depPointId][next.iter->data.arrPointId]) 
-					+ ")";
-				valid = false;
-				break;
-			}
-		}
-	}
-
-	if(verbose) {
-		std::cout << (valid ? "walk is valid" : msg) << std::endl;
-	}
-	
-	if (!valid) {
-		std::cerr << "walk is invalid: exiting.. " << std::endl; 
-		std::exit(1);
-	}
-}
-
-std::tuple<bool, double> ILS_TOPTW::insertionBetweenIsValid(const TA& left, const TA& ta, const TA& right, 
-	const Vector2D<double>& travel_times){
-
-	double arr_time{}, wait_dur{}, start_of_visit_time{}, dep_time{}, shift{};
-	arr_time = left.depTime + travel_times[left.depPointId][ta.point.id];
-	wait_dur = std::max(0.0, ta.timeWindow.openTime - arr_time);
-	start_of_visit_time = arr_time + wait_dur;
-	dep_time = start_of_visit_time + ta.visitDuration;
-	shift = travel_times[left.depPointId][ta.point.id]
-		+ wait_dur
-		+ ta.visitDuration
-		+ travel_times[ta.point.id][right.arrPointId]
-		- travel_times[left.depPointId][right.arrPointId];
-
-	return { dep_time <= ta.timeWindow.closeTime && shift <= right.maxShift, shift };
-}
-
-//Check if inserting ta before route is valid. The start_time of the route is needed.
-std::tuple<bool, double> ILS_TOPTW::insertionBeforeIsValid(const TA& ta, const TA& right, const double start_time, const Vector2D<double>& travel_times){
-	double wait_dur = std::max(0.0, ta.timeWindow.openTime - start_time);
-	double start_of_visit_time = start_time + wait_dur;
-	double dep_time = start_of_visit_time + ta.visitDuration;
-	double shift = wait_dur
-		+ ta.visitDuration
-		+ travel_times[ta.point.id][right.arrPointId];
-
-	return { dep_time <= ta.timeWindow.closeTime && shift <= right.maxShift, shift };
-}
-
-//Check if inserting ta after left is valid. The close time of route is needed.
-std::tuple<bool, double> ILS_TOPTW::insertionAfterIsValid(const TA& left, const TA& ta, const double close_time, const Vector2D<double>& travel_times){
-	double arr_time = left.depTime + travel_times[left.depPointId][ta.point.id];
-	double wait_duration = std::max(0.0, ta.timeWindow.openTime - arr_time);
-	double start_of_visit_time = arr_time + wait_duration;
-	double dep_time = start_of_visit_time + ta.visitDuration;
-
-	double shift = travel_times[left.depPointId][ta.point.id]
-	+ ta.waitDuration
-	+ ta.visitDuration;
-
-	return { dep_time <= close_time, shift };
-}
-
-
-std::tuple<Walks::iterator, List<TA>::iterator, double, int, int> ILS_TOPTW::getBestPos(const TA& ta, 
+std::tuple<Walks::iterator, List<TA>::iterator, double, int, int> ILS::getBestPos(const TA& ta, 
 	Walks& walks, const Vector2D<double>& travel_times, const std::vector<double> distances, const TimeWindow time_budget, const bool open) {
 
 	Walks::iterator best_walk{ walks.end() };
@@ -1328,7 +935,7 @@ std::tuple<Walks::iterator, List<TA>::iterator, double, int, int> ILS_TOPTW::get
 	return { best_walk, best_pos, min_shift, arr_point_id, dep_point_id };
 }
 
-void ILS_TOPTW::updateTimes(List<TA>& walk, const List<TA>::iterator& start_pos, 
+void ILS::updateTimes(List<TA>& walk, const List<TA>::iterator& start_pos, 
 	const bool smart, const Vector2D<double>& travel_times, const TimeWindow time_budget) {
 	//update times first
 	List<TA>::iterator it{ start_pos };
@@ -1351,7 +958,7 @@ void ILS_TOPTW::updateTimes(List<TA>& walk, const List<TA>::iterator& start_pos,
 	updateMaxShifts(walk, travel_times, time_budget);
 }
 
-void ILS_TOPTW::updateMaxShifts(const List<TA>& li, const Vector2D<double>& travel_times, const TimeWindow time_budget) {
+void ILS::updateMaxShifts(const List<TA>& li, const Vector2D<double>& travel_times, const TimeWindow time_budget) {
 	List<TA>::iterator it{ li.end() - 1 };
 	it.iter->data.maxShift = std::min(it.iter->data.timeWindow.closeTime - it.iter->data.depTime, time_budget.closeTime - it.iter->data.depTime);
 	it--;
@@ -1361,16 +968,21 @@ void ILS_TOPTW::updateMaxShifts(const List<TA>& li, const Vector2D<double>& trav
 	}
 }
 
-/// <summary>
-/// Validating walk:
-/// In order of a walk to be valid it needs to fullfill the following requirements:
-/// 1)the departure time at each sight should be less than its closing time. 
-/// 2)the closing time of the last node, indicates the time budget of the problem so the total walk time should not surpass it.
-/// 3)all the variable times/durations should be correct (arrTime, waitDuration, depTime) based on the travelling times between the attractions
-/// </summary>
-/// <param name="walk">Holds the walk that gets examined</param>
-/// <param name="ttMatrix">Holds the travel times between the points of the problem</param>
-void ILS_TOPTW::validate(const List<TA>& walk, const Vector2D<double>& travel_times, const bool verbose) {
+void ILS::validate(const std::vector<Solution>& sols, const Vector2D<double>& travel_times, const bool verbose){
+	for(auto sol_it = sols.begin(); sol_it != sols.end(); ++sol_it){
+		const int index = sol_it - sols.begin();
+		std::cout << "Checking solution [" << index << "]: ";
+		validate(sol_it->m_walks, travel_times, verbose);
+	}
+}
+
+void ILS::validate(const std::vector<List<TA>>& walks, const Vector2D<double>& travel_times, const bool verbose) {
+	for (auto& walk : walks) {
+		validate(walk, travel_times, verbose);
+	}
+}
+
+void ILS::validate(const List<TA>& walk, const Vector2D<double>& travel_times, const bool verbose) {
 	if(verbose){
 		walk.print("validating walk", verbose);
 	}
@@ -1448,14 +1060,12 @@ void ILS::drawSolution(const Solution& sol){
 	for(List<TA>::iterator ta_it = sol.m_unvisited.begin(); ta_it != sol.m_unvisited.end(); ++ta_it) {
 		glPointSize(20.0f);
 		glColor3f(1.0f, 1.0f, 1.0f);
-		// Graphics::drawFilledCircle(ta_it.iter->data.point.pos.lat*factor, ta_it.iter->data.point.pos.lon*factor, 11);
 		glBegin(GL_POINTS);
 		glVertex2d(ta_it.iter->data.point.pos.lat*factor, ta_it.iter->data.point.pos.lon*factor);
 		glEnd();
 
 		glPointSize(18.0f);
 		glColor3ub(170, 170, 170); //grey
-		// Graphics::drawFilledCircle(ta_it.iter->data.point.pos.lat*factor, ta_it.iter->data.point.pos.lon*factor, 10);
 		glBegin(GL_POINTS);
 		glVertex2d(ta_it.iter->data.point.pos.lat*factor, ta_it.iter->data.point.pos.lon*factor);
 		glEnd();

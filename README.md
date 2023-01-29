@@ -13,6 +13,3 @@ we will connnect the unvisited nodes again to be ready for the next revision.
 
 ### Shake Step
 Shake procedure will be applied at a single solution with multiple walks.  
-
-### Run Open Trip Planner  
-java -Xmx2G -jar otp-2.1.0-shaded.jar --load ~/otp/

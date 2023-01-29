@@ -33,14 +33,6 @@ std::vector<std::string> split(const std::string& line) {
 	return tokens;
 }
 
-double calcMeanVisitTime(std::vector<TA*> touristAttractions) {
-	double totalVisitDuration = 0;
-	for (auto& ta : touristAttractions) {
-		totalVisitDuration += ta->visitDuration;
-	}
-	return totalVisitDuration / (touristAttractions.size() - 1); //don't count the depot
-}
-
 void init(std::string folder, std::string filename, int numRoutes, int numIntervals, InstanceType instance_type) {
 
 	std::vector<TA*> touristAttractions; //TODO:delete pointers
@@ -123,8 +115,6 @@ void init(std::string folder, std::string filename, int numRoutes, int numInterv
 
 	}
 
-#if 1
-	std::cout << std::endl;
 	TA start_depot(*touristAttractions[0]);
 	TA end_depot(*touristAttractions[0]);
 	start_depot.id = START_DEPOT_ID;
@@ -147,10 +137,8 @@ void init(std::string folder, std::string filename, int numRoutes, int numInterv
 	}
 	
 
-	ILS_TOPTW ilstoptw = ILS_TOPTW(numIntervals);
-	ilstoptw.Solve(op);
-
-#endif
+	ILS ils = ILS(numIntervals);
+	ils.Solve(op);
 
 	for (auto p : touristAttractions) {
 		delete p;
@@ -265,18 +253,6 @@ int main(int argc, char** argv) {
 		std::cerr << "Error: Option -s is required" << std::endl;
 		exit(EXIT_FAILURE);
 	}
-
-	// glutInit(&argc, argv);
-	// glutInitDisplayMode( GLUT_RGB | GLUT_DOUBLE );
-	// glutInitWindowSize(WINDOW_WIDTH, WINDOW_HEIGHT);
-	// glutCreateWindow( "TSP Opengl" ) ;
-
-	// glutDisplayFunc(displayOther ) ;
-	// glutIdleFunc(displayOther);
-  	// glutReshapeFunc( onResize );
-	// glutKeyboardFunc( onKeyDown ) ;
-	
-	// glutMainLoop();
 
 	// glutInit(&argc, argv);
 
