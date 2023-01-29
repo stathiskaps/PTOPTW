@@ -229,7 +229,7 @@ size_t ILS::countNodes(const std::vector<Solution>& sols){
 
 void ILS::Solve(OP& op) {
 
-	std::cout.setstate(std::ios_base::failbit);
+	// std::cout.setstate(std::ios_base::failbit);
 	
 	// Graphics::myInit();
 	// // Set the OpenGL display mode
@@ -268,32 +268,32 @@ void ILS::Solve(OP& op) {
 		shake_settings.push_back(ILS::SR{1, 1});
 	}
 
-	std::vector<Solution> proc_solutions(mIntervalsNum, Solution());
+	std::vector<Solution> initial_solutions(mIntervalsNum, Solution()), process_solutions;
 	//Initialize solutions
-	for (auto& s : proc_solutions) {
+	for (auto& s : initial_solutions) {
 		for (size_t i = 0; i < op.m_walks_num; ++i) {
 			s.m_walks.push_back(List<TA>());
 		}
 	}
-	InitSolutions(proc_solutions, intervals, op);
-	List<TA> pool = std::move(unvisited);
-
+	InitSolutions(initial_solutions, intervals, op);
+	const List<TA> initial_pool = std::move(unvisited);
  
 	while (times_not_improved < MAX_TIMES_NOT_IMPROVED) {
 		counter++;
 
 		std::cout << "Revision " << counter << std::endl;
-		
-		splitUnvisitedList(proc_solutions, pool, mIntervalsNum, reg, activities);
-		validateUnifiedSolution(proc_solutions, op.m_walks_num, op.mTravelTimes, time_budget);
-		SplitSearch(proc_solutions, pool, intervals, op, reg);
-		validateUnifiedSolution(proc_solutions, op.m_walks_num, op.mTravelTimes, time_budget);
-		int score = collectScores(proc_solutions);
+		List<TA> pool = initial_pool;
+		process_solutions = initial_solutions;
+		splitUnvisitedList(process_solutions, pool, mIntervalsNum, reg, activities);
+		validateUnifiedSolution(process_solutions, op.m_walks_num, op.mTravelTimes, time_budget);
+		SplitSearch(process_solutions, pool, intervals, op, reg);
+		validateUnifiedSolution(process_solutions, op.m_walks_num, op.mTravelTimes, time_budget);
+		int score = collectScores(process_solutions);
 
 		if (score > best_score) {
 			bestCounter = counter;
 			best_score = score;
-			best_solutions = proc_solutions;
+			best_solutions = process_solutions;
 			validate(best_solutions, op.mTravelTimes, true);
 			for(auto& sr : shake_settings){
 				sr.R = 1;
@@ -305,9 +305,11 @@ void ILS::Solve(OP& op) {
 			times_not_improved++;
 		}
 
-		int removed_counter = SplitShake(proc_solutions, shake_settings, op, intervals);
-		pool.clear(); //TODO: comment this when using middle solutions
-		gatherUnvisited(proc_solutions, pool);
+
+
+		// int removed_counter = SplitShake(process_solutions, shake_settings, op, intervals);
+		// pool.clear(); //TODO: comment this when using middle solutions
+		// gatherUnvisited(process_solutions, pool);
 
 	}
 	auto end = std::chrono::high_resolution_clock::now();
