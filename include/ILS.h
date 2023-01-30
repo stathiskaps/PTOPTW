@@ -9,13 +9,13 @@
 #include <climits>
 #include <numeric>
 #include <signal.h>
+#include <list>
 #include <fmt/ranges.h>
 #include <chrono>
 #include <algorithm>
 #include "List.h"
 #include "Solution.h"
 #include "OP.h"
-#include "Custom.h"
 #include "Graphics.h"
 
 #ifndef ILS_H
@@ -38,8 +38,8 @@ void printVector2D(Vector2D<T> v){
 	}
 }
 
-using Walks = std::vector<List<TA>>;
-using Walk = List<TA>;
+using Walks = std::vector<std::list<TA>>;
+using Walk = std::list<TA>;
 
 class ILS{
 private:
@@ -90,31 +90,31 @@ private:
 
 	void AddStartDepots(std::vector<Solution>&, const std::vector<TimeWindow>&, const int, const OP&);
 	void AddEndDepots(std::vector<Solution>&, const std::vector<TimeWindow>&, const int, OP&);
-	bool compareTimeWindowCenter(const List<TA>::iterator&, const List<TA>::iterator&);
-	std::tuple<Walks::iterator, List<TA>::iterator, double, int, int> getBestPos(const TA&, Walks&, const Vector2D<double>&, 
+	bool compareTimeWindowCenter(const std::list<TA>::iterator&, const std::list<TA>::iterator&);
+	std::tuple<Walks::iterator, std::list<TA>::iterator, double, int, int> getBestPos(const TA&, Walks&, const Vector2D<double>&, 
 		const std::vector<double>, const TimeWindow, const bool);
-	void updateTimes(List<TA>&, const List<TA>::iterator&, const bool, const Vector2D<double>&, const TimeWindow);
-	void updateMaxShifts(const List<TA>&, const Vector2D<double>&, const TimeWindow);
-	std::map<std::string, std::vector<Usage>> initRegistry(List<TA>&, std::vector<TimeWindow>);
-	std::map<std::string, std::vector<double>> getActivities(List<TA>&, std::vector<TimeWindow>);
-	void SplitSearch(std::vector<Solution>&, List<TA>& pool, const std::vector<TimeWindow>&, OP&, std::map<std::string, std::vector<Usage>>&);
-	void gatherUnvisited(std::vector<Solution>&, List<TA>&);
-	std::vector<List<TA>> splitUnvisitedList(std::vector<Solution>&, List<TA>&, int, std::map<std::string, std::vector<ILS::Usage>>&, std::map<std::string, std::vector<double>>);
+	void updateTimes(std::list<TA>&, const std::list<TA>::iterator&, const bool, const Vector2D<double>&, const TimeWindow);
+	void updateMaxShifts(const std::list<TA>&, const Vector2D<double>&, const TimeWindow);
+	std::map<std::string, std::vector<Usage>> initRegistry(std::list<TA>&, std::vector<TimeWindow>);
+	std::map<std::string, std::vector<double>> getActivities(std::list<TA>&, std::vector<TimeWindow>);
+	void SplitSearch(std::vector<Solution>&, std::list<TA>& pool, const std::vector<TimeWindow>&, OP&, std::map<std::string, std::vector<Usage>>&);
+	void gatherUnvisited(std::vector<Solution>&, std::list<TA>&);
+	std::vector<std::list<TA>> splitUnvisitedList(std::vector<Solution>&, std::list<TA>&, int, std::map<std::string, std::vector<ILS::Usage>>&, std::map<std::string, std::vector<double>>);
 	bool hasWeightedCentroid(const Solution& sol, const int, const int);
-	inline Point getWeightedCentroid(const List<TA>::iterator&, const List<TA>::iterator&, const int);
+	inline Point getWeightedCentroid(const std::list<TA>::iterator&, const std::list<TA>::iterator&, const int);
 	int SplitShake(std::vector<Solution>&, std::vector<ILS::SR>&, OP&, const std::vector<TimeWindow>);
 	int Shake(Solution&, int&, int&, OP&, const TimeWindow);
 	std::vector<std::string> construct(Solution&, const Vector2D<double>&, const std::vector<Point>, const TimeWindow, const bool);
 	int collectScores(const std::vector<Solution>&) const;
 	Solution connectSolutions(std::vector<Solution>&, const size_t);
-	inline int collectProfit (const List<TA>::iterator&, const List<TA>::iterator&) const;
+	inline int collectProfit (const std::list<TA>::iterator&, const std::list<TA>::iterator&) const;
 	void printSolution(const std::string, const Solution& sol);
 	void printSolutions(const std::string, const std::vector<Solution>& sols);
 	void PrepareForShake(std::vector<Solution>&);
 	void RemoveDummyNodes(std::vector<Solution>&);
 	void InitSolutions(std::vector<Solution>&, const std::vector<TimeWindow> intervals, const OP& op);
-	std::tuple<bool, double> CandidateEndDepotIsValid(const List<TA>&, const TA, TimeWindow);
-	std::tuple<bool, double> CandidateStartDepotIsValid(const List<TA>&, const TA&, const double, const Vector2D<double>&);
+	std::tuple<bool, double> CandidateEndDepotIsValid(const std::list<TA>&, const TA, TimeWindow);
+	std::tuple<bool, double> CandidateStartDepotIsValid(const std::list<TA>&, const TA&, const double, const Vector2D<double>&);
 	std::vector<Point> getTargets(const std::vector<Solution>&, const int, const OP&);
 	std::vector<TimeWindow> getIntervals(std::vector<TA>, int, double, double);
 	TA getPreviousTA(std::vector<Solution>&, const int, const size_t);
@@ -122,6 +122,7 @@ private:
 	void connectAndValidateSolutions(const std::vector<Solution>&, size_t, const Vector2D<double>&, const TimeWindow);
 	size_t countNodes(const std::vector<Solution>& sols);
 	void setupDrawCallback();
+	void print(const std::list<TA>&, std::string, bool) const;
 
 protected:
 	Metrics metrics;
@@ -133,7 +134,7 @@ public:
     ILS();
 	ILS(int);
     ~ILS();
-	void validate(const List<TA>&, const Vector2D<double>&, const bool);
+	void validate(const std::list<TA>&, const Vector2D<double>&, const bool);
 	void validate(const Walks&, const Vector2D<double>&, const bool);
 	void validate(const std::vector<Solution>&, const Vector2D<double>&, const bool);
 	void Solve(OP&);

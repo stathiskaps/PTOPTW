@@ -2,7 +2,6 @@
 #include <stdexcept>
 #include <climits>
 #include "List.h"
-#include "Custom.h"
 #include <fstream>
 
 
@@ -15,14 +14,14 @@ class Solution {
 	friend class ILS;
 	friend class ILS_OPTW;
 	friend class ILS_TOPTW;
-	List<TA> m_unvisited;
-	std::vector<List<TA>> m_walks;
+	std::list<TA> m_unvisited;
+	std::vector<std::list<TA>> m_walks;
 public:
 	Solution();
 	~Solution();
-	Solution(List<TA>);
-	Solution(TA, TA, List<TA>, double, double, int); 
-	Solution(TA, TA, List<TA>, size_t);
+	Solution(std::list<TA>);
+	Solution(TA, TA, std::list<TA>, double, double, int); 
+	Solution(TA, TA, std::list<TA>, size_t);
 
 	int getScores() const;
 	int getVisits();

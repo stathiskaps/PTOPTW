@@ -7,12 +7,12 @@ Solution::~Solution(){
         walk.clear();
     }
 }
-Solution::Solution(List<TA> unvisited): m_unvisited(unvisited) {}
+Solution::Solution(std::list<TA> unvisited): m_unvisited(unvisited) {}
 
 //todo: check what explicit is
-Solution::Solution(TA start, TA end, List<TA> unvisited, double startTime, double endTime, int walksNum) : m_unvisited(unvisited) {
+Solution::Solution(TA start, TA end, std::list<TA> unvisited, double startTime, double endTime, int walksNum) : m_unvisited(unvisited) {
     for (int i = 0; i < walksNum; ++i) {
-        List<TA> walk{ start, end };
+        std::list<TA> walk{ start, end };
         walk.front().depTime = startTime;
         walk.front().timeWindow = TimeWindow{ startTime, endTime };
         walk.back().timeWindow = TimeWindow{ startTime, endTime };
@@ -21,9 +21,9 @@ Solution::Solution(TA start, TA end, List<TA> unvisited, double startTime, doubl
     }
 }
 
-Solution::Solution(TA start, TA end, List<TA> unvisited, size_t walks) : m_unvisited(unvisited){
+Solution::Solution(TA start, TA end, std::list<TA> unvisited, size_t walks) : m_unvisited(unvisited){
     for(size_t i = 0; i < walks; ++i){
-         m_walks.push_back(List<TA>{start, end});
+         m_walks.push_back(std::list<TA>{start, end});
     }
 }
 
@@ -37,7 +37,7 @@ void Solution::print(std::string tag, const bool verbose){
 }
 
 int Solution::getScores() const{
-    int sum{}; 
+    int sum{};
     for (auto& w : m_walks) {
         for (auto& p : w) {
             sum += p.profit;
@@ -63,34 +63,34 @@ int Solution::getMinWalkSize() const {
 void Solution::draw(std::string tag, std::string color){
     std::string filename = tag+".svg";
     Bounds bounds;
-    for(List<TA>::iterator ta_it = m_unvisited.begin(); ta_it != m_unvisited.end(); ++ta_it){
-        if(ta_it.iter->data.point.pos.lat < bounds.minLat){
-            bounds.minLat = ta_it.iter->data.point.pos.lat;
+    for(std::list<TA>::iterator ta_it = m_unvisited.begin(); ta_it != m_unvisited.end(); ++ta_it){
+        if(ta_it->point.pos.lat < bounds.minLat){
+            bounds.minLat = ta_it->point.pos.lat;
         }
-        if(ta_it.iter->data.point.pos.lat > bounds.maxLat){
-            bounds.maxLat = ta_it.iter->data.point.pos.lat;
+        if(ta_it->point.pos.lat > bounds.maxLat){
+            bounds.maxLat = ta_it->point.pos.lat;
         }
-        if(ta_it.iter->data.point.pos.lon < bounds.minLon){
-            bounds.minLon = ta_it.iter->data.point.pos.lon;
+        if(ta_it->point.pos.lon < bounds.minLon){
+            bounds.minLon = ta_it->point.pos.lon;
         }
-        if(ta_it.iter->data.point.pos.lon > bounds.maxLon){
-            bounds.maxLon = ta_it.iter->data.point.pos.lon;
+        if(ta_it->point.pos.lon > bounds.maxLon){
+            bounds.maxLon = ta_it->point.pos.lon;
         }
     }
 
     for(auto& walk : m_walks){
-        for(List<TA>::iterator ta_it = walk.begin(); ta_it != walk.end(); ++ta_it){
-            if(ta_it.iter->data.point.pos.lat < bounds.minLat){
-                bounds.minLat = ta_it.iter->data.point.pos.lat;
+        for(std::list<TA>::iterator ta_it = walk.begin(); ta_it != walk.end(); ++ta_it){
+            if(ta_it->point.pos.lat < bounds.minLat){
+                bounds.minLat = ta_it->point.pos.lat;
             }
-            if(ta_it.iter->data.point.pos.lat > bounds.maxLat){
-                bounds.maxLat = ta_it.iter->data.point.pos.lat;
+            if(ta_it->point.pos.lat > bounds.maxLat){
+                bounds.maxLat = ta_it->point.pos.lat;
             }
-            if(ta_it.iter->data.point.pos.lon < bounds.minLon){
-                bounds.minLon = ta_it.iter->data.point.pos.lon;
+            if(ta_it->point.pos.lon < bounds.minLon){
+                bounds.minLon = ta_it->point.pos.lon;
             }
-            if(ta_it.iter->data.point.pos.lon > bounds.maxLon){
-                bounds.maxLon = ta_it.iter->data.point.pos.lon;
+            if(ta_it->point.pos.lon > bounds.maxLon){
+                bounds.maxLon = ta_it->point.pos.lon;
             }
         }
     }
@@ -108,30 +108,30 @@ void Solution::draw(std::string tag, std::string color){
 
 	// Write the routes as lines in the SVG file
     for(auto& walk : m_walks){
-        List<TA>::iterator left, right;
+        std::list<TA>::iterator left, right;
         for(left = walk.begin(), right = walk.begin() + 1; right != walk.end(); ++left, ++right){
-            out << "<line x1=\"" << left.iter->data.point.pos.lat << "\" y1=\"" << left.iter->data.point.pos.lon <<
-             "\" x2=\"" << right.iter->data.point.pos.lat << "\" y2=\"" << right.iter->data.point.pos.lon << "\" style=\"stroke:rgb(66,66,66);stroke-width:0.5\" />" << std::endl;
+            out << "<line x1=\"" << left->point.pos.lat << "\" y1=\"" << left->point.pos.lon <<
+             "\" x2=\"" << right->point.pos.lat << "\" y2=\"" << right->point.pos.lon << "\" style=\"stroke:rgb(66,66,66);stroke-width:0.5\" />" << std::endl;
         }
     }
 
     //Write nodes
-    for(List<TA>::iterator ta_it = m_unvisited.begin(); ta_it != m_unvisited.end(); ++ta_it){
-        out << "<circle cx=\"" << ta_it.iter->data.point.pos.lat << "\" cy=\"" << ta_it.iter->data.point.pos.lon  << "\" r=\"" << radius << "\" />" << std::endl;
+    for(std::list<TA>::iterator ta_it = m_unvisited.begin(); ta_it != m_unvisited.end(); ++ta_it){
+        out << "<circle cx=\"" << ta_it->point.pos.lat << "\" cy=\"" << ta_it->point.pos.lon  << "\" r=\"" << radius << "\" />" << std::endl;
     }
     for(auto& walk : m_walks){
-        for(List<TA>::iterator ta_it = walk.begin(); ta_it != walk.end(); ++ta_it){
-            out << "<circle cx=\"" << ta_it.iter->data.point.pos.lat << "\" cy=\"" << ta_it.iter->data.point.pos.lon  << "\" r=\"" << radius << "\" />" << std::endl;
+        for(std::list<TA>::iterator ta_it = walk.begin(); ta_it != walk.end(); ++ta_it){
+            out << "<circle cx=\"" << ta_it->point.pos.lat << "\" cy=\"" << ta_it->point.pos.lon  << "\" r=\"" << radius << "\" />" << std::endl;
         }
     }
 
     //Write ids
-    for(List<TA>::iterator ta_it = m_unvisited.begin(); ta_it != m_unvisited.end(); ++ta_it){
-        out << "<text x=\""<< ta_it.iter->data.point.pos.lat << "\" y=\""<< ta_it.iter->data.point.pos.lon << "\" text-anchor=\"middle\" font-size=\"2px\" fill=\"white\" alignment-baseline=\"middle\">" << ta_it.iter->data.id  << "</text>" << std::endl;
+    for(std::list<TA>::iterator ta_it = m_unvisited.begin(); ta_it != m_unvisited.end(); ++ta_it){
+        out << "<text x=\""<< ta_it->point.pos.lat << "\" y=\""<< ta_it->point.pos.lon << "\" text-anchor=\"middle\" font-size=\"2px\" fill=\"white\" alignment-baseline=\"middle\">" << ta_it->id  << "</text>" << std::endl;
     }
     for(auto& walk : m_walks){
-        for(List<TA>::iterator ta_it = walk.begin(); ta_it != walk.end(); ++ta_it){
-            out << "<text x=\""<< ta_it.iter->data.point.pos.lat << "\" y=\""<< ta_it.iter->data.point.pos.lon << "\" text-anchor=\"middle\" font-size=\"2px\" fill=\"white\" alignment-baseline=\"middle\">" << ta_it.iter->data.id  << "</text>" << std::endl;
+        for(std::list<TA>::iterator ta_it = walk.begin(); ta_it != walk.end(); ++ta_it){
+            out << "<text x=\""<< ta_it->point.pos.lat << "\" y=\""<< ta_it->point.pos.lon << "\" text-anchor=\"middle\" font-size=\"2px\" fill=\"white\" alignment-baseline=\"middle\">" << ta_it->id  << "</text>" << std::endl;
         }
     }
 
