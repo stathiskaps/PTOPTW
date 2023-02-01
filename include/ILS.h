@@ -79,6 +79,9 @@ private:
 		double split_unvisited;
 		double shake;
 		int final_pos, middle_pos;
+		int second_phase_counter;
+		int second_phase_window_sum;
+		int second_phase_improved;
 	};
 
 	int mIntervalsNum;
