@@ -11,6 +11,7 @@
 #include <signal.h>
 #include <fmt/ranges.h>
 #include <chrono>
+#include <fstream>
 #include <algorithm>
 #include "List.h"
 #include "Solution.h"
@@ -82,9 +83,11 @@ private:
 		int second_phase_counter;
 		int second_phase_window_sum;
 		int second_phase_improved;
+		int comparisons;
 	};
 
 	int mIntervalsNum;
+	std::string mInstance;
 	static ILS* currentInstance;
 
 	static void drawCallback(){
@@ -134,7 +137,7 @@ public:
 	void draw();
 	void drawSolution(const Solution&);
     ILS();
-	ILS(int);
+	ILS(int, std::string);
     ~ILS();
 	void validate(const List<TA>&, const Vector2D<double>&, const bool);
 	void validate(const Walks&, const Vector2D<double>&, const bool);

@@ -137,7 +137,7 @@ void init(std::string folder, std::string filename, int numRoutes, int numInterv
 	}
 	
 
-	ILS ils = ILS(numIntervals);
+	ILS ils = ILS(numIntervals, filename);
 	ils.Solve(op);
 
 	for (auto p : touristAttractions) {
@@ -254,7 +254,7 @@ int main(int argc, char** argv) {
 		exit(EXIT_FAILURE);
 	}
 
-	// glutInit(&argc, argv);
+	glutInit(&argc, argv);
 
 	init(folder, instance, num_of_walks, num_of_intervals, instance_type);
 

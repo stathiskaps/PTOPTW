@@ -2,7 +2,7 @@
 
 ILS::ILS() {}
 
-ILS::ILS(int intervalsNum) : mIntervalsNum(intervalsNum) {
+ILS::ILS(int intervalsNum, std::string instance) : mIntervalsNum(intervalsNum), mInstance(instance) {
 	metrics.local_search = std::vector<double>(intervalsNum, 0);
 	metrics.split_unvisited = 0.0;
 	metrics.shake = 0.0;
@@ -11,6 +11,7 @@ ILS::ILS(int intervalsNum) : mIntervalsNum(intervalsNum) {
 	metrics.second_phase_counter = 0;
 	metrics.second_phase_window_sum = 0;
 	metrics.second_phase_improved = 0;
+	metrics.comparisons = 0;
 }
 
 ILS::~ILS() {}
@@ -46,7 +47,8 @@ std::vector<TimeWindow> ILS::getIntervals(std::vector<TA> unvisited, int interva
 
 	double score, best_score = DBL_MAX;
 
-	uint32_t not_improved = 0, max_times_not_improved = 20;
+	uint8_t not_improved = 0;
+	const uint8_t max_times_not_improved = 25;
 
 	std::vector<double> time_cuts, best_time_cuts;
 	double time_cut = day_start_time;
@@ -59,7 +61,7 @@ std::vector<TimeWindow> ILS::getIntervals(std::vector<TA> unvisited, int interva
 	}
 
 	//Acceptance criterion
-	while(true) {
+	while(not_improved < max_times_not_improved) {
 
 		std::vector<Bin> bins;
 		bins.reserve(intervals_num);
@@ -91,49 +93,63 @@ std::vector<TimeWindow> ILS::getIntervals(std::vector<TA> unvisited, int interva
 		});
 
 		score = most_used_bin->count - least_used_bin->count;
+		
 
 		if(score < best_score) {
 			best_score = score; //minimization
 			best_time_cuts = time_cuts;
 			not_improved = 0;
-			
-			//Improve intervals
-			const double bin_duration = time_cuts[most_used_bin->right_cut_index] - time_cuts[most_used_bin->left_cut_index];
+		} else {
+			not_improved++;
+		}
+		
+		//Improve intervals
+		const double bin_duration = time_cuts[most_used_bin->right_cut_index] - time_cuts[most_used_bin->left_cut_index];
 
-			double reduce_left = 0, reduce_right = 0;
-			const double reduce_amount = bin_duration * a;
+		double reduce_left = 0, reduce_right = 0;
+		const double reduce_amount = bin_duration * a;
 
-			//TODO:: check at the start of the function if there is only one bin
-			if(most_used_bin > bins.begin() && most_used_bin < bins.end()){
-				std::vector<Bin>::iterator left_bin = most_used_bin-1;
-				std::vector<Bin>::iterator right_bin = most_used_bin+1;
+		//TODO:: check at the start of the function if there is only one bin
+		if(most_used_bin > bins.begin() && most_used_bin < bins.end()-1){
+			std::vector<Bin>::iterator left_bin = most_used_bin-1;
+			std::vector<Bin>::iterator right_bin = most_used_bin+1;
 
+			if(right_bin->count == 0){
 				if(left_bin->count == right_bin->count){
-					reduce_left = reduce_amount * 50/100;
+					reduce_left = reduce_amount * 1/2;
 					reduce_right = reduce_left;
 				} else {
-					if(left_bin->count < right_bin->count) {
-						reduce_left = reduce_amount - (left_bin->count/right_bin->count)*reduce_amount;
-						reduce_right = reduce_amount - reduce_left;
-					} else {
-						reduce_right = reduce_amount - (right_bin->count/left_bin->count)*reduce_amount;
-						reduce_left = reduce_amount - reduce_right;
-					}
+					reduce_right = reduce_amount;
+					reduce_left = 0;
 				}
 			} else {
-				if(most_used_bin == bins.begin()){
-					reduce_right = reduce_amount;
-				} else {
-					reduce_left = reduce_amount;
-				}
+				const double ratio = left_bin->count/right_bin->count;
+				reduce_left = std::ceil(ratio * reduce_amount / (ratio + 1)) ;
+				reduce_right = reduce_amount - reduce_left;
 			}
-
-			time_cuts[most_used_bin->left_cut_index]+=reduce_left;
-			time_cuts[most_used_bin->right_cut_index]-=reduce_right;
-
+			
+			// if(left_bin->count == right_bin->count){
+			// 	reduce_left = reduce_amount * 50/100;
+			// 	reduce_right = reduce_left;
+			// } else {
+			// 	if(left_bin->count < right_bin->count) {
+			// 		reduce_left = reduce_amount - (left_bin->count/right_bin->count)*reduce_amount;
+			// 		reduce_right = reduce_amount - reduce_left;
+			// 	} else {
+			// 		reduce_right = reduce_amount - ( ->count/left_bin->count)*reduce_amount;
+			// 		reduce_left = reduce_amount - reduce_right;
+			// 	}
+			// }
 		} else {
-			break;
+			if(most_used_bin == bins.begin()){
+				reduce_right = reduce_amount;
+			} else {
+				reduce_left = reduce_amount;
+			}
 		}
+
+		time_cuts[most_used_bin->left_cut_index]+=reduce_left;
+		time_cuts[most_used_bin->right_cut_index]-=reduce_right;
 	}
 
 	for(size_t i = 0; i < mIntervalsNum; ++i){
@@ -174,7 +190,6 @@ void ILS::printSolutions(const std::string tag, const std::vector<Solution>& sol
 		const int index = sol_it - sols.begin();
 		const std::string tag = "Solution [" + std::to_string(index) + "]: ";
 		printSolution(tag, *sol_it);
-		std::cout << std::endl;
 	}
 }
 
@@ -203,7 +218,7 @@ void ILS::connectAndValidateSolutions(const std::vector<Solution>& solutions, si
 			walk.append(s.m_walks[i]);
 		}
 		updateTimes(walk, walk.begin(), false, travel_times, time_budget);
-		validate(walk, travel_times, true);
+		validate(walk, travel_times, false);
 	}
 }
 
@@ -232,19 +247,19 @@ size_t ILS::countNodes(const std::vector<Solution>& sols){
 
 void ILS::Solve(OP& op) {
 
-	std::cout.setstate(std::ios_base::failbit);
+	// std::cout.setstate(std::ios_base::failbit);
 	
-	// Graphics::myInit();
-	// // Set the OpenGL display mode
-	// glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB);
-	// // Set the initial window size
-	// glutInitWindowSize(WINDOW_WIDTH, WINDOW_HEIGHT);
-	// // Create the window with the given title
-	// glutCreateWindow("Best Solution");
-	// glutMouseFunc(Graphics::mouseButton);
-	// //Set the display callback function
-	// setupDrawCallback();
-	// glutReshapeFunc(Graphics::onResize);
+	Graphics::myInit();
+	// Set the OpenGL display mode
+	glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB);
+	// Set the initial window size
+	glutInitWindowSize(WINDOW_WIDTH, WINDOW_HEIGHT);
+	// Create the window with the given title
+	glutCreateWindow("Best Solution");
+	glutMouseFunc(Graphics::mouseButton);
+	//Set the display callback function
+	setupDrawCallback();
+	glutReshapeFunc(Graphics::onResize);
 
 	// // Enter the GLUT main loop
 	// std::thread glutThread(glutMainLoop);
@@ -296,7 +311,7 @@ void ILS::Solve(OP& op) {
 			bestCounter = counter;
 			best_score = score;
 			best_solutions = process_solutions;
-			validate(best_solutions, op.mTravelTimes, true);
+			validate(best_solutions, op.mTravelTimes, false);
 			for(auto& sr : shake_settings){
 				sr.R = 1;
 			}
@@ -345,15 +360,20 @@ void ILS::Solve(OP& op) {
 	std::cout << "Total Times final position was best: " << metrics.final_pos << "\n" << std::endl;
 
 	std::cout << "Total execution time: " << elapsed_time << " seconds" << std::endl;
+	std::cout << "Total comparisons made: " << metrics.comparisons << std::endl;
 	std::cout << "-------------------------------------" << std::endl;
 	std::cout << std::endl;
 
 	
-	std::cout << best_score << "\t" << elapsed_time << "\t" << best_solution.getVisits() << "\t" << std::endl;
+	
+    std::ofstream outputFile;
+    outputFile.open("output.txt", std::ios::out | std::ios::app);
+    outputFile << best_score << "\t" << std::round(elapsed_time * 1000) / 1000 << "\t" << best_solution.getVisits() << "\t" << std::endl;
+    outputFile.close();
 	std::cout << std::endl;
 
 	// Wait for the GLUT thread to finish
-	// glutMainLoop();
+	glutMainLoop();
     // glutThread.join();
 }
 
@@ -363,7 +383,6 @@ void ILS::gatherUnvisited(std::vector<Solution>& solutions, List<TA>& pool){
 		pool.append(sol.m_unvisited);
 		sol.m_unvisited.clear();
 	}
-	std::cout << std::endl;
 }
 
 std::vector<List<TA>> ILS::splitUnvisitedList(std::vector<Solution>& solutions, List<TA>& pool, int intervals_num, std::map<std::string, std::vector<ILS::Usage>>& reg, std::map<std::string, std::vector<double>> activities) {
@@ -389,8 +408,8 @@ std::vector<List<TA>> ILS::splitUnvisitedList(std::vector<Solution>& solutions, 
 		std::vector<ILS::Usage>::iterator usage_it;
 		std::vector<double>::iterator duratio_it;
 		for(usage_it = reg[ta.id].begin(), duratio_it = activities[ta.id].begin(); usage_it != reg[ta.id].end() ; ++usage_it, ++duratio_it){
-			// double score = *duratio_it * (usage_it->solved / static_cast<double>(usage_it->imported));
-			double score = *duratio_it;
+			double score = *duratio_it * (usage_it->solved / static_cast<double>(usage_it->imported));
+			// double score = *duratio_it;
 			if (score>best_score){
 				best_score = score;
 				best_it = usage_it;
@@ -765,7 +784,7 @@ void ILS::SplitSearch(std::vector<Solution>& solutions, List<TA>& pool, const st
 			}
 		}
 
-		validate(solutions[i].m_walks, op.mTravelTimes, true);
+		validate(solutions[i].m_walks, op.mTravelTimes, false);
 
 		auto end = std::chrono::high_resolution_clock::now();
 		auto elapsed_time = std::chrono::duration_cast<std::chrono::duration<double>>(end - start).count();
@@ -773,8 +792,8 @@ void ILS::SplitSearch(std::vector<Solution>& solutions, List<TA>& pool, const st
 
 	}
 	
-	tempScore1 = collectScores(solutions);
-	std::cout << "Inserted " << std::to_string(counter1) << " nodes at phase 1, score: " << std::to_string(tempScore1) << std::endl;
+	// tempScore1 = collectScores(solutions);
+	// std::cout << "Inserted " << std::to_string(counter1) << " nodes at phase 1, score: " << std::to_string(tempScore1) << std::endl;
 
 	// // TODO: comment out pool.clear() at Solve function when I use this code
 	// for(size_t i = 1; i < solutions.size(); ++i){
@@ -786,7 +805,7 @@ void ILS::SplitSearch(std::vector<Solution>& solutions, List<TA>& pool, const st
 	// 			double minMaxShift = DBL_MAX;
 	// 			for(size_t k = i; k < solutions.size(); ++k){
 	// 				if(solutions[i].m_walks[j].front().maxShift < minMaxShift) {
-	// 					minMaxShift = solutions[i].m_walks[j].front().maxShift;
+	// 					minMaxShift = solutions[i].m_walks[j].front().maxShift + solutions[i].m_walks[j].front().waitDuration;
 	// 				}
 	// 			}
 	// 			TimeWindow interval = {prev_last.depTime, curr_first.depTime + minMaxShift};
@@ -948,11 +967,6 @@ std::vector<std::string> ILS::construct(Solution& sol, const Vector2D<double>& t
 		inserted_it.iter->data.depPointId = best_dep_point_id;
 		sol.m_unvisited.erase(insert_it);
 		updateTimes(*best_walk_it, inserted_it, true, travel_times, time_budget);
-
-		std::cout << "inserted ta " << inserted_it.iter->data.id << std::endl;
-		validate(*best_walk_it, travel_times, true);
-
-		std::cout << std::endl;
 	}
 	return inserted_ids;
 }
@@ -983,6 +997,7 @@ std::tuple<Walks::iterator, List<TA>::iterator, double, int, int> ILS::getBestPo
 
 		List<TA>::iterator left{ walk_it->begin() }, right{ left + 1 };
 		while(right != walk_it->end()) {
+			metrics.comparisons++;
 			arr_time = left.iter->data.depTime + travel_times[left.iter->data.depPointId][ta.point.id];
 			wait_dur = std::max(0.0, ta.timeWindow.openTime - arr_time);
 			start_of_visit_time = arr_time + wait_dur;
@@ -1007,6 +1022,7 @@ std::tuple<Walks::iterator, List<TA>::iterator, double, int, int> ILS::getBestPo
 		}
 
 		if(open){
+			metrics.comparisons++;
 			//here we check the insertion at the end of the walk
 			arr_time = left.iter->data.depTime + travel_times[left.iter->data.depPointId][ta.point.id];
 			wait_dur = std::max(0.0, ta.timeWindow.openTime - arr_time);
@@ -1073,7 +1089,6 @@ void ILS::updateMaxShifts(const List<TA>& li, const Vector2D<double>& travel_tim
 void ILS::validate(const std::vector<Solution>& sols, const Vector2D<double>& travel_times, const bool verbose){
 	for(auto sol_it = sols.begin(); sol_it != sols.end(); ++sol_it){
 		const int index = sol_it - sols.begin();
-		std::cout << "Checking solution [" << index << "]: ";
 		validate(sol_it->m_walks, travel_times, verbose);
 	}
 }
