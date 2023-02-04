@@ -249,17 +249,17 @@ void ILS::Solve(OP& op) {
 
 	// std::cout.setstate(std::ios_base::failbit);
 	
-	Graphics::myInit();
-	// Set the OpenGL display mode
-	glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB);
-	// Set the initial window size
-	glutInitWindowSize(WINDOW_WIDTH, WINDOW_HEIGHT);
-	// Create the window with the given title
-	glutCreateWindow("Best Solution");
-	glutMouseFunc(Graphics::mouseButton);
-	//Set the display callback function
-	setupDrawCallback();
-	glutReshapeFunc(Graphics::onResize);
+	// Graphics::myInit();
+	// // Set the OpenGL display mode
+	// glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB);
+	// // Set the initial window size
+	// glutInitWindowSize(WINDOW_WIDTH, WINDOW_HEIGHT);
+	// // Create the window with the given title
+	// glutCreateWindow("Best Solution");
+	// glutMouseFunc(Graphics::mouseButton);
+	// //Set the display callback function
+	// setupDrawCallback();
+	// glutReshapeFunc(Graphics::onResize);
 
 	// // Enter the GLUT main loop
 	// std::thread glutThread(glutMainLoop);
@@ -366,14 +366,14 @@ void ILS::Solve(OP& op) {
 
 	
 	
-    std::ofstream outputFile;
-    outputFile.open("output.txt", std::ios::out | std::ios::app);
-    outputFile << best_score << "\t" << std::round(elapsed_time * 1000) / 1000 << "\t" << best_solution.getVisits() << "\t" << std::endl;
-    outputFile.close();
-	std::cout << std::endl;
+    // std::ofstream outputFile;
+    // outputFile.open("output.txt", std::ios::out | std::ios::app);
+    // outputFile << best_score << "\t" << std::round(elapsed_time * 1000) / 1000 << "\t" << best_solution.getVisits() << "\t" << std::endl;
+    // outputFile.close();
+	// std::cout << std::endl;
 
 	// Wait for the GLUT thread to finish
-	glutMainLoop();
+	// glutMainLoop();
     // glutThread.join();
 }
 

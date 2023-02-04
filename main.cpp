@@ -254,7 +254,7 @@ int main(int argc, char** argv) {
 		exit(EXIT_FAILURE);
 	}
 
-	glutInit(&argc, argv);
+	// glutInit(&argc, argv);
 
 	init(folder, instance, num_of_walks, num_of_intervals, instance_type);
 
