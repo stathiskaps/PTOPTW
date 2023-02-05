@@ -10,6 +10,7 @@
 #include <cmath>
 #include <variant>
 #include <cassert>
+#include <filesystem>
 #include "Definitions.h"
 #include "ILS.h"
 #include "OP.h"
@@ -33,12 +34,11 @@ std::vector<std::string> split(const std::string& line) {
 	return tokens;
 }
 
-void init(std::string folder, std::string filename, int numRoutes, int numIntervals, InstanceType instance_type) {
+void init(std::string filepath, std::string filename, int numRoutes, int numIntervals, InstanceType instance_type, ILS::Configuration conf) {
 
 	std::vector<TA*> touristAttractions; //TODO:delete pointers
 	std::vector<Point> points;
-
-	std::string filepath = "./instances/"+folder+"/"+filename+".txt";
+	
 	std::ifstream infile(filepath);
 	std::string line;
 
@@ -137,7 +137,7 @@ void init(std::string folder, std::string filename, int numRoutes, int numInterv
 	}
 	
 
-	ILS ils = ILS(numIntervals, filename);
+	ILS ils = ILS(numIntervals, filename, conf);
 	ils.Solve(op);
 
 	for (auto p : touristAttractions) {
@@ -155,8 +155,11 @@ int main(int argc, char** argv) {
 
 	std::string folder;
 	std::string instance;
+	double execution_time_limit = 0;
 	int num_of_walks;
 	int num_of_intervals;
+	ILS::Configuration conf;
+	bool run_all = false;
 
 	int c;
 	int option_index = 0;
@@ -164,15 +167,17 @@ int main(int argc, char** argv) {
 		walks_option_provided = false, subs_option_provided = false;
 	static struct option long_options[] = {
 		{"help", no_argument, 0, 'h'},
+		{"write", no_argument, 0, 'w'},
 		{"custom", no_argument, 0, 'c'},
 		{"folder", required_argument, 0, 'f'},
 		{"instance", required_argument, 0, 'i'},
 		{"walks", required_argument, 0, 'm'},
 		{"solutions", required_argument, 0, 's'},
+		{"time", required_argument, 0, 't'},
 		{0, 0, 0, 0}
 	};
 
-	while ((c = getopt_long(argc, argv, "hcf:i:m:s:", long_options, &option_index)) != -1) {
+	while ((c = getopt_long(argc, argv, "ahwcf:i:m:s:t:", long_options, &option_index)) != -1) {
 		switch (c) {
 		case 'h': {
 			std::cout << "Please run the program with the following options: "<< std::endl <<
@@ -183,6 +188,26 @@ int main(int argc, char** argv) {
 			"Also, you can add the option -c without any arguments if you want to use custom travel times from a custom made topology" << std::endl;
 
 			return 0;
+		}
+		case 'a':{
+			run_all = true;
+			std::cout << "Will run all instances" << std::endl;
+			break;
+		}
+		case 'w': {
+			conf.write_output = true;
+			break;
+		}
+		case 't':{
+			if(optarg) {
+				conf.execution_time_limit = std::atof(optarg);
+				conf.time_limited_execution = true;
+				std::cout << "Will run ILS for " << conf.execution_time_limit << " seconds" << std::endl;
+			} else {
+				std::cerr << "Error: argument for option -t is required" << std::endl;
+				exit(EXIT_FAILURE);
+			}
+			break;
 		}
 		case 'c':{
 			std::cout << "Will use custom times" << std::endl;
@@ -256,7 +281,20 @@ int main(int argc, char** argv) {
 
 	// glutInit(&argc, argv);
 
-	init(folder, instance, num_of_walks, num_of_intervals, instance_type);
+	if(!run_all){
+		std::string filepath = "./instances/"+folder+"/"+instance+".txt";
+		init(filepath, instance, num_of_walks, num_of_intervals, instance_type, conf);
+	} else {
+		std::filesystem::path directory_path("./instances/Cordeau/");
+		for (const auto &entry : std::filesystem::directory_iterator(directory_path)){
+			if (entry.is_regular_file()) {
+				auto filename = entry.path().filename();
+				// init(entry.path().string(), filename.replace_extension().string(), num_of_walks, num_of_intervals, instance_type, conf);
+				std::cout << filename.replace_extension().string() << std::endl;
+			}
+		}
+	}
+	
 
 	return 0;
 }

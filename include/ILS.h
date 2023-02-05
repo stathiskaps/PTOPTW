@@ -43,6 +43,23 @@ using Walks = std::vector<List<TA>>;
 using Walk = List<TA>;
 
 class ILS{
+public:
+	struct Configuration{
+		bool time_limited_execution = false, write_output = false;
+		double execution_time_limit = 0;
+	};
+
+	std::vector<Solution> best_solutions;
+	Solution best_solution;
+	void draw();
+	void drawSolution(const Solution&);
+    ILS();
+	ILS(int, std::string, Configuration);
+    ~ILS();
+	void validate(const List<TA>&, const Vector2D<double>&, const bool);
+	void validate(const Walks&, const Vector2D<double>&, const bool);
+	void validate(const std::vector<Solution>&, const Vector2D<double>&, const bool);
+	void Solve(OP&);
 private:
 
 	struct Usage{
@@ -79,6 +96,7 @@ private:
 		std::vector<double> local_search;
 		double split_unvisited;
 		double shake;
+		double validation_time;
 		int final_pos, middle_pos;
 		int second_phase_counter;
 		int second_phase_window_sum;
@@ -89,6 +107,7 @@ private:
 	int mIntervalsNum;
 	std::string mInstance;
 	static ILS* currentInstance;
+	Configuration mConf;
 
 	static void drawCallback(){
 		currentInstance->draw();
@@ -131,18 +150,7 @@ private:
 
 protected:
 	Metrics metrics;
-public:
-	std::vector<Solution> best_solutions;
-	Solution best_solution;
-	void draw();
-	void drawSolution(const Solution&);
-    ILS();
-	ILS(int, std::string);
-    ~ILS();
-	void validate(const List<TA>&, const Vector2D<double>&, const bool);
-	void validate(const Walks&, const Vector2D<double>&, const bool);
-	void validate(const std::vector<Solution>&, const Vector2D<double>&, const bool);
-	void Solve(OP&);
+
 
 };
 

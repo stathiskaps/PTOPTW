@@ -2,12 +2,13 @@
 
 ILS::ILS() {}
 
-ILS::ILS(int intervalsNum, std::string instance) : mIntervalsNum(intervalsNum), mInstance(instance) {
+ILS::ILS(int intervalsNum, std::string instance, Configuration conf) : mIntervalsNum(intervalsNum), mInstance(instance), mConf(conf) {
 	metrics.local_search = std::vector<double>(intervalsNum, 0);
 	metrics.split_unvisited = 0.0;
 	metrics.shake = 0.0;
 	metrics.final_pos = 0;
 	metrics.middle_pos = 0;
+	metrics.validation_time = 0.0;
 	metrics.second_phase_counter = 0;
 	metrics.second_phase_window_sum = 0;
 	metrics.second_phase_improved = 0;
@@ -298,9 +299,17 @@ void ILS::Solve(OP& op) {
 	InitSolutions(process_solutions, intervals, op);
 	List<TA> pool = std::move(unvisited);
 	const size_t split_iteration = 10;
- 
-	while (times_not_improved < MAX_TIMES_NOT_IMPROVED) {
 
+	std::function<bool()> stopping_criterion = [&]() { return times_not_improved > MAX_TIMES_NOT_IMPROVED; };
+	if(mConf.time_limited_execution){
+		stopping_criterion = [&]() {
+			auto end = std::chrono::high_resolution_clock::now();
+			auto time_elapsed = std::chrono::duration_cast<std::chrono::seconds>(end - start);
+			return std::chrono::duration_cast<std::chrono::duration<double>>(end - start).count() >= mConf.execution_time_limit;
+    	};
+	}
+ 
+	while (!stopping_criterion()) {
 		splitUnvisitedList(process_solutions, pool, mIntervalsNum, reg, activities);
 		connectAndValidateSolutions(process_solutions, op.m_walks_num, op.mTravelTimes, time_budget);
 		SplitSearch(process_solutions, pool, intervals, op, reg);
@@ -316,7 +325,6 @@ void ILS::Solve(OP& op) {
 				sr.R = 1;
 			}
 			times_not_improved = 0;
-			// glutPostRedisplay();
 		}
 		else {
 			times_not_improved++;
@@ -338,6 +346,7 @@ void ILS::Solve(OP& op) {
 		const size_t index = walk_it - best_solution.m_walks.begin();
 		updateTimes(*walk_it, walk_it->begin(), false, op.mTravelTimes, op.mTimeWindow);
 	}
+	std::cout << mInstance << std::endl;
 	std::cout << "Best counter: " << bestCounter << std::endl;
 
 	validate(best_solution.m_walks, op.mTravelTimes, false);
@@ -365,12 +374,14 @@ void ILS::Solve(OP& op) {
 	std::cout << std::endl;
 
 	
-	
-    // std::ofstream outputFile;
-    // outputFile.open("output.txt", std::ios::out | std::ios::app);
-    // outputFile << best_score << "\t" << std::round(elapsed_time * 1000) / 1000 << "\t" << best_solution.getVisits() << "\t" << std::endl;
-    // outputFile.close();
-	// std::cout << std::endl;
+	if(mConf.write_output) {
+		std::ofstream outputFile;
+		outputFile.open("output.txt", std::ios::out | std::ios::app);
+		outputFile << mInstance << " -m " << op.m_walks_num << " -s " << mIntervalsNum << "\t" << 
+			best_score << "\t" << std::round(elapsed_time * 1000) / 1000 << "\t" << best_solution.getVisits() << "\t" << std::endl;
+		outputFile.close();
+	}
+
 
 	// Wait for the GLUT thread to finish
 	// glutMainLoop();
@@ -514,7 +525,7 @@ int ILS::Shake(Solution& sol, int& S, int& R, OP& op, const TimeWindow time_budg
 	for(auto& walk : sol.m_walks){
 		num_locations += walk.size();
 	}
-	const int max_to_remove = num_locations / (3 * sol.m_walks.size());
+	const int max_to_remove = num_locations / (2 * sol.m_walks.size());
 
 	int removed_counter = 0;
 	if (S >= minWalkSize - 2) {
@@ -1167,6 +1178,7 @@ void ILS::validate(const List<TA>& walk, const Vector2D<double>& travel_times, c
 		std::cerr << "walk is invalid: exiting.. " << std::endl;
 		std::exit(1);
 	}
+
 }
 
 void ILS::drawSolution(const Solution& sol){
