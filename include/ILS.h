@@ -88,15 +88,12 @@ private:
 		int R = 1;
 	};
 
-	struct Bounds{
-		double minLat, minLon, maxLat, maxLon;
-	};
-
 	struct Metrics{
 		std::vector<double> local_search;
 		double split_unvisited;
 		double shake;
 		double validation_time;
+		double total_execution_time;
 		int final_pos, middle_pos;
 		int second_phase_counter;
 		int second_phase_window_sum;
@@ -142,10 +139,11 @@ private:
 	std::tuple<bool, double> CandidateStartDepotIsValid(const List<TA>&, const TA&, const double, const Vector2D<double>&);
 	std::vector<Point> getTargets(const std::vector<Solution>&, const int, const OP&);
 	std::vector<TimeWindow> getIntervals(std::vector<TA>, int, double, double);
-	TA getPreviousTA(std::vector<Solution>&, const int, const size_t);
+	TA getValidPreviousTA(std::vector<Solution>&, const int, const size_t);
 	void RemoveUnfeasibleVisits(std::vector<Solution>&, const int, const size_t);
 	void connectAndValidateSolutions(const std::vector<Solution>&, size_t, const Vector2D<double>&, const TimeWindow);
 	size_t countNodes(const std::vector<Solution>& sols);
+	void printMetrics();
 	void setupDrawCallback();
 
 protected:

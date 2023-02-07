@@ -52,6 +52,7 @@ void init(std::string filepath, std::string filename, int numRoutes, int numInte
 	while (std::getline(infile, line))
 	{
 		poi_data = split(line);
+		if(poi_data.size() == 0) break;
 
 		switch (line.front()) {
 		case 'R': {
@@ -285,14 +286,30 @@ int main(int argc, char** argv) {
 		std::string filepath = "./instances/"+folder+"/"+instance+".txt";
 		init(filepath, instance, num_of_walks, num_of_intervals, instance_type, conf);
 	} else {
-		std::filesystem::path directory_path("./instances/Cordeau/");
-		for (const auto &entry : std::filesystem::directory_iterator(directory_path)){
-			if (entry.is_regular_file()) {
-				auto filename = entry.path().filename();
-				// init(entry.path().string(), filename.replace_extension().string(), num_of_walks, num_of_intervals, instance_type, conf);
-				std::cout << filename.replace_extension().string() << std::endl;
+		std::string directories[2] = {"./instances/Solomon/", "./instances/Cordeau/"};
+		for(size_t i = 0; i < 2; ++i){
+			const std::filesystem::path directory_path(directories[i]);
+			std::vector<std::filesystem::path> entries;
+			 for (const auto &entry : std::filesystem::directory_iterator(directory_path)) {
+				if (entry.is_regular_file()) {
+					entries.push_back(entry);
+				}
+			}
+			std::sort(entries.begin(), entries.end(), [](const auto &a, const auto &b) {
+				return a.filename().string() < b.filename().string();
+			});
+
+			for (const auto &entry : entries){
+				auto filename = entry.filename();
+				for(size_t j = 1; j < 5; ++j){
+					for(size_t k = 1; k < 5; ++k){
+						init(entry.string(), filename.replace_extension().string(), j, k, instance_type, conf);
+					}
+				}
 			}
 		}
+		
+		
 	}
 	
 

@@ -60,7 +60,7 @@ int Solution::getMinWalkSize() const {
     return min_size;
 }
 
-void Solution::draw(std::string tag, std::string color){
+void Solution::draw(std::string tag){
     std::string filename = tag+".svg";
     Bounds bounds;
     for(List<TA>::iterator ta_it = m_unvisited.begin(); ta_it != m_unvisited.end(); ++ta_it){
@@ -101,8 +101,6 @@ void Solution::draw(std::string tag, std::string color){
     // Open an output stream to write the SVG file
     std::ofstream out(filename);
 
-
-
     // Write the SVG file header
     out << "<svg viewBox=\"" << bounds.minLat - radius << " " << bounds.minLon - radius << " " << bounds.maxLat - bounds.minLat + radius*2 << " " << bounds.maxLon - bounds.minLon + radius*2 << "\" xmlns=\"http://www.w3.org/2000/svg\">" << std::endl;
 
@@ -117,21 +115,23 @@ void Solution::draw(std::string tag, std::string color){
 
     //Write nodes
     for(List<TA>::iterator ta_it = m_unvisited.begin(); ta_it != m_unvisited.end(); ++ta_it){
-        out << "<circle cx=\"" << ta_it.iter->data.point.pos.lat << "\" cy=\"" << ta_it.iter->data.point.pos.lon  << "\" r=\"" << radius << "\" />" << std::endl;
+        out << "<circle cx=\"" << ta_it.iter->data.point.pos.lat << "\" cy=\"" << 
+        ta_it.iter->data.point.pos.lon  << "\" r=\"" << radius << "\" fill=\"#4592DF\" />" << std::endl;
     }
     for(auto& walk : m_walks){
         for(List<TA>::iterator ta_it = walk.begin(); ta_it != walk.end(); ++ta_it){
-            out << "<circle cx=\"" << ta_it.iter->data.point.pos.lat << "\" cy=\"" << ta_it.iter->data.point.pos.lon  << "\" r=\"" << radius << "\" />" << std::endl;
+            out << "<circle cx=\"" << ta_it.iter->data.point.pos.lat << "\" cy=\"" << 
+                ta_it.iter->data.point.pos.lon  << "\" r=\"" << radius << "\" fill=\"#4592DF\" />" << std::endl;
         }
     }
 
     //Write ids
     for(List<TA>::iterator ta_it = m_unvisited.begin(); ta_it != m_unvisited.end(); ++ta_it){
-        out << "<text x=\""<< ta_it.iter->data.point.pos.lat << "\" y=\""<< ta_it.iter->data.point.pos.lon << "\" text-anchor=\"middle\" font-size=\"2px\" fill=\"white\" alignment-baseline=\"middle\">" << ta_it.iter->data.id  << "</text>" << std::endl;
+        out << "<text x=\""<< ta_it.iter->data.point.pos.lat << "\" y=\""<< ta_it.iter->data.point.pos.lon << "\" text-anchor=\"middle\" font-size=\"2px\" fill=\"white\" alignment-baseline=\"middle\">" << ta_it.iter->data.point.id  << "</text>" << std::endl;
     }
     for(auto& walk : m_walks){
         for(List<TA>::iterator ta_it = walk.begin(); ta_it != walk.end(); ++ta_it){
-            out << "<text x=\""<< ta_it.iter->data.point.pos.lat << "\" y=\""<< ta_it.iter->data.point.pos.lon << "\" text-anchor=\"middle\" font-size=\"2px\" fill=\"white\" alignment-baseline=\"middle\">" << ta_it.iter->data.id  << "</text>" << std::endl;
+            out << "<text x=\""<< ta_it.iter->data.point.pos.lat << "\" y=\""<< ta_it.iter->data.point.pos.lon << "\" text-anchor=\"middle\" font-size=\"2px\" fill=\"white\" alignment-baseline=\"middle\">" << ta_it.iter->data.point.id  << "</text>" << std::endl;
         }
     }
 

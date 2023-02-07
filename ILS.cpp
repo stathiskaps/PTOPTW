@@ -128,19 +128,6 @@ std::vector<TimeWindow> ILS::getIntervals(std::vector<TA> unvisited, int interva
 				reduce_left = std::ceil(ratio * reduce_amount / (ratio + 1)) ;
 				reduce_right = reduce_amount - reduce_left;
 			}
-			
-			// if(left_bin->count == right_bin->count){
-			// 	reduce_left = reduce_amount * 50/100;
-			// 	reduce_right = reduce_left;
-			// } else {
-			// 	if(left_bin->count < right_bin->count) {
-			// 		reduce_left = reduce_amount - (left_bin->count/right_bin->count)*reduce_amount;
-			// 		reduce_right = reduce_amount - reduce_left;
-			// 	} else {
-			// 		reduce_right = reduce_amount - ( ->count/left_bin->count)*reduce_amount;
-			// 		reduce_left = reduce_amount - reduce_right;
-			// 	}
-			// }
 		} else {
 			if(most_used_bin == bins.begin()){
 				reduce_right = reduce_amount;
@@ -265,6 +252,7 @@ void ILS::Solve(OP& op) {
 	// // Enter the GLUT main loop
 	// std::thread glutThread(glutMainLoop);
 
+	std::cout << mInstance << " -m " << op.m_walks_num << " -s " << mIntervalsNum << std::endl;
 	auto start = std::chrono::high_resolution_clock::now();
 
 	std::vector<TA> unvisitedVec;
@@ -338,7 +326,8 @@ void ILS::Solve(OP& op) {
 
 	}
 	auto end = std::chrono::high_resolution_clock::now();
-	auto elapsed_time = std::chrono::duration_cast<std::chrono::duration<double>>(end - start).count();
+	metrics.total_execution_time = std::chrono::duration_cast<std::chrono::duration<double>>(end - start).count();
+	metrics.total_execution_time = std::round(metrics.total_execution_time * 1000) / 1000;
 
 	std::cout.clear();
 	best_solution = connectSolutions(best_solutions, op.m_walks_num);
@@ -346,14 +335,25 @@ void ILS::Solve(OP& op) {
 		const size_t index = walk_it - best_solution.m_walks.begin();
 		updateTimes(*walk_it, walk_it->begin(), false, op.mTravelTimes, op.mTimeWindow);
 	}
-	std::cout << mInstance << std::endl;
-	std::cout << "Best counter: " << bestCounter << std::endl;
-
+	
 	validate(best_solution.m_walks, op.mTravelTimes, false);
+	std::cout << "Best counter: " << bestCounter << std::endl;
 	std::cout << "Best score: " << best_score << std::endl;
-	std::cout << "Visits: " << best_solution.getVisits() << std::endl;
+	std::cout << "Visits: " << best_solution.getVisits() << std::endl << std::endl;
+	
+	if(mConf.write_output) {
+		std::ofstream outputFile;
+		outputFile.open("output.txt", std::ios::out | std::ios::app);
+		outputFile << mInstance << " -m " << op.m_walks_num << " -s " << mIntervalsNum << ":\t" << 
+			best_score << ":\t" << metrics.total_execution_time << "\t" << best_solution.getVisits() << "\t" << std::endl;
+		outputFile.close();
+	}
 
-	std::cout << std::endl;
+	// Wait for the GLUT thread to finish
+	// glutMainLoop();
+}
+
+void ILS::printMetrics(){
 	std::cout << "-------------Metrics-----------------" << std::endl;
 	std::cout << "Split Local Search: " << std::endl;
 	for(size_t i = 0; i < metrics.local_search.size(); ++i){
@@ -362,30 +362,14 @@ void ILS::Solve(OP& op) {
 
 	std::cout << std::endl;
 	std::cout << "Split Unvisited List: " << metrics.split_unvisited << " seconds\n" << std::endl;
-
 	std::cout << "Shake: " << metrics.shake << " seconds\n" << std::endl;
-
 	std::cout << "Total Times middle position was best: " << metrics.middle_pos << "\n" << std::endl;
 	std::cout << "Total Times final position was best: " << metrics.final_pos << "\n" << std::endl;
-
-	std::cout << "Total execution time: " << elapsed_time << " seconds" << std::endl;
+	std::cout << "Total execution time: " << metrics.total_execution_time << " seconds" << std::endl;
 	std::cout << "Total comparisons made: " << metrics.comparisons << std::endl;
+	std::cout << "Total execution time: " << metrics.total_execution_time << std::endl;
 	std::cout << "-------------------------------------" << std::endl;
 	std::cout << std::endl;
-
-	
-	if(mConf.write_output) {
-		std::ofstream outputFile;
-		outputFile.open("output.txt", std::ios::out | std::ios::app);
-		outputFile << mInstance << " -m " << op.m_walks_num << " -s " << mIntervalsNum << "\t" << 
-			best_score << "\t" << std::round(elapsed_time * 1000) / 1000 << "\t" << best_solution.getVisits() << "\t" << std::endl;
-		outputFile.close();
-	}
-
-
-	// Wait for the GLUT thread to finish
-	// glutMainLoop();
-    // glutThread.join();
 }
 
 void ILS::gatherUnvisited(std::vector<Solution>& solutions, List<TA>& pool){
@@ -603,7 +587,7 @@ void ILS::RemoveUnfeasibleVisits(std::vector<Solution>& solutions, const int i, 
 
 //i is the solution index
 //j is the walk index
-TA ILS::getPreviousTA(std::vector<Solution>& solutions, const int i, const size_t j) {
+TA ILS::getValidPreviousTA(std::vector<Solution>& solutions, const int i, const size_t j) {
 	int prev_sol_index = i-1;
 	while(solutions[prev_sol_index].m_walks[j].empty() && prev_sol_index >= 0){
 		prev_sol_index--;
@@ -784,10 +768,9 @@ void ILS::SplitSearch(std::vector<Solution>& solutions, List<TA>& pool, const st
 
 			//Make a local search betweem current solution and previous
 			for (size_t j = 0; j < solutions[i].m_walks.size(); ++j) {
-
 				solutions[i].m_walks[j].pop_front();
 				if(!solutions[i].m_walks[j].empty()){
-					const TA prev_last = getPreviousTA(solutions, i, j);
+					const TA prev_last = getValidPreviousTA(solutions, i, j);
 					TA &curr_first = solutions[i].m_walks[j].front();
 					double start_time = std::max(prev_last.depTime+op.mTravelTimes[prev_last.point.id][curr_first.point.id], intervals[i].openTime);
 					updateTimes(solutions[i].m_walks[j], solutions[i].m_walks[j].begin(), false, op.mTravelTimes, TimeWindow{start_time, intervals[i].closeTime});
