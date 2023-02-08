@@ -130,19 +130,20 @@ private:
 	Solution connectSolutions(std::vector<Solution>&, const size_t);
 	inline int collectProfit (const List<TA>::iterator&, const List<TA>::iterator&) const;
 	void printSolution(const std::string, const Solution& sol);
-	void printSolutions(const std::string, const std::vector<Solution>& sols);
+	void printSolutions(const std::string, const std::vector<Solution>&);
 	void PrepareForShake(std::vector<Solution>&);
 	void RemoveDummyNodes(std::vector<Solution>&);
-	void InitSolutions(std::vector<Solution>&, const std::vector<TimeWindow> intervals, const OP& op);
+	void InitSolutions(std::vector<Solution>&, const std::vector<TimeWindow>, const OP&);
 	std::tuple<bool, double> CandidateStartDepotIsValid(const List<TA>&, const TA&, const double, const Vector2D<double>&);
 	std::vector<Point> getTargets(const std::vector<Solution>&, const int, const OP&);
 	std::vector<TimeWindow> getIntervals(std::vector<TA>, int, double, double);
 	TA getValidPreviousTA(std::vector<Solution>&, const int, const size_t);
 	void RemoveUnfeasibleVisits(std::vector<Solution>&, const int, const size_t);
 	void connectAndValidateSolutions(const std::vector<Solution>&, size_t, const Vector2D<double>&, const TimeWindow);
-	size_t countNodes(const std::vector<Solution>& sols);
+	size_t countNodes(const std::vector<Solution>&);
 	void printMetrics();
 	void setupDrawCallback();
+	void Correction(std::vector<Solution>&, const OP&);
 
 protected:
 	Metrics metrics;

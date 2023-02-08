@@ -191,11 +191,11 @@ void ILS::InitSolutions(std::vector<Solution>& sols, const std::vector<TimeWindo
 		updateTimes(walk, walk.begin(), false, op.mTravelTimes, intervals[0]);
 	}
 
-	for(auto& walk : last_sol->m_walks) {
-		walk.push_back(op.mEndDepot);
-		walk.back().timeWindow = TimeWindow{intervals[intervals.size()-1].openTime, intervals[intervals.size()-1].closeTime};
-		updateTimes(walk, walk.begin(), false, op.mTravelTimes, intervals[intervals.size()-1]);
-	}
+	// for(auto& walk : last_sol->m_walks) {
+	// 	walk.push_back(op.mEndDepot);
+	// 	walk.back().timeWindow = TimeWindow{intervals[intervals.size()-1].openTime, intervals[intervals.size()-1].closeTime};
+	// 	updateTimes(walk, walk.begin(), false, op.mTravelTimes, intervals[intervals.size()-1]);
+	// }
 
 }
 
@@ -464,12 +464,12 @@ void ILS::PrepareForShake(std::vector<Solution>& sols){
 				walk_it->front().id = DUMMY_ID;
 			}
 		}
+		// if(sol_it != sols.end() - 1) {
 
-		if(sol_it != sols.end() - 1) {
-			for(std::vector<List<TA>>::iterator walk_it = sol_it->m_walks.begin(); walk_it != sol_it->m_walks.end(); ++walk_it){
-				walk_it->push_back(walk_it->back());
-				walk_it->back().id = DUMMY_ID;;
-			}
+		// }
+		for(std::vector<List<TA>>::iterator walk_it = sol_it->m_walks.begin(); walk_it != sol_it->m_walks.end(); ++walk_it){
+			walk_it->push_back(walk_it->back());
+			walk_it->back().id = DUMMY_ID;;
 		}
 
 	}
@@ -660,9 +660,23 @@ std::vector<bool> ILS::AddStartDepots(std::vector<Solution>& solutions, const st
 	return added_start_depot;
 }
 
+void ILS::Correction(std::vector<Solution>& sols, const OP& op){
+	for(size_t j = 0; j < op.m_walks_num; ++j){
+		while(true){
+			for(std::vector<Solution>::iterator sol_it = sols.begin(); sol_it != sols.end(); ++sol_it){
+				for(List<TA>::iterator ta_it = sol_it->m_walks[j].begin(); ta_it != sol_it->m_walks[j].end(); ++ta_it){
+					
+				}
+			}
+		}
+
+	}
+
+}
+
 std::vector<Point> ILS::getTargets(const std::vector<Solution>& solutions, const int i, const OP& op){
 	if(last_solution){
-		return std::vector<Point>(solutions[i].m_walks.size(), Point()); //DEFAULT_POINT_ID
+		return std::vector<Point>(solutions[i].m_walks.size(), op.mEndDepot.point); //DEFAULT_POINT_ID
 	}
 
 	const int min_size = 3;
