@@ -665,7 +665,6 @@ void ILS::Correction(std::vector<Solution>& sols, const OP& op){
 		while(true){
 			for(std::vector<Solution>::iterator sol_it = sols.begin(); sol_it != sols.end(); ++sol_it){
 				for(List<TA>::iterator ta_it = sol_it->m_walks[j].begin(); ta_it != sol_it->m_walks[j].end(); ++ta_it){
-					
 				}
 			}
 		}
