@@ -59,7 +59,7 @@ public:
 	void validate(const List<TA>&, const Vector2D<double>&, const bool);
 	void validate(const Walks&, const Vector2D<double>&, const bool);
 	void validate(const std::vector<Solution>&, const Vector2D<double>&, const bool);
-	void Solve(OP&);
+	int Solve(OP&);
 private:
 
 	struct Usage{
@@ -110,8 +110,7 @@ private:
 		currentInstance->draw();
 	}
 
-	void AddStartDepots(std::vector<Solution>&, const std::vector<TimeWindow>&, const int, const OP&);
-	void AddEndDepots(std::vector<Solution>&, const std::vector<TimeWindow>&, const int, OP&);
+	std::vector<bool> AddStartDepots(std::vector<Solution>&, const std::vector<TimeWindow>&, const int, const OP&);
 	bool compareTimeWindowCenter(const List<TA>::iterator&, const List<TA>::iterator&);
 	std::tuple<Walks::iterator, List<TA>::iterator, double, int, int> getBestPos(const TA&, Walks&, const Vector2D<double>&, 
 		const std::vector<double>, const TimeWindow, const bool);
@@ -135,7 +134,6 @@ private:
 	void PrepareForShake(std::vector<Solution>&);
 	void RemoveDummyNodes(std::vector<Solution>&);
 	void InitSolutions(std::vector<Solution>&, const std::vector<TimeWindow> intervals, const OP& op);
-	std::tuple<bool, double> CandidateEndDepotIsValid(const List<TA>&, const TA, TimeWindow);
 	std::tuple<bool, double> CandidateStartDepotIsValid(const List<TA>&, const TA&, const double, const Vector2D<double>&);
 	std::vector<Point> getTargets(const std::vector<Solution>&, const int, const OP&);
 	std::vector<TimeWindow> getIntervals(std::vector<TA>, int, double, double);

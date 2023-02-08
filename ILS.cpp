@@ -233,7 +233,7 @@ size_t ILS::countNodes(const std::vector<Solution>& sols){
 	return counter;
 }
 
-void ILS::Solve(OP& op) {
+int ILS::Solve(OP& op) {
 
 	// std::cout.setstate(std::ios_base::failbit);
 	
@@ -348,6 +348,8 @@ void ILS::Solve(OP& op) {
 			best_score << ":\t" << metrics.total_execution_time << "\t" << best_solution.getVisits() << "\t" << std::endl;
 		outputFile.close();
 	}
+
+	return best_score;
 
 	// Wait for the GLUT thread to finish
 	// glutMainLoop();
@@ -563,16 +565,16 @@ bool ILS::hasWeightedCentroid(const Solution& sol, const int walk_index, const i
 	return sol.m_walks[walk_index].size() >= min_walk_size || !sol.m_unvisited.empty();
 }
 
-std::tuple<bool, double> ILS::CandidateStartDepotIsValid(const List<TA>& walk, const TA& ta, const double start_time, const Vector2D<double>& travel_times){
+std::tuple<bool, double> ILS::CandidateStartDepotIsValid(const List<TA>& walk, const TA& candidate, const double start_time, const Vector2D<double>& travel_times){
 	auto first_it = walk.begin();
-	double wait_dur = std::max(0.0, ta.timeWindow.openTime - start_time);
+	double wait_dur = std::max(0.0, candidate.timeWindow.openTime - start_time);
 	double start_of_visit_time = start_time + wait_dur;
-	double dep_time = start_of_visit_time + ta.visitDuration;
+	double dep_time = start_of_visit_time + candidate.visitDuration;
 	double shift = wait_dur
-		+ ta.visitDuration
-		+ travel_times[ta.point.id][first_it.iter->data.arrPointId];
+		+ candidate.visitDuration
+		+ travel_times[candidate.point.id][first_it.iter->data.arrPointId];
 
-	return { dep_time <= ta.timeWindow.closeTime && shift <= first_it.iter->data.maxShift, shift };
+	return { dep_time <= candidate.timeWindow.closeTime && shift <= first_it.iter->data.maxShift, shift };
 }
 
 
@@ -601,14 +603,16 @@ TA ILS::getValidPreviousTA(std::vector<Solution>& solutions, const int i, const 
 	return ta;
 }
 
-void ILS::AddStartDepots(std::vector<Solution>& solutions, const std::vector<TimeWindow>& intervals, const int i, const OP& op){
+std::vector<bool> ILS::AddStartDepots(std::vector<Solution>& solutions, const std::vector<TimeWindow>& intervals, const int i, const OP& op){
+
+	std::vector<bool> added_start_depot(op.m_walks_num, false);
 
 	TimeWindow timeBudget = TimeWindow{intervals[i].openTime, intervals[i].closeTime};
 	for (size_t j = 0; j < solutions[i].m_walks.size(); ++j) {
 		int prev_sol_index = i-1;
 		
 		if(first_solution){ //we have already added a start depot at first solution's walks
-			return;
+			return added_start_depot;
 		}
 
 		while(solutions[prev_sol_index].m_walks[j].empty() && prev_sol_index >= 0){
@@ -621,90 +625,39 @@ void ILS::AddStartDepots(std::vector<Solution>& solutions, const std::vector<Tim
 		}
 
 		TA &prev_last = solutions[prev_sol_index].m_walks[j].back();
-		TA candidate = prev_last;
-		candidate.neutralize(DUMMY_START_DEPOT);
-		candidate.timeWindow = intervals[i];
+		TA dummy = prev_last;
+		dummy.neutralize(DUMMY_START_DEPOT);
+		dummy.timeWindow = intervals[i];
+
+		bool skip = false;
 
 		//left trim invalid nodes
 		if(!solutions[i].m_walks[j].empty()) { 
 			List<TA>::iterator curr = solutions[i].m_walks[j].begin();
 			while(curr != solutions[i].m_walks[j].end()){
-				auto [valid, _] = CandidateStartDepotIsValid(solutions[i].m_walks[j], candidate, intervals[i].openTime, op.mTravelTimes);
-				if(!valid){
+				auto [valid, _] = CandidateStartDepotIsValid(solutions[i].m_walks[j], dummy, intervals[i].openTime, op.mTravelTimes);
+				if(!valid){ 
+					if(curr.iter->data.id == END_DEPOT_ID){
+						skip = true;
+						break;
+					}
 					solutions[i].m_unvisited.push_back(curr.iter->data);
 					curr = solutions[i].m_walks[j].erase(curr);
 					updateTimes(solutions[i].m_walks[j], curr, false, op.mTravelTimes, intervals[i]);
-					//TODO: check extreme occasion that dep time of the dummy depot is greater than close time of time window
 				} else {
 					break;
 				}
 			}
 		}
 
-		solutions[i].m_walks[j].push_front(candidate);
+		if(skip){
+			continue;
+		}
+		solutions[i].m_walks[j].push_front(dummy);
+		added_start_depot[j] = true;
 		updateTimes(solutions[i].m_walks[j], solutions[i].m_walks[j].begin(), false, op.mTravelTimes, intervals[i]);
 	}
-}
-
-std::tuple<bool, double> ILS::CandidateEndDepotIsValid(const List<TA>& walk, const TA candidateEndDepot, const TimeWindow timebudget){
-	double shift = candidateEndDepot.waitDuration + candidateEndDepot.visitDuration;
-	auto last_it = walk.end()-1;
-	if(walk.empty()){
-		return { timebudget.openTime + shift <= timebudget.closeTime, shift };
-	}
-	const double distance = last_it.iter->data.point.euclidean_distance(candidateEndDepot.point);
-	shift += distance;
-	return { last_it.iter->data.depTime + shift <= timebudget.closeTime, shift };
-}
-
-void ILS::AddEndDepots(std::vector<Solution>& solutions, const std::vector<TimeWindow>& intervals, const int i, OP& op){
-	const int min_size = 3;
-	TimeWindow timeBudget = TimeWindow{intervals[i].openTime, intervals[i].closeTime};
-	for (size_t j = 0; j < solutions[i].m_walks.size(); ++j) {
-		//add endpoint
-		Point candidateEndPoint, finalEndPoint;
-		TA last = solutions[i].m_walks[j].back(), endDepot;
-		std::string endPointId;
-
-		int next_sol_index = i + 1;
-		while (next_sol_index < solutions.size() && !hasWeightedCentroid(solutions[next_sol_index], j, min_size)) {
-			next_sol_index++;
-		}
-
-		if (last_solution || next_sol_index == solutions.size()) {
-			if(solutions[i].m_walks[j].back().id != op.mEndDepot.id){
-				candidateEndPoint = op.mEndDepot.point;
-			}
-		}
-		else {
-			if (solutions[next_sol_index].m_walks[j].size() > min_size) {
-				const List<TA>& next_solution_walk = solutions[next_sol_index].m_walks[j];
-				candidateEndPoint = getWeightedCentroid(next_solution_walk.at(0), next_solution_walk.at(min_size), DEFAULT_POINT_ID);
-			}
-			else {
-				candidateEndPoint = getWeightedCentroid(solutions[next_sol_index].m_unvisited.begin(), solutions[next_sol_index].m_unvisited.end(), DEFAULT_POINT_ID);
-			}
-		}
-		
-		//We should check if candidateEndPoint can be added at the end of the walk as endDepot
-		//If we use function insertionAfterIsValid, we need first to add the point to the graph and calculate
-		//the travel times for and to each other point. But we only need to know the distance between walk's last point
-		//and candidateEndPoint to figure out if the insertion is feasible. So we won't add the candidate end point in the graph.
-		const TA candidateEndDepot = TA(CANDIDATE_END_DEPOT_ID, candidateEndPoint);
-		auto [valid, _] = CandidateEndDepotIsValid(solutions[i].m_walks[j], candidateEndDepot, timeBudget);
-		if (!valid){
-			finalEndPoint = last.point.findPointWithDistance(candidateEndPoint, intervals[i].closeTime - last.depTime - 1);
-		} else {
-			finalEndPoint = candidateEndPoint;
-		}
-
-		op.AddPointToGraph(finalEndPoint); //finalEndPoint gets an id here
-		endDepot = TA(DUMMY_END_DEPOT_ID, finalEndPoint); //endDepot arrPointId and dePointId get the finalPoint.id value
-		endDepot.timeWindow = timeBudget;
-		solutions[i].m_walks[j].push_back(endDepot);
-		updateTimes(solutions[i].m_walks[j], solutions[i].m_walks[j].end() - 1, false, op.mTravelTimes, intervals[i]);
-
-	}
+	return added_start_depot;
 }
 
 std::vector<Point> ILS::getTargets(const std::vector<Solution>& solutions, const int i, const OP& op){
@@ -752,8 +705,10 @@ void ILS::SplitSearch(std::vector<Solution>& solutions, List<TA>& pool, const st
 		auto start = std::chrono::high_resolution_clock::now();
 
 		if (solutions[i].m_unvisited.empty()) continue;
+
+		std::vector<bool> added_start_depot;
 		if(i > 0) {
-			AddStartDepots(solutions, intervals, i, op);
+			added_start_depot = AddStartDepots(solutions, intervals, i, op);
 		}
 
 		std::vector<Point> targets = getTargets(solutions, i, op);
@@ -765,16 +720,19 @@ void ILS::SplitSearch(std::vector<Solution>& solutions, List<TA>& pool, const st
 		}
 
 		if (i > 0) {
-
+			
 			//Make a local search betweem current solution and previous
 			for (size_t j = 0; j < solutions[i].m_walks.size(); ++j) {
-				solutions[i].m_walks[j].pop_front();
-				if(!solutions[i].m_walks[j].empty()){
-					const TA prev_last = getValidPreviousTA(solutions, i, j);
-					TA &curr_first = solutions[i].m_walks[j].front();
-					double start_time = std::max(prev_last.depTime+op.mTravelTimes[prev_last.point.id][curr_first.point.id], intervals[i].openTime);
-					updateTimes(solutions[i].m_walks[j], solutions[i].m_walks[j].begin(), false, op.mTravelTimes, TimeWindow{start_time, intervals[i].closeTime});
+				if(added_start_depot[j]){
+					solutions[i].m_walks[j].pop_front();
+					// if(!solutions[i].m_walks[j].empty()){
+					// 	const TA prev_last = getValidPreviousTA(solutions, i, j);
+					// 	TA &curr_first = solutions[i].m_walks[j].front();
+					// 	double start_time = std::max(prev_last.depTime+op.mTravelTimes[prev_last.point.id][curr_first.point.id], intervals[i].openTime);
+					// 	updateTimes(solutions[i].m_walks[j], solutions[i].m_walks[j].begin(), false, op.mTravelTimes, TimeWindow{start_time, intervals[i].closeTime});
+					// }
 				}
+				
 			}
 		}
 

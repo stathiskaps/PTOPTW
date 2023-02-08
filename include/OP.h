@@ -13,7 +13,7 @@ private:
 	std::vector<Point> mPoints;
 	std::vector<std::vector<double>> mTravelTimes;
 	TA mStartDepot, mEndDepot;
-	int m_walks_num;
+	size_t m_walks_num;
 	TimeWindow mTimeWindow;
 
 	std::tuple<std::vector<std::vector<double>>, double> calcTravelTimes(std::vector<Point>& points);

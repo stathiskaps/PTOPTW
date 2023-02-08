@@ -34,7 +34,7 @@ std::vector<std::string> split(const std::string& line) {
 	return tokens;
 }
 
-void init(std::string filepath, std::string filename, int numRoutes, int numIntervals, InstanceType instance_type, ILS::Configuration conf) {
+int init(std::string filepath, std::string filename, int numRoutes, int numIntervals, InstanceType instance_type, ILS::Configuration conf) {
 
 	std::vector<TA*> touristAttractions; //TODO:delete pointers
 	std::vector<Point> points;
@@ -139,13 +139,15 @@ void init(std::string filepath, std::string filename, int numRoutes, int numInte
 	
 
 	ILS ils = ILS(numIntervals, filename, conf);
-	ils.Solve(op);
+	int score = ils.Solve(op);
 
 	for (auto p : touristAttractions) {
 		delete p;
 	}
 
 	touristAttractions.clear();
+
+	return score;
 
 }
 
@@ -157,8 +159,7 @@ int main(int argc, char** argv) {
 	std::string folder;
 	std::string instance;
 	double execution_time_limit = 0;
-	int num_of_walks;
-	int num_of_intervals;
+	int num_of_walks, num_of_intervals, total_score = 0;
 	ILS::Configuration conf;
 	bool run_all = false;
 
@@ -303,13 +304,15 @@ int main(int argc, char** argv) {
 				auto filename = entry.filename();
 				for(size_t j = 1; j < 5; ++j){
 					for(size_t k = 1; k < 5; ++k){
-						init(entry.string(), filename.replace_extension().string(), j, k, instance_type, conf);
+						total_score += init(entry.string(), filename.replace_extension().string(), j, k, instance_type, conf);
 					}
 				}
 			}
 		}
-		
-		
+	}
+	
+	if(run_all){
+		std::cout << "Total score: " << total_score << std::endl;
 	}
 	
 
