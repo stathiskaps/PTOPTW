@@ -110,11 +110,12 @@ private:
 		currentInstance->draw();
 	}
 
-	std::vector<bool> AddStartDepots(std::vector<Solution>&, const std::vector<TimeWindow>&, const int, const OP&);
+	void AddStartDepots(std::vector<Solution>&, const std::vector<TimeWindow>&, const int, const OP&);
 	bool compareTimeWindowCenter(const List<TA>::iterator&, const List<TA>::iterator&);
 	std::tuple<Walks::iterator, List<TA>::iterator, double, int, int> getBestPos(const TA&, Walks&, const Vector2D<double>&, 
 		const std::vector<double>, const TimeWindow, const bool);
-	void updateTimes(List<TA>&, const List<TA>::iterator&, const bool, const Vector2D<double>&, const TimeWindow);
+	void updateBasicTimes(List<TA>::iterator&, const Vector2D<double>&, const TimeWindow);
+	bool updateTimes(List<TA>&, const List<TA>::iterator&, const bool, const Vector2D<double>&, const TimeWindow);
 	void updateMaxShifts(const List<TA>&, const Vector2D<double>&, const TimeWindow);
 	std::map<std::string, std::vector<Usage>> initRegistry(List<TA>&, std::vector<TimeWindow>);
 	std::map<std::string, std::vector<double>> getActivities(List<TA>&, std::vector<TimeWindow>);
@@ -143,7 +144,8 @@ private:
 	size_t countNodes(const std::vector<Solution>&);
 	void printMetrics();
 	void setupDrawCallback();
-	void Correction(std::vector<Solution>&, const OP&);
+	void checkSolutions(std::vector<Solution>&, const OP&);
+	std::vector<std::string> fixWalk(List<TA>&, const List<TA>::iterator&, const List<TA>::iterator&, const OP&);
 
 protected:
 	Metrics metrics;

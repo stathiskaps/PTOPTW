@@ -301,6 +301,7 @@ int ILS::Solve(OP& op) {
 		splitUnvisitedList(process_solutions, pool, mIntervalsNum, reg, activities);
 		connectAndValidateSolutions(process_solutions, op.m_walks_num, op.mTravelTimes, time_budget);
 		SplitSearch(process_solutions, pool, intervals, op, reg);
+		checkSolutions(process_solutions, op);
 		connectAndValidateSolutions(process_solutions, op.m_walks_num, op.mTravelTimes, time_budget);
 		int score = collectScores(process_solutions);
 
@@ -339,6 +340,7 @@ int ILS::Solve(OP& op) {
 	validate(best_solution.m_walks, op.mTravelTimes, false);
 	std::cout << "Best counter: " << bestCounter << std::endl;
 	std::cout << "Best score: " << best_score << std::endl;
+	std::cout << "Execution time:" << metrics.total_execution_time << std::endl;
 	std::cout << "Visits: " << best_solution.getVisits() << std::endl << std::endl;
 	
 	if(mConf.write_output) {
@@ -603,16 +605,13 @@ TA ILS::getValidPreviousTA(std::vector<Solution>& solutions, const int i, const 
 	return ta;
 }
 
-std::vector<bool> ILS::AddStartDepots(std::vector<Solution>& solutions, const std::vector<TimeWindow>& intervals, const int i, const OP& op){
-
-	std::vector<bool> added_start_depot(op.m_walks_num, false);
-
+void ILS::AddStartDepots(std::vector<Solution>& solutions, const std::vector<TimeWindow>& intervals, const int i, const OP& op){
 	TimeWindow timeBudget = TimeWindow{intervals[i].openTime, intervals[i].closeTime};
 	for (size_t j = 0; j < solutions[i].m_walks.size(); ++j) {
 		int prev_sol_index = i-1;
 		
 		if(first_solution){ //we have already added a start depot at first solution's walks
-			return added_start_depot;
+			return;
 		}
 
 		while(solutions[prev_sol_index].m_walks[j].empty() && prev_sol_index >= 0){
@@ -629,18 +628,12 @@ std::vector<bool> ILS::AddStartDepots(std::vector<Solution>& solutions, const st
 		dummy.neutralize(DUMMY_START_DEPOT);
 		dummy.timeWindow = intervals[i];
 
-		bool skip = false;
-
 		//left trim invalid nodes
 		if(!solutions[i].m_walks[j].empty()) { 
 			List<TA>::iterator curr = solutions[i].m_walks[j].begin();
 			while(curr != solutions[i].m_walks[j].end()){
 				auto [valid, _] = CandidateStartDepotIsValid(solutions[i].m_walks[j], dummy, intervals[i].openTime, op.mTravelTimes);
 				if(!valid){ 
-					if(curr.iter->data.id == END_DEPOT_ID){
-						skip = true;
-						break;
-					}
 					solutions[i].m_unvisited.push_back(curr.iter->data);
 					curr = solutions[i].m_walks[j].erase(curr);
 					updateTimes(solutions[i].m_walks[j], curr, false, op.mTravelTimes, intervals[i]);
@@ -649,33 +642,14 @@ std::vector<bool> ILS::AddStartDepots(std::vector<Solution>& solutions, const st
 				}
 			}
 		}
-
-		if(skip){
-			continue;
-		}
 		solutions[i].m_walks[j].push_front(dummy);
-		added_start_depot[j] = true;
 		updateTimes(solutions[i].m_walks[j], solutions[i].m_walks[j].begin(), false, op.mTravelTimes, intervals[i]);
 	}
-	return added_start_depot;
-}
-
-void ILS::Correction(std::vector<Solution>& sols, const OP& op){
-	for(size_t j = 0; j < op.m_walks_num; ++j){
-		while(true){
-			for(std::vector<Solution>::iterator sol_it = sols.begin(); sol_it != sols.end(); ++sol_it){
-				for(List<TA>::iterator ta_it = sol_it->m_walks[j].begin(); ta_it != sol_it->m_walks[j].end(); ++ta_it){
-				}
-			}
-		}
-
-	}
-
 }
 
 std::vector<Point> ILS::getTargets(const std::vector<Solution>& solutions, const int i, const OP& op){
 	if(last_solution){
-		return std::vector<Point>(solutions[i].m_walks.size(), op.mEndDepot.point); //DEFAULT_POINT_ID
+		return std::vector<Point>(solutions[i].m_walks.size(), op.mEndDepot.point); //END_DEPOT
 	}
 
 	const int min_size = 3;
@@ -721,11 +695,11 @@ void ILS::SplitSearch(std::vector<Solution>& solutions, List<TA>& pool, const st
 
 		std::vector<bool> added_start_depot;
 		if(i > 0) {
-			added_start_depot = AddStartDepots(solutions, intervals, i, op);
+			AddStartDepots(solutions, intervals, i, op);
 		}
 
 		std::vector<Point> targets = getTargets(solutions, i, op);
-		std::vector<std::string> ids = construct(solutions[i], op.mTravelTimes, targets, intervals[i], !(last_solution));
+		std::vector<std::string> ids = construct(solutions[i], op.mTravelTimes, targets, intervals[i], true);
 		counter1 += ids.size();
 
 		for (auto& id : ids) {
@@ -736,15 +710,13 @@ void ILS::SplitSearch(std::vector<Solution>& solutions, List<TA>& pool, const st
 			
 			//Make a local search betweem current solution and previous
 			for (size_t j = 0; j < solutions[i].m_walks.size(); ++j) {
-				if(added_start_depot[j]){
-					solutions[i].m_walks[j].pop_front();
-					// if(!solutions[i].m_walks[j].empty()){
-					// 	const TA prev_last = getValidPreviousTA(solutions, i, j);
-					// 	TA &curr_first = solutions[i].m_walks[j].front();
-					// 	double start_time = std::max(prev_last.depTime+op.mTravelTimes[prev_last.point.id][curr_first.point.id], intervals[i].openTime);
-					// 	updateTimes(solutions[i].m_walks[j], solutions[i].m_walks[j].begin(), false, op.mTravelTimes, TimeWindow{start_time, intervals[i].closeTime});
-					// }
-				}
+				solutions[i].m_walks[j].pop_front();
+				// if(!solutions[i].m_walks[j].empty()){
+				// 	const TA prev_last = getValidPreviousTA(solutions, i, j);
+				// 	TA &curr_first = solutions[i].m_walks[j].front();
+				// 	double start_time = std::max(prev_last.depTime+op.mTravelTimes[prev_last.point.id][curr_first.point.id], intervals[i].openTime);
+				// 	updateTimes(solutions[i].m_walks[j], solutions[i].m_walks[j].begin(), false, op.mTravelTimes, TimeWindow{start_time, intervals[i].closeTime});
+				// }
 				
 			}
 		}
@@ -1018,27 +990,43 @@ std::tuple<Walks::iterator, List<TA>::iterator, double, int, int> ILS::getBestPo
 	return { best_walk, best_pos, min_shift, arr_point_id, dep_point_id };
 }
 
-void ILS::updateTimes(List<TA>& walk, const List<TA>::iterator& start_pos, 
+void ILS::updateBasicTimes(List<TA>::iterator& it, const Vector2D<double>& travel_times, const TimeWindow time_budget){
+	it.iter->data.arrTime = it.prev().iter->data.depTime + travel_times[it.prev().iter->data.depPointId][it.iter->data.arrPointId];
+	it.iter->data.waitDuration = std::max(0.0, it.iter->data.timeWindow.openTime - it.iter->data.arrTime);
+	it.iter->data.startOfVisitTime = it.iter->data.arrTime + it.iter->data.waitDuration;
+	it.iter->data.depTime = it.iter->data.startOfVisitTime + it.iter->data.visitDuration;
+}
+
+bool ILS::updateTimes(List<TA>& walk, const List<TA>::iterator& start_pos, 
 	const bool smart, const Vector2D<double>& travel_times, const TimeWindow time_budget) {
 	//update times first
 	List<TA>::iterator it{ start_pos };
-	if (it == walk.begin()) {
-		it.iter->data.arrTime = time_budget.openTime;
-		it.iter->data.waitDuration = std::max(0.0, it.iter->data.timeWindow.openTime - it.iter->data.arrTime);
-		it.iter->data.startOfVisitTime = it.iter->data.arrTime + it.iter->data.waitDuration;
-		it.iter->data.depTime = it.iter->data.startOfVisitTime + it.iter->data.visitDuration;
-		it++;
-	}
-	
 	while (it != walk.end()) {
-		it.iter->data.arrTime = it.iter->previous->data.depTime + travel_times[it.iter->previous->data.depPointId][it.iter->data.arrPointId];
-		it.iter->data.waitDuration = std::max(0.0, it.iter->data.timeWindow.openTime - it.iter->data.arrTime);
-		it.iter->data.startOfVisitTime = it.iter->data.arrTime + it.iter->data.waitDuration;
-		it.iter->data.depTime = it.iter->data.startOfVisitTime + it.iter->data.visitDuration;
+		if(it == walk.begin()) {
+			it.iter->data.arrTime = time_budget.openTime;
+			it.iter->data.waitDuration = std::max(0.0, it.iter->data.timeWindow.openTime - it.iter->data.arrTime);
+			it.iter->data.startOfVisitTime = it.iter->data.arrTime + it.iter->data.waitDuration;
+			it.iter->data.depTime = it.iter->data.startOfVisitTime + it.iter->data.visitDuration;
+			it.iter->data.shift = it.iter->data.waitDuration
+				+ it.iter->data.visitDuration
+				+ travel_times[it.iter->data.depPointId][it.next().iter->data.arrPointId];
+		} else if(it == walk.end()-1){
+			updateBasicTimes(it, travel_times, time_budget);
+			it.iter->data.shift = travel_times[it.prev().iter->data.depPointId][it.iter->data.arrPointId]
+				+ it.iter->data.waitDuration
+				+ it.iter->data.visitDuration;
+		} else {
+			updateBasicTimes(it, travel_times, time_budget);
+			it.iter->data.shift = travel_times[it.prev().iter->data.depPointId][it.iter->data.arrPointId]
+				+ it.iter->data.waitDuration
+				+ it.iter->data.visitDuration
+				+ travel_times[it.iter->data.depPointId][it.next().iter->data.arrPointId];
+		}
 		it++;
 	}
 
 	updateMaxShifts(walk, travel_times, time_budget);
+	return walk.back().maxShift >= 0;
 }
 
 void ILS::updateMaxShifts(const List<TA>& li, const Vector2D<double>& travel_times, const TimeWindow time_budget) {
@@ -1048,6 +1036,59 @@ void ILS::updateMaxShifts(const List<TA>& li, const Vector2D<double>& travel_tim
 	while(it != li.end()){
 		it.iter->data.maxShift = std::min(it.iter->data.timeWindow.closeTime - it.iter->data.depTime, (it + 1).iter->data.waitDuration + (it + 1).iter->data.maxShift);
 		it--;
+	}
+}
+
+bool compareByShift(const TA &a, const TA &b) {
+    return a.shift < b.shift;
+}
+
+std::vector<std::string> ILS::fixWalk(List<TA>& walk, const List<TA>::iterator& start_pos, const List<TA>::iterator& end_pos, const OP& op){
+	std::vector<std::string> remove_nodes;
+	while(!updateTimes(walk, walk.begin(), false, op.mTravelTimes, op.mTimeWindow)){
+		double minScore = DBL_MAX;
+		List<TA>::iterator remove_it = walk.end();
+		for(List<TA>::iterator it = start_pos; it != end_pos; ++it){
+			double score = pow(it.iter->data.profit, 2) / it.iter->data.shift;
+			if(score < minScore){
+				remove_it = it;
+				minScore = score;
+			}
+		}
+
+		if(remove_it != walk.end()){
+			walk.erase(remove_it);
+			remove_nodes.push_back(remove_it.iter->data.id);
+		}
+	}
+	return remove_nodes;
+}
+
+void ILS::checkSolutions(std::vector<Solution>& sols, const OP& op){
+	for(size_t j = 0; j < op.m_walks_num; ++j){
+		List<TA> walk;
+		for(auto& sol: sols){
+			walk.append(sol.m_walks[j]);
+		}
+		walk.push_back(op.mEndDepot);
+		std::vector<std::string> unvisit_ids = fixWalk(walk, walk.begin()+1, walk.end()-1, op);
+		if(unvisit_ids.empty()) {
+			continue;
+		}
+		std::sort(unvisit_ids.begin(), unvisit_ids.end());
+
+		for(auto& sol: sols){
+			for(List<TA>::iterator ta_it = sol.m_walks[j].begin(); ta_it != sol.m_walks[j].end(); ){
+				auto it = std::lower_bound(unvisit_ids.begin(), unvisit_ids.end(), ta_it.iter->data.id);
+				if(it == unvisit_ids.end()){
+					++ta_it;
+				} else if(*it == ta_it.iter->data.id) {
+					sol.m_unvisited.push_back(ta_it.iter->data);
+					ta_it = sol.m_walks[j].erase(ta_it);
+					unvisit_ids.erase(it);
+				}
+			}
+		}
 	}
 }
 

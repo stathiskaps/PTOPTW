@@ -352,6 +352,13 @@ public:
         }
     }
 
+    std::vector<T> tovec(){
+        std::vector<T> v;
+        for(Node* curr = head->next; curr != head; curr=curr->next){
+            v.push_back(*curr);
+        }
+    }
+
     template<typename Lambda>
     void foreach(Lambda func) { // or Lambda&&, which is usually better
         Node* curr = head;
@@ -406,6 +413,9 @@ public:
         iterator operator--() { iter = iter->previous; return *this; }
         iterator operator++(int) { iterator tmp = *this; ++* this; return tmp; }
         iterator operator--(int) { iterator tmp = *this; --* this; return tmp; }
+
+        iterator next() { iterator temp { *this }; return ++temp; }
+        iterator prev() { iterator temp { *this }; return --temp; }
 
         iterator operator +(const difference_type& n) const {
             iterator temp{ *this };  difference_type k{ n }; if (k > 0) while (k--)++temp; else while (k++)--temp; return temp;
