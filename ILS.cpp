@@ -301,7 +301,7 @@ int ILS::Solve(OP& op) {
 		splitUnvisitedList(process_solutions, pool, mIntervalsNum, reg, activities);
 		connectAndValidateSolutions(process_solutions, op.m_walks_num, op.mTravelTimes, time_budget);
 		SplitSearch(process_solutions, pool, intervals, op, reg);
-		checkSolutions(process_solutions, op);
+		checkSolutions(process_solutions, intervals, op);
 		connectAndValidateSolutions(process_solutions, op.m_walks_num, op.mTravelTimes, time_budget);
 		int score = collectScores(process_solutions);
 
@@ -1031,6 +1031,8 @@ bool ILS::updateTimes(List<TA>& walk, const List<TA>::iterator& start_pos,
 
 void ILS::updateMaxShifts(const List<TA>& li, const Vector2D<double>& travel_times, const TimeWindow time_budget) {
 	List<TA>::iterator it{ li.end() - 1 };
+	//TODO: write in documentation that maxShift of last node depends not only to its window but also to time budget
+	//cause now the last node isn't the endDepot of the problem
 	it.iter->data.maxShift = std::min(it.iter->data.timeWindow.closeTime - it.iter->data.depTime, time_budget.closeTime - it.iter->data.depTime);
 	it--;
 	while(it != li.end()){
@@ -1043,9 +1045,9 @@ bool compareByShift(const TA &a, const TA &b) {
     return a.shift < b.shift;
 }
 
-std::vector<std::string> ILS::fixWalk(List<TA>& walk, const List<TA>::iterator& start_pos, const List<TA>::iterator& end_pos, const OP& op){
+std::vector<std::string> ILS::fixWalk(List<TA>& walk, const List<TA>::iterator& start_pos, const List<TA>::iterator& end_pos, const OP& op, TimeWindow time_budget){
 	std::vector<std::string> remove_nodes;
-	while(!updateTimes(walk, walk.begin(), false, op.mTravelTimes, op.mTimeWindow)){
+	while(!updateTimes(walk, walk.begin(), false, op.mTravelTimes, time_budget)){
 		double minScore = DBL_MAX;
 		List<TA>::iterator remove_it = walk.end();
 		for(List<TA>::iterator it = start_pos; it != end_pos; ++it){
@@ -1057,44 +1059,59 @@ std::vector<std::string> ILS::fixWalk(List<TA>& walk, const List<TA>::iterator& 
 		}
 
 		if(remove_it != walk.end()){
-			walk.erase(remove_it);
 			remove_nodes.push_back(remove_it.iter->data.id);
+			walk.erase(remove_it);
 		}
 	}
 	return remove_nodes;
 }
 
-void ILS::checkSolutions(std::vector<Solution>& sols, const OP& op){
+void ILS::checkSolutions(std::vector<Solution>& sols,  const std::vector<TimeWindow>& intervals, const OP& op){
+	TimeWindow custom_budget = {op.mTimeWindow.openTime, op.mTimeWindow.closeTime/2};
+	Vector2D<bool> modified;
+	for(size_t j = 0; j < op.m_walks_num; ++j){
+		modified.push_back(std::vector<bool>(sols.size(), false));
+	}
 	for(size_t j = 0; j < op.m_walks_num; ++j){
 		List<TA> walk;
 		for(auto& sol: sols){
 			walk.append(sol.m_walks[j]);
 		}
 		walk.push_back(op.mEndDepot);
-		std::vector<std::string> unvisit_ids = fixWalk(walk, walk.begin()+1, walk.end()-1, op);
+		std::vector<std::string> unvisit_ids = fixWalk(walk, walk.begin()+1, walk.end()-1, op, custom_budget);
 		if(unvisit_ids.empty()) {
 			continue;
 		}
 		std::sort(unvisit_ids.begin(), unvisit_ids.end());
 
-		for(auto& sol: sols){
-			for(List<TA>::iterator ta_it = sol.m_walks[j].begin(); ta_it != sol.m_walks[j].end(); ){
+		for(size_t i = 0; i < sols.size(); ++i){
+			bool modified;
+			for(List<TA>::iterator ta_it = sols[i].m_walks[j].begin(); ta_it != sols[i].m_walks[j].end(); ){
 				auto it = std::lower_bound(unvisit_ids.begin(), unvisit_ids.end(), ta_it.iter->data.id);
-				if(it == unvisit_ids.end()){
-					++ta_it;
-				} else if(*it == ta_it.iter->data.id) {
-					sol.m_unvisited.push_back(ta_it.iter->data);
-					ta_it = sol.m_walks[j].erase(ta_it);
+				if(*it == ta_it.iter->data.id){
+					sols[i].m_unvisited.push_back(ta_it.iter->data);
+					ta_it = sols[i].m_walks[j].erase(ta_it);
 					unvisit_ids.erase(it);
+					modified = true;
+					if(unvisit_ids.empty()) goto done;
+				} else {
+					++ta_it;
 				}
 			}
+			if(modified){
+				updateTimes(sols[i].m_walks[j], sols[i].m_walks[j].begin(), false, op.mTravelTimes, intervals[i]);
+			}
 		}
+
+		done:
+		continue;
 	}
 }
 
 void ILS::validate(const std::vector<Solution>& sols, const Vector2D<double>& travel_times, const bool verbose){
 	for(auto sol_it = sols.begin(); sol_it != sols.end(); ++sol_it){
 		const int index = sol_it - sols.begin();
+		std::cout << "Validating solution " << index << std::endl;
 		validate(sol_it->m_walks, travel_times, verbose);
 	}
 }
