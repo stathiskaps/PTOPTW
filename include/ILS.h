@@ -145,7 +145,7 @@ private:
 	void printMetrics();
 	void setupDrawCallback();
 	void checkSolutions(std::vector<Solution>&,  const std::vector<TimeWindow>& intervals, const OP&);
-	std::vector<std::string> fixWalk(List<TA>&, const List<TA>::iterator&, const List<TA>::iterator&, const OP&, TimeWindow time_budget);
+	std::vector<std::string> fixWalk(List<TA>&, const OP&, TimeWindow time_budget);
 
 protected:
 	Metrics metrics;
