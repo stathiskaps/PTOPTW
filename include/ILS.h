@@ -49,16 +49,11 @@ public:
 		double execution_time_limit = 0;
 	};
 
-	std::vector<Solution> best_solutions;
-	Solution best_solution;
 	void draw();
 	void drawSolution(const Solution&);
     ILS();
 	ILS(int, std::string, Configuration);
     ~ILS();
-	void validate(const List<TA>&, const Vector2D<double>&, const bool);
-	void validate(const Walks&, const Vector2D<double>&, const bool);
-	void validate(const std::vector<Solution>&, const Vector2D<double>&, const bool);
 	int Solve(OP&);
 private:
 
@@ -105,6 +100,8 @@ private:
 	std::string mInstance;
 	static ILS* currentInstance;
 	Configuration mConf;
+	std::vector<Solution> best_solutions;
+	Solution best_solution;
 
 	static void drawCallback(){
 		currentInstance->draw();
@@ -140,12 +137,16 @@ private:
 	std::vector<TimeWindow> getIntervals(std::vector<TA>, int, double, double);
 	TA getValidPreviousTA(std::vector<Solution>&, const int, const size_t);
 	void RemoveUnfeasibleVisits(std::vector<Solution>&, const int, const size_t);
-	void connectAndValidateSolutions(const std::vector<Solution>&, size_t, const Vector2D<double>&, const TimeWindow);
+	void connectAndValidateSolutions(const std::vector<Solution>&, const OP&);
 	size_t countNodes(const std::vector<Solution>&);
 	void printMetrics();
 	void setupDrawCallback();
 	void checkSolutions(std::vector<Solution>&,  const std::vector<TimeWindow>& intervals, const OP&);
 	std::vector<std::string> fixWalk(List<TA>&, const OP&, TimeWindow time_budget);
+	void validateDirectedSolution(const Solution&, const OP& op, const bool);
+	void validateTimes(const std::vector<Solution>&, const Vector2D<double>&, const bool);
+	void validateTimes(const Solution&, const Vector2D<double>&, const bool);
+	void validateTimes(const List<TA>&, const Vector2D<double>&, const bool);
 
 protected:
 	Metrics metrics;

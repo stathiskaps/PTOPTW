@@ -36,7 +36,7 @@ std::vector<std::string> split(const std::string& line) {
 
 int init(std::string filepath, std::string filename, int numRoutes, int numIntervals, InstanceType instance_type, ILS::Configuration conf) {
 
-	std::vector<TA*> touristAttractions; //TODO:delete pointers
+	std::vector<TA> touristAttractions; //TODO:delete pointers
 	std::vector<Point> points;
 	
 	std::ifstream infile(filepath);
@@ -64,7 +64,7 @@ int init(std::string filepath, std::string filename, int numRoutes, int numInter
 			points.push_back(edge1);
 			points.push_back(edge2);
 
-			touristAttractions.push_back(new Route(
+			touristAttractions.push_back(Route(
 				id::generate(),
 				p,
 				edge1,
@@ -90,7 +90,7 @@ int init(std::string filepath, std::string filename, int numRoutes, int numInter
 			if (poi_data[0].empty()) {
 				Point p = Point(pointId++, std::stod(poi_data[2]), std::stod(poi_data[3]));
 				points.push_back(p);
-				touristAttractions.push_back(new Sight(
+				touristAttractions.push_back(Sight(
 					id::generate(),
 					p,
 					std::stoi(poi_data[4]),
@@ -101,7 +101,7 @@ int init(std::string filepath, std::string filename, int numRoutes, int numInter
 			} else {
 				Point p = Point(pointId++, std::stod(poi_data[1]), std::stod(poi_data[2]));
 				points.push_back(p);
-				touristAttractions.push_back(new Sight(
+				touristAttractions.push_back(Sight(
 					id::generate(),
 					p,
 					std::stoi(poi_data[3]),
@@ -116,8 +116,8 @@ int init(std::string filepath, std::string filename, int numRoutes, int numInter
 
 	}
 
-	TA start_depot(*touristAttractions[0]);
-	TA end_depot(*touristAttractions[0]);
+	TA start_depot(touristAttractions[0]);
+	TA end_depot(touristAttractions[0]);
 	start_depot.id = START_DEPOT_ID;
 	end_depot.id = END_DEPOT_ID;
 	touristAttractions.erase(touristAttractions.begin());
@@ -141,11 +141,11 @@ int init(std::string filepath, std::string filename, int numRoutes, int numInter
 	ILS ils = ILS(numIntervals, filename, conf);
 	int score = ils.Solve(op);
 
-	for (auto p : touristAttractions) {
-		delete p;
-	}
+	// for (auto p : touristAttractions) {
+	// 	delete p;
+	// }
 
-	touristAttractions.clear();
+	// touristAttractions.clear();
 
 	return score;
 

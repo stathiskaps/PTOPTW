@@ -15,12 +15,15 @@ ILS::ILS(int intervalsNum, std::string instance, Configuration conf) : mInterval
 	metrics.comparisons = 0;
 }
 
-ILS::~ILS() {}
+ILS::~ILS() {
+	best_solutions.clear();
+}
 
 std::map<std::string, std::vector<double>> ILS::getActivities(List<TA>& unvisited, std::vector<TimeWindow> intervals){
 	std::map<std::string, std::vector<double>> activities;
 	for(auto& n : unvisited) {
 		std::vector<double> durations;
+		durations.reserve(intervals.size());
 		for(auto& i : intervals) {
 			double active_dur = std::min(i.closeTime, n.timeWindow.closeTime) - std::max(i.openTime, n.timeWindow.openTime);
 			if (active_dur < 0) active_dur = 0;
@@ -152,6 +155,7 @@ std::map<std::string, std::vector<ILS::Usage>> ILS::initRegistry(List<TA>& unvis
 
 	for(auto& n : unvisited){
 		std::vector<ILS::Usage> usages;
+		usages.reserve(intervals.size());
 		for(auto &i : intervals){
 			usages.push_back(Usage());
 		}
@@ -199,15 +203,23 @@ void ILS::InitSolutions(std::vector<Solution>& sols, const std::vector<TimeWindo
 
 }
 
-void ILS::connectAndValidateSolutions(const std::vector<Solution>& solutions, size_t walks_num, const Vector2D<double>& travel_times, const TimeWindow time_budget){
-	for (size_t i = 0; i < walks_num; ++i) {
+void ILS::connectAndValidateSolutions(const std::vector<Solution>& solutions, const OP& op){
+	Solution temp;
+	for(auto& sol : solutions){
+		temp.m_unvisited.append(sol.m_unvisited);
+	}
+
+	for (size_t i = 0; i < op.m_walks_num; ++i) {
 		List<TA> walk;
 		for (auto& s : solutions) {
 			walk.append(s.m_walks[i]);
 		}
-		updateTimes(walk, walk.begin(), false, travel_times, time_budget);
-		validate(walk, travel_times, false);
+		updateTimes(walk, walk.begin(), false, op.mTravelTimes, op.mTimeWindow);
+		temp.m_walks.push_back(walk);
+		//TODO: destroy temp
 	}
+
+	validateDirectedSolution(temp, op, false);
 }
 
 ILS* g_CurrentInstance;
@@ -255,16 +267,16 @@ int ILS::Solve(OP& op) {
 	std::cout << mInstance << " -m " << op.m_walks_num << " -s " << mIntervalsNum << std::endl;
 	auto start = std::chrono::high_resolution_clock::now();
 
-	std::vector<TA> unvisitedVec;
-	List<TA> unvisited;
-	for (auto ta : op.mAttractions) {
-		unvisited.push_back(*ta);
-		unvisitedVec.push_back(*ta);
-	}
+	List<TA> unvisited(op.mAttractions);
+
+	// for (auto ta : op.mAttractions) {
+	// 	unvisited.push_back(*ta);
+	// 	unvisitedVec.push_back(*ta);
+	// }
 
 	const TimeWindow time_budget{op.mStartDepot.timeWindow.openTime, op.mEndDepot.timeWindow.closeTime};
 
-	std::vector<TimeWindow> intervals = getIntervals(unvisitedVec, mIntervalsNum, op.mStartDepot.timeWindow.openTime, op.mEndDepot.timeWindow.closeTime);
+	std::vector<TimeWindow> intervals = getIntervals(op.mAttractions, mIntervalsNum, op.mStartDepot.timeWindow.openTime, op.mEndDepot.timeWindow.closeTime);
 	const std::map<std::string, std::vector<double>> activities = getActivities(unvisited, intervals);
 	std::map<std::string, std::vector<ILS::Usage>> reg = initRegistry(unvisited, intervals); 
 
@@ -299,17 +311,17 @@ int ILS::Solve(OP& op) {
  
 	while (!stopping_criterion()) {
 		splitUnvisitedList(process_solutions, pool, mIntervalsNum, reg, activities);
-		connectAndValidateSolutions(process_solutions, op.m_walks_num, op.mTravelTimes, time_budget);
+		connectAndValidateSolutions(process_solutions, op);
 		SplitSearch(process_solutions, pool, intervals, op, reg);
 		checkSolutions(process_solutions, intervals, op);
-		connectAndValidateSolutions(process_solutions, op.m_walks_num, op.mTravelTimes, time_budget);
+		connectAndValidateSolutions(process_solutions, op);
 		int score = collectScores(process_solutions);
 
 		if (score > best_score) {
 			bestCounter = counter;
 			best_score = score;
 			best_solutions = process_solutions;
-			validate(best_solutions, op.mTravelTimes, false);
+			validateTimes(best_solutions, op.mTravelTimes, false);
 			for(auto& sr : shake_settings){
 				sr.R = 1;
 			}
@@ -337,7 +349,7 @@ int ILS::Solve(OP& op) {
 		updateTimes(*walk_it, walk_it->begin(), false, op.mTravelTimes, op.mTimeWindow);
 	}
 	
-	validate(best_solution.m_walks, op.mTravelTimes, false);
+	validateDirectedSolution(best_solution, op, false);
 	std::cout << "Best counter: " << bestCounter << std::endl;
 	std::cout << "Best score: " << best_score << std::endl;
 	std::cout << "Execution time:" << metrics.total_execution_time << std::endl;
@@ -351,6 +363,7 @@ int ILS::Solve(OP& op) {
 		outputFile.close();
 	}
 
+	process_solutions.clear();
 	return best_score;
 
 	// Wait for the GLUT thread to finish
@@ -721,7 +734,7 @@ void ILS::SplitSearch(std::vector<Solution>& solutions, List<TA>& pool, const st
 			}
 		}
 
-		validate(solutions[i].m_walks, op.mTravelTimes, false);
+		validateTimes(solutions[i], op.mTravelTimes, false);
 
 		auto end = std::chrono::high_resolution_clock::now();
 		auto elapsed_time = std::chrono::duration_cast<std::chrono::duration<double>>(end - start).count();
@@ -999,6 +1012,7 @@ void ILS::updateBasicTimes(List<TA>::iterator& it, const Vector2D<double>& trave
 
 bool ILS::updateTimes(List<TA>& walk, const List<TA>::iterator& start_pos, 
 	const bool smart, const Vector2D<double>& travel_times, const TimeWindow time_budget) {
+	if(walk.empty()) return true;
 	//update times first
 	List<TA>::iterator it{ start_pos };
 	while (it != walk.end()) {
@@ -1007,9 +1021,14 @@ bool ILS::updateTimes(List<TA>& walk, const List<TA>::iterator& start_pos,
 			it.iter->data.waitDuration = std::max(0.0, it.iter->data.timeWindow.openTime - it.iter->data.arrTime);
 			it.iter->data.startOfVisitTime = it.iter->data.arrTime + it.iter->data.waitDuration;
 			it.iter->data.depTime = it.iter->data.startOfVisitTime + it.iter->data.visitDuration;
-			it.iter->data.shift = it.iter->data.waitDuration
+			if(it.next() != walk.end()){
+				it.iter->data.shift = it.iter->data.waitDuration
 				+ it.iter->data.visitDuration
 				+ travel_times[it.iter->data.depPointId][it.next().iter->data.arrPointId];
+			} else {
+				it.iter->data.shift = it.iter->data.waitDuration + it.iter->data.visitDuration;
+			}
+			
 		} else if(it == walk.end()-1){
 			updateBasicTimes(it, travel_times, time_budget);
 			it.iter->data.shift = travel_times[it.prev().iter->data.depPointId][it.iter->data.arrPointId]
@@ -1077,7 +1096,7 @@ void ILS::checkSolutions(std::vector<Solution>& sols,  const std::vector<TimeWin
 			walk.append(sol.m_walks[j]);
 		}
 		walk.push_back(op.mEndDepot);
-		std::vector<std::string> unvisit_ids = fixWalk(walk, op, op.mTimeWindow);
+		std::vector<std::string> unvisit_ids = fixWalk(walk, op, custom_budget);
 		if(unvisit_ids.empty()) {
 			continue;
 		}
@@ -1106,24 +1125,57 @@ void ILS::checkSolutions(std::vector<Solution>& sols,  const std::vector<TimeWin
 		}
 
 		done:
-		continue;
+		walk.destroy();
+	}
+	
+}
+
+void ILS::validateDirectedSolution(const Solution& solution, const OP& op, const bool verbose){
+	std::vector<std::string> v1;
+	for(auto& ta : solution.m_unvisited){
+		v1.push_back(ta.id);
+	}
+
+	for(auto& walk : solution.m_walks){
+		for(auto& ta : walk){
+			v1.push_back(ta.id);
+		}
+	}
+
+	v1.erase(std::remove(v1.begin(), v1.end(), op.mStartDepot.id), v1.end());
+	v1.erase(std::remove(v1.begin(), v1.end(), op.mEndDepot.id), v1.end());
+
+	std::vector<std::string> v2;
+	for(auto& ta : op.mAttractions){
+		v2.push_back(ta.id);
+	}
+
+	std::sort(v1.begin(), v1.end());
+	std::sort(v2.begin(), v2.end());
+
+	if(v1.size() != v2.size()){
+		throw std::runtime_error("Solution has different size of nodes than the problem");
+	}
+
+	for(auto& walk : solution.m_walks){
+		validateTimes(walk, op.mTravelTimes, verbose);
 	}
 }
 
-void ILS::validate(const std::vector<Solution>& sols, const Vector2D<double>& travel_times, const bool verbose){
+void ILS::validateTimes(const Solution& sol, const Vector2D<double>& travel_times, const bool verbose) {
+	for(auto walk_it = sol.m_walks.begin(); walk_it != sol.m_walks.end(); ++walk_it){
+		validateTimes(*walk_it, travel_times, verbose);
+	}
+}
+
+void ILS::validateTimes(const std::vector<Solution>& sols, const Vector2D<double>& travel_times, const bool verbose){
 	for(auto sol_it = sols.begin(); sol_it != sols.end(); ++sol_it){
 		const int index = sol_it - sols.begin();
-		validate(sol_it->m_walks, travel_times, verbose);
+		validateTimes(*sol_it, travel_times, verbose);
 	}
 }
 
-void ILS::validate(const std::vector<List<TA>>& walks, const Vector2D<double>& travel_times, const bool verbose) {
-	for (auto& walk : walks) {
-		validate(walk, travel_times, verbose);
-	}
-}
-
-void ILS::validate(const List<TA>& walk, const Vector2D<double>& travel_times, const bool verbose) {
+void ILS::validateTimes(const List<TA>& walk, const Vector2D<double>& travel_times, const bool verbose) {
 	if(verbose){
 		walk.print("validating walk", verbose);
 	}
