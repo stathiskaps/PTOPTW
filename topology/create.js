@@ -77,47 +77,40 @@ const VISIT_TIMES = [20, 23, 14, 13, 17, 30, 19, 10, 18];
 const SCORES = [6, 7, 10, 12, 13, 16, 18, 19, 21];
 
 const writeSights = (points, writeStream) => {
-    let pointId = 1;
-    const depot = `0 37.97616 23.73530 0 0 0 0 ${TimeBudget.openTime} ${TimeBudget.closeTime}`;
-    writeStream.write(`${depot}\n`);
-    
-    for(const [k, v] of Object.entries(points)) {
-        for(const point of v){
-            const timeWindow = TIME_WINDOWS[getRandom(0, 8)];
-            const visitTime = VISIT_TIMES[getRandom(0, 8)];
-            const profit = getRandom(5, 20);
-            const lat = (+point.lat).toFixed(5);
-            const lon = (+point.lon).toFixed(5);
-            const sight = `${pointId++} ${lat} ${lon} ${profit} ${visitTime} 0 0 ${timeWindow.startTime} ${timeWindow.endTime}`;
-            console.log(`Writing node: ${sight}`);
-            writeStream.write(`${sight}\n`);
-        }
+    let pointId = 0;
+   
+    const depotPoint = points[0];
+    const poiPoints = points.slice(1);
 
+    const depot = `${pointId++} ${depotPoint.lat} ${depotPoint.lon} 0 0 0 0 ${TimeBudget.openTime} ${TimeBudget.closeTime}`;
+    console.log(`Writing depot: ${depot}`);
+    writeStream.write(`${depot}\n`); 
+
+    for(const point of poiPoints) {
+        const timeWindow = TIME_WINDOWS[getRandom(0, 8)];
+        const visitTime = VISIT_TIMES[getRandom(0, 8)];
+        const profit = getRandom(5, 20);
+        const lat = (+point.lat).toFixed(5);
+        const lon = (+point.lon).toFixed(5);
+        const sight = `${pointId++} ${lat} ${lon} ${profit} ${visitTime} 0 0 ${timeWindow.startTime} ${timeWindow.endTime}`;
+        console.log(`Writing node: ${sight}`);
+        writeStream.write(`${sight}\n`);
     }
 }
 
 const writeRoutes = async(points, writeStream) => {
-    let pool = [];
-    for(const [k, v] of Object.entries(points)){
-        pool.push(...v);
-    }
     let routeId = 0;
-    for(const [i, pointX] of pool.entries()){
-        for(const [j,pointY] of pool.entries()){
-            const {valid, duration} = await getRoute(pointX, pointY);
+    for(let i = 0; i < points.length; ++i){
+        for(let j = 0; j < points.length; j++){
+            const {valid, duration} = await getRoute(points[i], points[j]);
             if(!valid){
-                console.log(`invalid route for points ${JSON.stringify(pointX)} and ${JSON.stringify(pointY)}`);
+                console.log(`invalid route for points ${JSON.stringify(points[i])} and ${JSON.stringify(points[j])}`);
                 process.exit()
             }
             const route = `D ${routeId++} ${i} ${j} ${duration}`;
             writeStream.write(`${route}\n`);
         }
     }
-
-    // const file = fs.createWriteStream('AthensRoutes.txt');
-    // file.on('error', (error) => { console.log(error) });
-    // routes.forEach(v => { file.write(v.join(', ') + '\n'); });
-    // file.end();
 }
 
 function inside(point, polygon) {
@@ -145,23 +138,22 @@ const create = async () => {
     const data = fs.readFileSync('./athens_box.geojson', 'utf8');
     const geojson = JSON.parse(data);
     const polygon = geojson.features[0].geometry.coordinates[0];
-    let pois = {};
-    const validPois = {}; 
-    let totalValidPoints = 0;
+    let totalPoints = {};
+    let totalValidPoints = [{lat: 37.97616, lon: 23.73530}]; 
 
     const dir = "./pois";
     fs.readdirSync(dir).forEach(filename => {
         const content = xlsx.parse(`${dir}/${filename}`);
         let points = content[0].data.map(x => {return {lat: x[3], lon: x[2]}});
-        points = points.slice(0, 4);
-        pois[filename.split(".")[0]] = points;
+        points = points.slice(0, 2);
+        totalPoints[filename.split(".")[0]] = points;
     });
 
-    for(const [k, v] of Object.entries(pois)) {
-        validPois[k] = v.filter(x => {
+    for(const [k, v] of Object.entries(totalPoints)) {
+        const validPoints = v.filter(x => {
             return inside(x, polygon);
         });
-        totalValidPoints += validPois[k].length;
+        totalValidPoints.push(...validPoints);
     }
     
     writeStream.on('finish', () => {
@@ -171,12 +163,11 @@ const create = async () => {
         console.error(`Error while writing routes: ${pathName} => ${err}`)
     });
 
-    writeStream.write(`${totalValidPoints} ${totalValidPoints * totalValidPoints}\n`);
+    writeStream.write(`${totalValidPoints.length} ${totalValidPoints.length * totalValidPoints.length}\n`);
     writeStream.write(`0 0\n`);
 
-    await writeSights(validPois, writeStream);
-
-    await writeRoutes(validPois, writeStream);
+    await writeSights(totalValidPoints, writeStream);
+    await writeRoutes(totalValidPoints, writeStream);
     
     writeStream.end();
 }
