@@ -313,8 +313,20 @@ public:
     void pop_back() { erase(--end()); };
     void push_back(const T& d) { insert(end(), d); }
 
-    
+    void emplace_back(List<T> other, iterator n) {
+        n.iter->next->previous = n.iter->previous;
+        n.iter->previous->next = n.iter->next;
+        
+        n.iter->previous = head->previous;
+        n.iter->next = head;
 
+        head->previous->next = n.iter;
+        head->previous = n.iter;
+
+        other.numberOfElements--;
+        numberOfElements++;
+    }
+    
     void resize(size_t count, const T& value) {
         if (numberOfElements < count)
             for (size_t i{ numberOfElements }; i < count; ++i)
@@ -332,11 +344,27 @@ public:
                 pop_back();
     }
 
-    //this can be improved by implementing a vector's emplace_back function
     void append(const List<T>& li) {
         for (List<T>::iterator it = li.begin(); it != li.end(); ++it) {
             push_back(it.iter->data);
         }
+    }
+
+    void append(List&& other){
+        if(other.empty()) return;
+
+        numberOfElements += other.numberOfElements;
+        head->previous->next = other.head->next;
+        other.head->next->previous = head->previous;
+
+        head->previous = other.head->previous;
+        other.head->previous->next = head;
+
+        other.head->next = nullptr;
+        other.head->previous = nullptr;
+        delete other.head;
+
+        other.init();
     }
 
     void swap(List& other) { std::swap(head, other.head); std::swap(numberOfElements, other.numberOfElements); }

@@ -363,7 +363,6 @@ int ILS::Solve(OP& op) {
 		outputFile.close();
 	}
 
-	process_solutions.clear();
 	return best_score;
 
 	// Wait for the GLUT thread to finish
@@ -390,10 +389,8 @@ void ILS::printMetrics(){
 }
 
 void ILS::gatherUnvisited(std::vector<Solution>& solutions, List<TA>& pool){
-	// pool.clear();
 	for(auto& sol : solutions){
-		pool.append(sol.m_unvisited);
-		sol.m_unvisited.clear();
+		pool.append(std::move(sol.m_unvisited));
 	}
 }
 
@@ -407,19 +404,20 @@ std::vector<List<TA>> ILS::splitUnvisitedList(std::vector<Solution>& solutions, 
 
 	std::vector<List<TA>> lists(intervals_num, List<TA>());
 	//Split Unvisited
-	for (auto& ta : pool) {
-		const double total_duration{ ta.timeWindow.closeTime - ta.timeWindow.openTime };
+	for (List<TA>::iterator ta_it = pool.begin(), next_ta; ta_it != pool.end(); ta_it = next_ta) {
+		next_ta = ta_it.next();
+		const double total_duration{ ta_it.iter->data.timeWindow.closeTime - ta_it.iter->data.timeWindow.openTime };
 		double max_score{ -1 };
 
-		if(reg[ta.id].size() != activities[ta.id].size()){
+		if(reg[ta_it.iter->data.id].size() != activities[ta_it.iter->data.id].size()){
 			throw std::runtime_error("vectors are not of equal size");
 		}
 
 		double best_score = DBL_MIN;
-		std::vector<ILS::Usage>::iterator best_it{ reg[ta.id].end() };
+		std::vector<ILS::Usage>::iterator best_it{ reg[ta_it.iter->data.id].end() };
 		std::vector<ILS::Usage>::iterator usage_it;
 		std::vector<double>::iterator duratio_it;
-		for(usage_it = reg[ta.id].begin(), duratio_it = activities[ta.id].begin(); usage_it != reg[ta.id].end() ; ++usage_it, ++duratio_it){
+		for(usage_it = reg[ta_it.iter->data.id].begin(), duratio_it = activities[ta_it.iter->data.id].begin(); usage_it != reg[ta_it.iter->data.id].end() ; ++usage_it, ++duratio_it){
 			double score = *duratio_it * (usage_it->solved / static_cast<double>(usage_it->imported));
 			// double score = *duratio_it;
 			if (score>best_score){
@@ -427,17 +425,17 @@ std::vector<List<TA>> ILS::splitUnvisitedList(std::vector<Solution>& solutions, 
 				best_it = usage_it;
 			}
 		}
-		if(best_it == reg[ta.id].end()){
-			throw std::runtime_error("didn't find a good interval for node " + ta.id);
+		if(best_it == reg[ta_it.iter->data.id].end()){
+			throw std::runtime_error("didn't find a good interval for node " + ta_it.iter->data.id);
 		}
 
-		const int index = best_it - reg[ta.id].begin();
-		solutions.at(index).m_unvisited.push_back(ta);
-		reg[ta.id].at(index).imported += 1;
+		const int index = best_it - reg[ta_it.iter->data.id].begin();
+		solutions.at(index).m_unvisited.emplace_back(pool, ta_it);
+		
+		reg[ta_it.iter->data.id].at(index).imported += 1;
 	}
 
-	//check if i can implement emplace back instead of creating new object
-	pool.clear();
+	//TODO:check if i can implement emplace back instead of creating new object and clearing the pool
 
 	auto end = std::chrono::high_resolution_clock::now();
 	auto elapsed_time = std::chrono::duration_cast<std::chrono::duration<double>>(end - start).count();
@@ -454,6 +452,7 @@ Solution ILS::connectSolutions(std::vector<Solution>& sols, const size_t walks_n
 	for (size_t i = 0; i < walks_num; ++i) {
 		List<TA> walk;
 		for (auto& s : sols) {
+			//TODO: check if emplace back can be implemented here
 			walk.append(s.m_walks[i]);
 			s.m_walks[i].clear();
 		}
@@ -1096,7 +1095,7 @@ void ILS::checkSolutions(std::vector<Solution>& sols,  const std::vector<TimeWin
 			walk.append(sol.m_walks[j]);
 		}
 		walk.push_back(op.mEndDepot);
-		std::vector<std::string> unvisit_ids = fixWalk(walk, op, custom_budget);
+		std::vector<std::string> unvisit_ids = fixWalk(walk, op, op.mTimeWindow);
 		if(unvisit_ids.empty()) {
 			continue;
 		}
@@ -1125,7 +1124,7 @@ void ILS::checkSolutions(std::vector<Solution>& sols,  const std::vector<TimeWin
 		}
 
 		done:
-		walk.destroy();
+		continue;
 	}
 	
 }
