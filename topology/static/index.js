@@ -15,9 +15,21 @@ for (var i = 0; i < points.length; i++) {
     L.marker(point).addTo(map);
 }
 
-var circle = L.circle([37.97616, 23.7353], {
-    color: 'red',
-    fillColor: '#f03',
-    fillOpacity: 0.5,
-    radius: 500
-}).addTo(map);
+var coords = [
+    [37.97616, 23.7353],
+    [37.97964, 23.72449],
+    [38.00183, 23.82721]
+];
+
+// Create a polyline with the latlngs array and add it to the map
+var polyline = L.polyline(coords, {color: 'red'}).addTo(map);
+
+// Zoom the map to fit the polyline
+map.fitBounds(polyline.getBounds());
+
+// var circle = L.circle([37.97616, 23.7353], {
+//     color: 'red',
+//     fillColor: '#f03',
+//     fillOpacity: 0.5,
+//     radius: 500
+// }).addTo(map);
