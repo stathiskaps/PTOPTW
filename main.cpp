@@ -281,7 +281,7 @@ int main(int argc, char** argv) {
 		exit(EXIT_FAILURE);
 	}
 
-	glutInit(&argc, argv);
+	// glutInit(&argc, argv);
 
 	if(!run_all){
 		std::string filepath = "./instances/"+folder+"/"+instance+".txt";
