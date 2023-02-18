@@ -4,7 +4,9 @@
 #include "List.h"
 #include "Custom.h"
 #include <fstream>
+#include "nlohmann/json.hpp"
 
+using json = nlohmann::json;
 
 class Solution {
 
@@ -29,7 +31,7 @@ public:
 	int getMinWalkSize() const;
 	void draw(std::string);
 	void print(std::string, const bool verbose);
-
+	void output();
 
 
 };

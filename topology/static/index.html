@@ -3,10 +3,29 @@
   <head>
     <title>Map Example</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <link rel="stylesheet" href="index.css"/>
+    
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.js"></script>
+    <!-- <script src="https://cdn.jsdelivr.net/leaflet.symbol/2.0.0/leaflet-symbol.js"></script> -->
+
+
+
     <style>
       #mapid {
         height: 1080px;
+      }
+
+      .arrow-icon {
+          width: 14px;
+          height: 14px;
+      }
+
+      .arrow-icon > div {
+          margin-left: -1px;
+          margin-top: -3px;
+          transform-origin: center center;
+          font: 12px/1.5 "Helvetica Neue", Arial, Helvetica, sans-serif;
       }
     </style>
   </head>

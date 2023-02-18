@@ -142,4 +142,49 @@ void Solution::draw(std::string tag){
     out.close();
 }
 
+void Solution::output(){
+    json output;
+
+    for (const auto& ta : m_unvisited) {
+        json node_json = {
+            {"id", ta.id},
+            {"lat", ta.point.pos.lat},
+            {"lon", ta.point.pos.lon}
+        };
+        json window_json = {
+            {"open", ta.timeWindow.openTime},
+            {"close", ta.timeWindow.closeTime}
+        };
+        node_json["time_window"] = window_json;
+        node_json["profit"] = ta.profit;
+        output["unvisited"].push_back(node_json);
+    }
+
+    output["walks"] = json::array();
+    for (const auto& walk : m_walks) {
+        json walk_json = json::array();
+        for (const auto& ta : walk) {
+            json node_json = {
+                {"id", ta.id},
+                {"lat", ta.point.pos.lat},
+                {"lon", ta.point.pos.lon}
+            };
+            json window_json = {
+                {"open", ta.timeWindow.openTime},
+                {"close", ta.timeWindow.closeTime}
+            };
+            node_json["time_window"] = window_json;
+            node_json["profit"] = ta.profit;
+            walk_json.push_back(node_json);
+        }
+        output["walks"].push_back(walk_json);
+    }
+
+    // std::cout << output.dump(2) << std::endl;
+
+    std::ofstream o("../topology/static/solution.json");
+    o << std::setw(4) << output << std::endl;
+
+}
+
 

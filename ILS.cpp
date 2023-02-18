@@ -363,6 +363,8 @@ int ILS::Solve(OP& op) {
 		outputFile.close();
 	}
 
+	best_solution.output();
+
 	// Wait for the GLUT thread to finish
 	// glutMainLoop();
 
@@ -849,7 +851,7 @@ std::vector<std::string> ILS::construct(Solution& sol, const Vector2D<double>& t
 		return inserted_ids;
 	}
 
-	double min_shift{}, max_score{ DBL_MIN }, score{};
+	double best_pos_score{}, max_score{ DBL_MIN }, score{};
 	int best_arr_point_id{ DEFAULT_POINT_ID }, best_dep_point_id{ DEFAULT_POINT_ID }, 
 		arr_point_id{ DEFAULT_POINT_ID }, dep_point_id{ DEFAULT_POINT_ID };
 	Walks::iterator best_walk_it;
@@ -878,9 +880,9 @@ std::vector<std::string> ILS::construct(Solution& sol, const Vector2D<double>& t
 		curr = sol.m_unvisited.begin();
 
 		while (curr != sol.m_unvisited.end()) {
-			min_shift = DBL_MAX;
+			best_pos_score = DBL_MAX;
 			std::vector<double> dists = distances[curr.iter->data.point.id];
-			auto [walk_it, pos, min_shift, arr_point_id, dep_point_id] = getBestPos(curr.iter->data, sol.m_walks, travel_times, dists, time_budget, open);
+			auto [walk_it, pos, best_pos_score, arr_point_id, dep_point_id] = getBestPos(curr.iter->data, sol.m_walks, travel_times, dists, time_budget, open);
 			//default value of walk_it is sol.m_walks.end()
 			//default value of pos is sol.m_walks.front().end()
 			//if these iterators have these values then insertion is infeasible
@@ -892,7 +894,9 @@ std::vector<std::string> ILS::construct(Solution& sol, const Vector2D<double>& t
 
 			const int walk_index = walk_it - sol.m_walks.begin();
 			const double distance_to_target = distances[curr.iter->data.depPointId].at(walk_index);
-			score = pow(curr.iter->data.profit, 2) / min_shift;	//score = profit^2/ minShifti
+			const size_t best_pos_index = pos - walk_it->begin();
+			const size_t total_pos = walk_it->size();
+			score = pow(curr.iter->data.profit, 2) / best_pos_score;	//score = profit^2/ minShifti
 
 			//check each score 
 			if (max_score < score){ 
@@ -929,7 +933,7 @@ std::tuple<Walks::iterator, List<TA>::iterator, double, int, int> ILS::getBestPo
 	Walks::iterator best_walk{ walks.end() };
 	List<TA>::iterator best_pos{ walks.front().end()};
 	int arr_point_id{ DEFAULT_POINT_ID }, dep_point_id{ DEFAULT_POINT_ID };
-	double min_shift{ DBL_MAX };
+	double min_score{ DBL_MAX };
 
 	for (Walks::iterator walk_it = walks.begin(); walk_it != walks.end(); ++walk_it) {
 		if (walk_it->empty()) {
@@ -940,7 +944,7 @@ std::tuple<Walks::iterator, List<TA>::iterator, double, int, int> ILS::getBestPo
 		const size_t walk_index = walk_it - walks.begin();
 		const double distance_to_next_target = distances[walk_index];
 
-		double arr_time{}, wait_dur{}, start_of_visit_time{}, dep_time{}, shift{};
+		double arr_time{}, wait_dur{}, start_of_visit_time{}, dep_time{}, shift{}, pos_score{};
 
 		const size_t possible_positions { walk_it->size() };
 		int temp_arr_point_id{ DEFAULT_POINT_ID }, temp_dep_point_id{ DEFAULT_POINT_ID }, pos_counter{};
@@ -957,14 +961,13 @@ std::tuple<Walks::iterator, List<TA>::iterator, double, int, int> ILS::getBestPo
 				+ wait_dur
 				+ ta.visitDuration
 				+ travel_times[ta.point.id][right.iter->data.arrPointId]
-				- travel_times[left.iter->data.depPointId][right.iter->data.arrPointId]
-				+ distance_to_next_target * (insertion_pos_index/possible_positions);
-
+				- travel_times[left.iter->data.depPointId][right.iter->data.arrPointId];
+			pos_score = shift + distance_to_next_target * (insertion_pos_index/possible_positions);
 			if(dep_time <= ta.timeWindow.closeTime && shift <= right.iter->data.maxShift + right.iter->data.waitDuration) {
-				if (shift < min_shift) {
-					best_walk = walk_it; 
+				if (pos_score < min_score) {
+					best_walk = walk_it;
 					best_pos = right;
-					min_shift = shift;
+					min_score = pos_score;
 					arr_point_id = ta.point.id;
 					dep_point_id = ta.point.id;
 				}
@@ -981,16 +984,15 @@ std::tuple<Walks::iterator, List<TA>::iterator, double, int, int> ILS::getBestPo
 			dep_time = start_of_visit_time + ta.visitDuration;
 			shift = travel_times[left.iter->data.depPointId][ta.point.id]
 				+ wait_dur
-				+ ta.visitDuration
-				+ distance_to_next_target * (insertion_pos_index/possible_positions);
-
+				+ ta.visitDuration;
+			pos_score = shift + distance_to_next_target * (insertion_pos_index/possible_positions);
 
 			if(dep_time <= ta.timeWindow.closeTime && dep_time <= time_budget.closeTime) {
-				if (shift < min_shift) {
+				if (pos_score < min_score) {
 					metrics.final_pos++;
 					best_walk = walk_it; 
 					best_pos = right;
-					min_shift = shift;
+					min_score = pos_score;
 					arr_point_id = ta.point.id;
 					dep_point_id = ta.point.id;
 				} else {
@@ -998,10 +1000,9 @@ std::tuple<Walks::iterator, List<TA>::iterator, double, int, int> ILS::getBestPo
 				}
 			}
 		}
-		
 	}
 
-	return { best_walk, best_pos, min_shift, arr_point_id, dep_point_id };
+	return { best_walk, best_pos, min_score, arr_point_id, dep_point_id };
 }
 
 void ILS::updateBasicTimes(List<TA>::iterator& it, const Vector2D<double>& travel_times, const TimeWindow time_budget){

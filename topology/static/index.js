@@ -8,24 +8,61 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 18,
 }).addTo(map);
 
-// Iterate through your array of points and add a marker for each point
-var points = [[37.97616, 23.7353], [37.97964, 23.72449], [38.00183, 23.82721], [37.98310, 23.71775]];
-for (var i = 0; i < points.length; i++) {
-    var point = points[i];
-    L.marker(point).addTo(map);
+const readFile = async () => {
+    const response = await fetch('http://localhost:8001/solution.json');
+    const solution = await response.json();
+    let coords = [];
+
+    var unvisitedIcon = new L.Icon({
+        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-grey.png',
+        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+        iconSize: [25, 41],
+        iconAnchor: [12, 41],
+        popupAnchor: [1, -34],
+        shadowSize: [41, 41]
+    });
+
+    if(solution.unvisited){
+        for(const u of solution.unvisited){
+            const point = [u.lat, u.lon];
+            const html = `
+            <div>${u.profit} : [${u.time_window.open} - ${u.time_window.close}]</div>
+            `;
+            L.marker(point, { icon: unvisitedIcon} ).addTo(map);
+            L.marker(point, { icon: L.divIcon({
+                html: html,
+                className: 'text-below-marker',
+            })}).addTo(map);
+        }
+    }
+
+    if(solution.walks){
+        for(const walk of solution.walks){
+            for(const ta of walk){
+                const point = [ta.lat, ta.lon];
+                coords.push(point);
+
+                const html = `
+                <div>${ta.profit} : [${ta.time_window.open} - ${ta.time_window.close}]</div>
+                `;
+                L.marker(point).addTo(map);
+                L.marker(point, { icon: L.divIcon({
+                    html: html,
+                    className: 'text-below-marker',
+                })}).addTo(map);
+            }
+        }
+    }
+
+    var polyline = L.polyline(coords, {color: '#4592DF'}).addTo(map);
+
+    // Zoom the map to fit the polyline
+    map.fitBounds(polyline.getBounds());
+
 }
 
-var coords = [
-    [37.97616, 23.7353],
-    [37.97964, 23.72449],
-    [38.00183, 23.82721]
-];
+readFile();
 
-// Create a polyline with the latlngs array and add it to the map
-var polyline = L.polyline(coords, {color: 'red'}).addTo(map);
-
-// Zoom the map to fit the polyline
-map.fitBounds(polyline.getBounds());
 
 // var circle = L.circle([37.97616, 23.7353], {
 //     color: 'red',
