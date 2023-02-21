@@ -8,6 +8,24 @@ var topology = {
     routes: [],
 };
 
+const TimeBudget = {openTime: 0, closeTime: 760};
+
+const TIME_WINDOWS = [
+    {startTime: 540, endTime: 960},
+    {startTime: 720, endTime: 900},
+    {startTime: 600, endTime: 1200},
+    {startTime: 720, endTime: 1080},
+    {startTime: 600, endTime: 1080},
+    {startTime: 400, endTime: 700},
+    {startTime: 300, endTime: 770},
+    {startTime: 200, endTime: 700},
+    {startTime: 550, endTime: 840},
+];
+
+const VISIT_TIMES = [20, 23, 14, 13, 17, 30, 19, 10, 18];
+
+const SCORES = [6, 7, 10, 12, 13, 16, 18, 19, 21];
+
 class BoundingBox {
     constructor(botLat, topLat, leftLon, rightLon){
         this.botLat = botLat;
@@ -28,9 +46,6 @@ getRandom = (min, max) => {
     return Math.floor(Math.random() * (max - min + 1) + min);
 }
 
-var found = 0;
-var notFound = 0;
-
 const getRoute = async({lat:latX, lon:lonX}, {lat:latY, lon:lonY}) => {
 
     if(latX == latY && lonX == lonY) {
@@ -41,7 +56,7 @@ const getRoute = async({lat:latX, lon:lonX}, {lat:latY, lon:lonY}) => {
         fromPlace:`${latX}, ${lonX}`,
         toPlace:`${latY}, ${lonY}`,
         time:'7:54pm',
-        date:'12-31-2022',
+        date:'12-31-2023',
         mode:'CAR_PICKUP',
         arriveBy:'false',
         wheelchair:'false',
@@ -49,10 +64,8 @@ const getRoute = async({lat:latX, lon:lonX}, {lat:latY, lon:lonY}) => {
         locale:'en'
     };
 
-    console.log(params);
-
     const res = await axios.get('http://localhost:8080/otp/routers/default/plan',{ params });
-
+    console.log({params})
     // console.log(res)
     const {data:{plan: {itineraries}}} = res;
     if(itineraries?.length > 0){
@@ -64,23 +77,28 @@ const getRoute = async({lat:latX, lon:lonX}, {lat:latY, lon:lonY}) => {
     return {valid: false, duration:0, path: []};
 }
 
-const TimeBudget = {openTime: 0, closeTime: 760};
+const writeRoutes = async(points, writeStream) => {
+    let routeId = 0;
+    let counter = 0, total = points.length*points.length;
+    for(let i = 0; i < points.length; ++i){
+        for(let j = 0; j < points.length; j++){
+            console.log(`Requesting route from ${JSON.stringify(points[i])} to ${JSON.stringify(points[j])}`)
+            const {valid, duration, path} = await getRoute(points[i], points[j]);
+            if(!valid){
+                console.log(`invalid route for points ${JSON.stringify(points[i])} and ${JSON.stringify(points[j])}`);
+                process.exit()
+            }
+            console.log(`Got route ${counter+=1} of ${total}`);
+            const route = `D ${routeId++} ${i} ${j} ${duration}`;
 
-const TIME_WINDOWS = [
-    {startTime: 540, endTime: 960},
-    {startTime: 720, endTime: 900},
-    {startTime: 600, endTime: 1200},
-    {startTime: 720, endTime: 1080},
-    {startTime: 600, endTime: 1080},
-    {startTime: 400, endTime: 700},
-    {startTime: 300, endTime: 770},
-    {startTime: 200, endTime: 700},
-    {startTime: 550, endTime: 840},
-];
+            const r = {id: routeId, from: i, to: j, duration, path};
+            topology.routes.push(r);
+            writeStream.write(`${route}\n`);
+        }
+    }
+}
 
-const VISIT_TIMES = [20, 23, 14, 13, 17, 30, 19, 10, 18];
 
-const SCORES = [6, 7, 10, 12, 13, 16, 18, 19, 21];
 
 const writeSights = (points, writeStream) => {
     let pointId = 0;
@@ -88,9 +106,12 @@ const writeSights = (points, writeStream) => {
     const depotPoint = points[0];
     const poiPoints = points.slice(1);
 
-    const depot = `${pointId++} ${depotPoint.lat} ${depotPoint.lon} 0 0 0 0 ${TimeBudget.openTime} ${TimeBudget.closeTime}`;
-    console.log(`Writing depot: ${depot}`);
+    const depot = `${pointId} ${depotPoint.lat} ${depotPoint.lon} 0 0 0 0 ${TimeBudget.openTime} ${TimeBudget.closeTime}`;
+    // console.log(`Writing depot: ${depot}`);
     writeStream.write(`${depot}\n`); 
+
+    const depotNode = {id: pointId, lat: parseFloat(depotPoint.lat), lon: parseFloat(depotPoint.lon), visit_time: 0, profit: 0, time_window:{start_time: TimeBudget.openTime, end_time: TimeBudget.closeTime}};
+    topology.nodes.push(depotNode);
 
     for(const point of poiPoints) {
         const timeWindow = TIME_WINDOWS[getRandom(0, 8)];
@@ -100,29 +121,11 @@ const writeSights = (points, writeStream) => {
         const lon = (+point.lon).toFixed(5);
         const sight = `${pointId++} ${lat} ${lon} ${visitTime} ${profit} 0 0 ${timeWindow.startTime} ${timeWindow.endTime}`;
 
-        console.log(`Writing node: ${sight}`);
+        // console.log(`Writing node: ${sight}`);
         writeStream.write(`${sight}\n`);
 
-        const node = {id: pointId, lat: parseFloat(lat), lon: parseFloat(lon), visit_time: visitTime, profit, time_window:{start_time: timeWindow.startTime, end_time: timeWindow.endTime}};
+        const node = {id: pointId, lat: parseFloat(lat), lon: parseFloat(lon), visit_time: visitTime, profit, time_window:{start_time: timeWindow.startTime, end_time: timeWindow.endTime}, category: point.category};
         topology.nodes.push(node);
-    }
-}
-
-const writeRoutes = async(points, writeStream) => {
-    let routeId = 0;
-    for(let i = 0; i < points.length; ++i){
-        for(let j = 0; j < points.length; j++){
-            const {valid, duration, path} = await getRoute(points[i], points[j]);
-            if(!valid){
-                console.log(`invalid route for points ${JSON.stringify(points[i])} and ${JSON.stringify(points[j])}`);
-                process.exit()
-            }
-            const route = `D ${routeId++} ${i} ${j} ${duration}`;
-
-            const r = {id: routeId, from: i, to: j, duration, path};
-            topology.routes.push(r);
-            writeStream.write(`${route}\n`);
-        }
     }
 }
 
@@ -157,8 +160,8 @@ const create = async () => {
     const dir = "./pois";
     fs.readdirSync(dir).forEach(filename => {
         const content = xlsx.parse(`${dir}/${filename}`);
-        let points = content[0].data.map(x => {return {lat: x[3], lon: x[2]}});
-        points = points.slice(0, 1);
+        let points = content[0].data.map(x => {return {lat: x[3], lon: x[2], category: filename.split(".")[0]}});
+        points = points.slice(0, 10);
         totalPoints[filename.split(".")[0]] = points;
     });
 
@@ -182,8 +185,6 @@ const create = async () => {
     await writeSights(totalValidPoints, writeStream);
     
     await writeRoutes(totalValidPoints, writeStream);
-
-    console.log(topology);
 
     const outputFilename = "./topology.json";
     fs.writeFile(outputFilename, JSON.stringify(topology, null, 4), function(err) {

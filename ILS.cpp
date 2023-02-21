@@ -346,6 +346,7 @@ int ILS::Solve(OP& op) {
 	best_solution = connectSolutions(best_solutions, op.m_walks_num);
 	for(auto walk_it = best_solution.m_walks.begin(); walk_it != best_solution.m_walks.end(); ++walk_it){
 		const size_t index = walk_it - best_solution.m_walks.begin();
+		walk_it->push_back(op.mEndDepot);
 		updateTimes(*walk_it, walk_it->begin(), false, op.mTravelTimes, op.mTimeWindow);
 	}
 	

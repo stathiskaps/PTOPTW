@@ -147,7 +147,7 @@ void Solution::output(){
 
     for (const auto& ta : m_unvisited) {
         json node_json = {
-            {"id", ta.id},
+            {"id", ta.point.id},
             {"lat", ta.point.pos.lat},
             {"lon", ta.point.pos.lon}
         };
@@ -165,7 +165,7 @@ void Solution::output(){
         json walk_json = json::array();
         for (const auto& ta : walk) {
             json node_json = {
-                {"id", ta.id},
+                {"id", ta.point.id},
                 {"lat", ta.point.pos.lat},
                 {"lon", ta.point.pos.lon}
             };
@@ -182,7 +182,7 @@ void Solution::output(){
 
     // std::cout << output.dump(2) << std::endl;
 
-    std::ofstream o("../topology/static/solution.json");
+    std::ofstream o("../topology/solution.json");
     o << std::setw(4) << output << std::endl;
 
 }

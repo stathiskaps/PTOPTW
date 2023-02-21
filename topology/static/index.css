@@ -1,10 +1,46 @@
 .text-below-marker {
-    
-    top: -30px;
-    left: 20px;
-    text-align: center;
-    min-height: 1em;
-    font-size: 16px;
-    font-weight: bold;
-    white-space:nowrap;
-  }
+  top: -40px;
+  left: 20px;
+  text-align: center;
+  min-height: 1em;
+  font-size: 16px;
+  font-weight: bold;
+  white-space:nowrap;
+}
+
+.metadata{
+  background: #f1f1f1;
+  border-radius: 4px;
+  border: 1px solid #000;
+  opacity: .6;
+  width: fit-content;
+}
+
+.metadata.in{
+  background: #4592DF;
+}
+
+.leaflet-popup-close-button {
+  display: none;
+}
+
+.leaflet-control.legend{
+  font-size: 18px;
+  background: rgba(104, 104, 104, 0.5);
+  border-radius: 4px;
+  color: #fff;
+  padding: 10px 20px 10px 20px;
+}
+
+.leaflet-control.legend table td, .leaflet-control.legend table th{
+  border:none;
+  text-align:center;
+}
+
+.leaflet-control.legend ul {
+  display: flex;
+  flex-direction: column;
+  flex-wrap: wrap;
+  list-style: none;
+  padding-left: 0;
+}

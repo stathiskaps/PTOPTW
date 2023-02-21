@@ -49,71 +49,103 @@ int init(std::string filepath, std::string filename, int numRoutes, int numInter
 	int pointId = 0;
 	std::vector<RouteDuration> durations;
 
-	while (std::getline(infile, line))
-	{
-		poi_data = split(line);
-		if(poi_data.size() == 0) break;
+	if(instance_type == custom){
 
-		switch (line.front()) {
-		case 'R': {
-			Point p = Point(pointId++, std::stod(poi_data[2]), std::stod(poi_data[3]));
-			Point edge1 = Point(pointId++, std::stod(poi_data[4]), std::stod(poi_data[5]));
-			Point edge2 = Point(pointId++, std::stod(poi_data[6]), std::stod(poi_data[7]));
+		std::ifstream i("../topology/topology.json");
+		json j;
+		i >> j;
+		
+		json nodes = j["nodes"];
+		json routes = j["routes"];
 
+		for(auto& node : nodes){
+			Point p = Point(pointId++, node["lat"], node["lon"]);
 			points.push_back(p);
-			points.push_back(edge1);
-			points.push_back(edge2);
-
-			touristAttractions.push_back(Route(
+			json timeWindow = node["time_window"];
+			touristAttractions.push_back(Sight(
 				id::generate(),
 				p,
-				edge1,
-				edge2,
-				std::stoi(poi_data[8]),
-				std::stoi(poi_data[9]),
-				std::stoi(poi_data[12 + std::stoi(poi_data[11])]),
-				std::stoi(poi_data[13 + std::stoi(poi_data[11])])
+				node["visit_time"],
+				node["profit"],
+				timeWindow["start_time"],
+				timeWindow["end_time"]
 			));
-			break;
-		}
-		case 'D': {
-			int id = std::stoi(poi_data[1]), from = std::stoi(poi_data[2]), to = std::stoi(poi_data[3]);
-			double duration = std::stod(poi_data[4]);
-			durations.push_back(RouteDuration{id, from , to, duration});
-			break;
-		}
-		case '#': {
-			continue;
-			break;
-		}
-		default: {
-			if (poi_data[0].empty()) {
-				Point p = Point(pointId++, std::stod(poi_data[2]), std::stod(poi_data[3]));
-				points.push_back(p);
-				touristAttractions.push_back(Sight(
-					id::generate(),
-					p,
-					std::stoi(poi_data[4]),
-					std::stoi(poi_data[5]),
-					std::stoi(poi_data[8 + std::stoi(poi_data[7])]),
-					std::stoi(poi_data[9 + std::stoi(poi_data[7])])
-				));
-			} else {
-				Point p = Point(pointId++, std::stod(poi_data[1]), std::stod(poi_data[2]));
-				points.push_back(p);
-				touristAttractions.push_back(Sight(
-					id::generate(),
-					p,
-					std::stoi(poi_data[3]),
-					std::stoi(poi_data[4]),
-					std::stoi(poi_data[7 + std::stoi(poi_data[6])]),
-					std::stoi(poi_data[8 + std::stoi(poi_data[6])])
-				));
-			}
-			break;
-		}
 		}
 
+		for(auto& route : routes){
+			int id = route["id"], from = route["from"], to = route["to"];
+			double duration = route["duration"];
+			durations.push_back(RouteDuration{id, from , to, duration});
+		}
+		
+	} else {
+
+		while (std::getline(infile, line))
+		{
+			poi_data = split(line);
+			if(poi_data.size() == 0) break;
+
+			switch (line.front()) {
+			case 'R': {
+				Point p = Point(pointId++, std::stod(poi_data[2]), std::stod(poi_data[3]));
+				Point edge1 = Point(pointId++, std::stod(poi_data[4]), std::stod(poi_data[5]));
+				Point edge2 = Point(pointId++, std::stod(poi_data[6]), std::stod(poi_data[7]));
+
+				points.push_back(p);
+				points.push_back(edge1);
+				points.push_back(edge2);
+
+				touristAttractions.push_back(Route(
+					id::generate(),
+					p,
+					edge1,
+					edge2,
+					std::stoi(poi_data[8]),
+					std::stoi(poi_data[9]),
+					std::stoi(poi_data[12 + std::stoi(poi_data[11])]),
+					std::stoi(poi_data[13 + std::stoi(poi_data[11])])
+				));
+				break;
+			}
+			case 'D': {
+				int id = std::stoi(poi_data[1]), from = std::stoi(poi_data[2]), to = std::stoi(poi_data[3]);
+				double duration = std::stod(poi_data[4]);
+				durations.push_back(RouteDuration{id, from , to, duration});
+				break;
+			}
+			case '#': {
+				continue;
+				break;
+			}
+			default: {
+				if (poi_data[0].empty()) {
+					Point p = Point(pointId++, std::stod(poi_data[2]), std::stod(poi_data[3]));
+					points.push_back(p);
+					touristAttractions.push_back(Sight(
+						id::generate(),
+						p,
+						std::stoi(poi_data[4]),
+						std::stoi(poi_data[5]),
+						std::stoi(poi_data[8 + std::stoi(poi_data[7])]),
+						std::stoi(poi_data[9 + std::stoi(poi_data[7])])
+					));
+				} else {
+					Point p = Point(pointId++, std::stod(poi_data[1]), std::stod(poi_data[2]));
+					points.push_back(p);
+					touristAttractions.push_back(Sight(
+						id::generate(),
+						p,
+						std::stoi(poi_data[3]),
+						std::stoi(poi_data[4]),
+						std::stoi(poi_data[7 + std::stoi(poi_data[6])]),
+						std::stoi(poi_data[8 + std::stoi(poi_data[6])])
+					));
+				}
+				break;
+			}
+			}
+
+		}
 	}
 
 	TA start_depot(touristAttractions[0]);
@@ -280,6 +312,9 @@ int main(int argc, char** argv) {
 		std::cerr << "Error: Option -s is required" << std::endl;
 		exit(EXIT_FAILURE);
 	}
+
+
+
 
 	// glutInit(&argc, argv);
 
