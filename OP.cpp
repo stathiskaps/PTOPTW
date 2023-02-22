@@ -10,7 +10,7 @@ OP::~OP() {
 OP::OP(std::vector<TA> attractions, std::vector<Point> points, 
 	TA startDepot, TA endDepot, int walksNum, 
 	double startTime, double endTime) : mAttractions(attractions), mPoints(points), m_walks_num(walksNum) {
-	std::tuple<std::vector<std::vector<double>>, double> tuple = calcTravelTimes(points); //TODO: delete pointer
+	std::tuple<std::vector<std::vector<double>>, double> tuple = calcTravelTimes(points);
 	mTravelTimes = std::get<0>(tuple);
 	mStartDepot = startDepot;
 	mEndDepot = endDepot;

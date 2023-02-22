@@ -27,7 +27,7 @@ public:
 	Solution(TA, TA, List<TA>, size_t);
 
 	int getScores() const;
-	int getVisits();
+	size_t getVisits(size_t);
 	int getMinWalkSize() const;
 	void draw(std::string);
 	void print(std::string, const bool verbose);

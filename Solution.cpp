@@ -1,5 +1,7 @@
 #include "Solution.h"
 
+
+
 Solution::Solution(){}
 Solution::~Solution(){
     m_unvisited.clear();
@@ -46,9 +48,11 @@ int Solution::getScores() const{
     return sum;
 }
 
-int Solution::getVisits(){
-    int visits{};
-    for (auto& w : m_walks) visits += w.size() - 1;
+size_t Solution::getVisits(size_t decrement){
+    size_t visits{};
+    for (auto& w : m_walks) {
+        visits += w.size() - decrement;
+    }
     return visits;
 }
 

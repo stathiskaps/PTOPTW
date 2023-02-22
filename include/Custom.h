@@ -8,8 +8,6 @@
 #include <vector>
 #include <string>
 
-#define DEFAULT_ID "d"
-
 // Type trait helper to identify iterators --------------------------------------------------------
 template<typename T, typename = void>
 struct is_iterator { static constexpr bool value = false; };

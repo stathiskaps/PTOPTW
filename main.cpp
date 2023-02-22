@@ -36,7 +36,7 @@ std::vector<std::string> split(const std::string& line) {
 
 int init(std::string filepath, std::string filename, int numRoutes, int numIntervals, InstanceType instance_type, ILS::Configuration conf) {
 
-	std::vector<TA> touristAttractions; //TODO:delete pointers
+	std::vector<TA> touristAttractions;
 	std::vector<Point> points;
 	
 	std::ifstream infile(filepath);
@@ -172,12 +172,6 @@ int init(std::string filepath, std::string filename, int numRoutes, int numInter
 
 	ILS ils = ILS(numIntervals, filename, conf);
 	int score = ils.Solve(op);
-
-	// for (auto p : touristAttractions) {
-	// 	delete p;
-	// }
-
-	// touristAttractions.clear();
 
 	return score;
 
