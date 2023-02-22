@@ -313,7 +313,7 @@ public:
     void pop_back() { erase(--end()); };
     void push_back(const T& d) { insert(end(), d); }
 
-    void emplace_back(List<T> other, iterator n) {
+    void emplace_back(List<T>& other, iterator n) {
         n.iter->next->previous = n.iter->previous;
         n.iter->previous->next = n.iter->next;
         

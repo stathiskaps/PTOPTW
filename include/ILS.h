@@ -117,6 +117,7 @@ private:
 	std::map<std::string, std::vector<Usage>> initRegistry(List<TA>&, std::vector<TimeWindow>);
 	std::map<std::string, std::vector<double>> getActivities(List<TA>&, std::vector<TimeWindow>);
 	void SplitSearch(std::vector<Solution>&, List<TA>& pool, const std::vector<TimeWindow>&, OP&, std::map<std::string, std::vector<Usage>>&);
+	void SearchBetween(std::vector<Solution>&, const size_t, List<TA>& pool, const std::vector<TimeWindow>&, OP&, std::map<std::string, std::vector<Usage>>&);
 	void gatherUnvisited(std::vector<Solution>&, List<TA>&);
 	std::vector<List<TA>> splitUnvisitedList(std::vector<Solution>&, List<TA>&, int, std::map<std::string, std::vector<ILS::Usage>>&, std::map<std::string, std::vector<double>>);
 	bool hasWeightedCentroid(const Solution& sol, const int, const int);
