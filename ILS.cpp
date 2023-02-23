@@ -357,7 +357,7 @@ int ILS::Solve(OP& op) {
 		std::ofstream outputFile;
 		outputFile.open("output.txt", std::ios::out | std::ios::app);
 		outputFile << mInstance << " -m " << op.m_walks_num << " -s " << mIntervalsNum << ":\t" << 
-			best_score << ":\t" << metrics.total_execution_time << "\t" << best_solution.getVisits(2) << "\t" << std::endl;
+			best_score << "\t" << metrics.total_execution_time << "\t" << best_solution.getVisits(2) << "\t" << std::endl;
 		outputFile.close();
 	}
 
