@@ -196,7 +196,9 @@ int main(int argc, char** argv) {
 	static struct option long_options[] = {
 		{"help", no_argument, 0, 'h'},
 		{"write", no_argument, 0, 'w'},
+		{"json", no_argument, 0, 'j'},
 		{"custom", no_argument, 0, 'c'},
+		{"graphics", no_argument, 0, 'g'},
 		{"folder", required_argument, 0, 'f'},
 		{"instance", required_argument, 0, 'i'},
 		{"walks", required_argument, 0, 'm'},
@@ -205,7 +207,7 @@ int main(int argc, char** argv) {
 		{0, 0, 0, 0}
 	};
 
-	while ((c = getopt_long(argc, argv, "ahwcf:i:m:s:t:", long_options, &option_index)) != -1) {
+	while ((c = getopt_long(argc, argv, "ahwcjgf:i:m:s:t:", long_options, &option_index)) != -1) {
 		switch (c) {
 		case 'h': {
 			std::cout << "Please run the program with the following options: "<< std::endl <<
@@ -223,7 +225,15 @@ int main(int argc, char** argv) {
 			break;
 		}
 		case 'w': {
-			conf.write_output = true;
+			conf.write_results = true;
+			break;
+		}
+		case 'j': {
+			conf.write_solution = true;
+			break;
+		}
+		case 'g':{
+			conf.graphics = true;
 			break;
 		}
 		case 't':{
@@ -307,10 +317,9 @@ int main(int argc, char** argv) {
 		exit(EXIT_FAILURE);
 	}
 
-
-
-
-	// glutInit(&argc, argv);
+	if(conf.graphics){
+		glutInit(&argc, argv);
+	}
 
 	if(!run_all){
 		std::string filepath = "./instances/"+folder+"/"+instance+".txt";

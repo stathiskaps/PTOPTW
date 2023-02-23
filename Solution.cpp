@@ -146,7 +146,7 @@ void Solution::draw(std::string tag){
     out.close();
 }
 
-void Solution::output(){
+void Solution::jsonOutput(){
     json output;
 
     for (const auto& ta : m_unvisited) {

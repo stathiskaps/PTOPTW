@@ -247,20 +247,19 @@ int ILS::Solve(OP& op) {
 
 	// std::cout.setstate(std::ios_base::failbit);
 	
-	// Graphics::myInit();
-	// // Set the OpenGL display mode
-	// glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB);
-	// // Set the initial window size
-	// glutInitWindowSize(WINDOW_WIDTH, WINDOW_HEIGHT);
-	// // Create the window with the given title
-	// glutCreateWindow("Best Solution");
-	// glutMouseFunc(Graphics::mouseButton);
-	// //Set the display callback function
-	// setupDrawCallback();
-	// glutReshapeFunc(Graphics::onResize);
-
-	// // Enter the GLUT main loop
-	// std::thread glutThread(glutMainLoop);
+	if(mConf.graphics){
+		Graphics::myInit();
+		// Set the OpenGL display mode
+		glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB);
+		// Set the initial window size
+		glutInitWindowSize(WINDOW_WIDTH, WINDOW_HEIGHT);
+		// Create the window with the given title
+		glutCreateWindow("Best Solution");
+		glutMouseFunc(Graphics::mouseButton);
+		//Set the display callback function
+		setupDrawCallback();
+		glutReshapeFunc(Graphics::onResize);
+	}
 
 	std::cout << mInstance << " -m " << op.m_walks_num << " -s " << mIntervalsNum << std::endl;
 	auto start = std::chrono::high_resolution_clock::now();
@@ -353,7 +352,7 @@ int ILS::Solve(OP& op) {
 	std::cout << "Execution time(s): " << metrics.total_execution_time << std::endl;
 	std::cout << "Visits: " << best_solution.getVisits(2) << std::endl << std::endl;
 	
-	if(mConf.write_output) {
+	if(mConf.write_results) {
 		std::ofstream outputFile;
 		outputFile.open("output.txt", std::ios::out | std::ios::app);
 		outputFile << mInstance << " -m " << op.m_walks_num << " -s " << mIntervalsNum << ":\t" << 
@@ -361,10 +360,14 @@ int ILS::Solve(OP& op) {
 		outputFile.close();
 	}
 
-	best_solution.output();
+	if(mConf.write_solution){
+		best_solution.jsonOutput();
+	}
 
-	// Wait for the GLUT thread to finish
-	// glutMainLoop();
+	if(mConf.graphics){
+		glutMainLoop();
+	}
+
 
 	return best_score;
 

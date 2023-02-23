@@ -45,7 +45,7 @@ using Walk = List<TA>;
 class ILS{
 public:
 	struct Configuration{
-		bool time_limited_execution = false, write_output = false;
+		bool time_limited_execution = false, write_results = false, write_solution = false, graphics = false;
 		double execution_time_limit = 0;
 	};
 

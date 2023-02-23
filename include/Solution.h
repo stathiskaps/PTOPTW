@@ -31,7 +31,7 @@ public:
 	int getMinWalkSize() const;
 	void draw(std::string);
 	void print(std::string, const bool verbose);
-	void output();
+	void jsonOutput();
 
 
 };
