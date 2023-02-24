@@ -54,7 +54,7 @@ public:
     ILS();
 	ILS(int, std::string, Configuration);
     ~ILS();
-	int Solve(OP&);
+	std::pair<int, double> Solve(OP&);
 private:
 
 	struct Usage{

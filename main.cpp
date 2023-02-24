@@ -34,7 +34,7 @@ std::vector<std::string> split(const std::string& line) {
 	return tokens;
 }
 
-int init(std::string filepath, std::string filename, int numRoutes, int numIntervals, InstanceType instance_type, ILS::Configuration conf) {
+std::pair<int, double> init(std::string filepath, std::string filename, int numRoutes, int numIntervals, InstanceType instance_type, ILS::Configuration conf) {
 
 	std::vector<TA> touristAttractions;
 	std::vector<Point> points;
@@ -171,9 +171,8 @@ int init(std::string filepath, std::string filename, int numRoutes, int numInter
 	
 
 	ILS ils = ILS(numIntervals, filename, conf);
-	int score = ils.Solve(op);
 
-	return score;
+	return ils.Solve(op);
 
 }
 
@@ -187,16 +186,19 @@ int main(int argc, char** argv) {
 	double execution_time_limit = 0;
 	int num_of_walks, num_of_intervals, total_score = 0;
 	ILS::Configuration conf;
-	bool run_all = false;
+	bool run_all = false, run_all_cases = false;
 
 	int c;
 	int option_index = 0;
 	bool folder_option_provided = false, instance_option_provided = false, 
 		walks_option_provided = false, subs_option_provided = false;
 	static struct option long_options[] = {
+		{"all", no_argument, 0, 'a'},
+		{"all-cases", no_argument, 0, 'r'},
 		{"help", no_argument, 0, 'h'},
 		{"write", no_argument, 0, 'w'},
 		{"json", no_argument, 0, 'j'},
+		{"python", no_argument, 0, 'p'},
 		{"custom", no_argument, 0, 'c'},
 		{"graphics", no_argument, 0, 'g'},
 		{"folder", required_argument, 0, 'f'},
@@ -207,7 +209,7 @@ int main(int argc, char** argv) {
 		{0, 0, 0, 0}
 	};
 
-	while ((c = getopt_long(argc, argv, "ahwcjgf:i:m:s:t:", long_options, &option_index)) != -1) {
+	while ((c = getopt_long(argc, argv, "ahrwcjgf:i:m:s:t:", long_options, &option_index)) != -1) {
 		switch (c) {
 		case 'h': {
 			std::cout << "Please run the program with the following options: "<< std::endl <<
@@ -230,6 +232,10 @@ int main(int argc, char** argv) {
 		}
 		case 'j': {
 			conf.write_solution = true;
+			break;
+		}
+		case 'r': {
+			run_all_cases = true;
 			break;
 		}
 		case 'g':{
@@ -297,23 +303,28 @@ int main(int argc, char** argv) {
 		}
 	}
 
-	if (!folder_option_provided) {
+	if (!folder_option_provided && !run_all) {
 		std::cerr << "Error: Option -f is required" << std::endl;
 		exit(EXIT_FAILURE);
 	}
 
-	if (!instance_option_provided) {
+	if (!instance_option_provided && !run_all) {
 		std::cerr << "Error: Option -i is required" << std::endl;
 		exit(EXIT_FAILURE);
 	}
 
-	if (!walks_option_provided) {
+	if (!walks_option_provided && !run_all) {
 		std::cerr << "Error: Option -m is required" << std::endl;
 		exit(EXIT_FAILURE);
 	}
 
-	if (!subs_option_provided) {
+	if (!subs_option_provided && !run_all && !run_all_cases) {
 		std::cerr << "Error: Option -s is required" << std::endl;
+		exit(EXIT_FAILURE);
+	}
+
+	if(subs_option_provided && run_all_cases){
+		std::cerr << "Error: Options -r and -s can't be used together" << std::endl;
 		exit(EXIT_FAILURE);
 	}
 
@@ -321,36 +332,51 @@ int main(int argc, char** argv) {
 		glutInit(&argc, argv);
 	}
 
-	if(!run_all){
+	if(run_all && run_all_cases){
+		std::cerr << "Error: Options -r and -a cannot be used together, please pick one" << std::endl;
+		exit(EXIT_FAILURE);
+	}
+
+	if(!run_all && !run_all_cases){
 		std::string filepath = "./instances/"+folder+"/"+instance+".txt";
 		init(filepath, instance, num_of_walks, num_of_intervals, instance_type, conf);
 	} else {
-		std::string directories[2] = {"./instances/Solomon/", "./instances/Cordeau/"};
-		for(size_t i = 0; i < 2; ++i){
-			const std::filesystem::path directory_path(directories[i]);
-			std::vector<std::filesystem::path> entries;
-			 for (const auto &entry : std::filesystem::directory_iterator(directory_path)) {
-				if (entry.is_regular_file()) {
-					entries.push_back(entry);
-				}
-			}
-			std::sort(entries.begin(), entries.end(), [](const auto &a, const auto &b) {
-				return a.filename().string() < b.filename().string();
-			});
+		if(run_all_cases){
+			std::string filepath = "./instances/"+folder+"/"+instance+".txt";
+			std::ofstream outfile("./output/"+instance+"_"+std::to_string(num_of_walks)+".csv", std::ofstream::out);
+			outfile << "s,score,time" << std::endl;
 
-			for (const auto &entry : entries){
-				auto filename = entry.filename();
-				for(size_t j = 1; j < 5; ++j){
-					for(size_t k = 1; k < 5; ++k){
-						total_score += init(entry.string(), filename.replace_extension().string(), j, k, instance_type, conf);
+			for(size_t k = 1; k < 5; ++k){
+				auto [score, time] = init(filepath, instance, num_of_walks, k, instance_type, conf);
+				outfile << k << "," << score << "," << time << std::endl;
+			}
+			outfile.close();
+		} else if(run_all){
+			std::string directories[2] = {"./instances/Solomon/", "./instances/Cordeau/"};
+			for(size_t i = 0; i < 2; ++i){
+				const std::filesystem::path directory_path(directories[i]);
+				std::vector<std::filesystem::path> entries;
+				for (const auto &entry : std::filesystem::directory_iterator(directory_path)) {
+					if (entry.is_regular_file()) {
+						entries.push_back(entry);
+					}
+				}
+				std::sort(entries.begin(), entries.end(), [](const auto &a, const auto &b) {
+					return a.filename().string() < b.filename().string();
+				});
+
+				for (const auto &entry : entries){
+					auto filename = entry.filename();
+					for(size_t j = 1; j < 5; ++j){
+						for(size_t k = 1; k < 5; ++k){
+							auto [score, time] = init(entry.string(), filename.replace_extension().string(), j, k, instance_type, conf);
+							total_score += score;
+						}
 					}
 				}
 			}
+			std::cout << "Total score: " << total_score << std::endl;
 		}
-	}
-	
-	if(run_all){
-		std::cout << "Total score: " << total_score << std::endl;
 	}
 	
 

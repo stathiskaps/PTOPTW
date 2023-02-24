@@ -194,12 +194,6 @@ void ILS::InitSolutions(std::vector<Solution>& sols, const std::vector<TimeWindo
 		updateTimes(walk, walk.begin(), false, op.mTravelTimes, intervals[0]);
 	}
 
-	// for(auto& walk : last_sol->m_walks) {
-	// 	walk.push_back(op.mEndDepot);
-	// 	walk.back().timeWindow = TimeWindow{intervals[intervals.size()-1].openTime, intervals[intervals.size()-1].closeTime};
-	// 	updateTimes(walk, walk.begin(), false, op.mTravelTimes, intervals[intervals.size()-1]);
-	// }
-
 }
 
 void ILS::connectAndValidateSolutions(const std::vector<Solution>& solutions, const OP& op){
@@ -243,7 +237,7 @@ size_t ILS::countNodes(const std::vector<Solution>& sols){
 	return counter;
 }
 
-int ILS::Solve(OP& op) {
+std::pair<int, double> ILS::Solve(OP& op) {
 
 	// std::cout.setstate(std::ios_base::failbit);
 	
@@ -354,7 +348,7 @@ int ILS::Solve(OP& op) {
 	
 	if(mConf.write_results) {
 		std::ofstream outputFile;
-		outputFile.open("output.txt", std::ios::out | std::ios::app);
+		outputFile.open("./output/benchmarks.txt", std::ios::out | std::ios::app);
 		outputFile << mInstance << " -m " << op.m_walks_num << " -s " << mIntervalsNum << ":\t" << 
 			best_score << "\t" << metrics.total_execution_time << "\t" << best_solution.getVisits(2) << "\t" << std::endl;
 		outputFile.close();
@@ -369,7 +363,7 @@ int ILS::Solve(OP& op) {
 	}
 
 
-	return best_score;
+	return {best_score, metrics.total_execution_time};
 
 
 }
@@ -990,7 +984,6 @@ std::vector<std::string> ILS::fixWalk(List<TA>& walk, const OP& op, TimeWindow t
 }
 
 void ILS::checkSolutions(std::vector<Solution>& sols,  const std::vector<TimeWindow>& intervals, const OP& op){
-	TimeWindow custom_budget = {op.mTimeWindow.openTime, op.mTimeWindow.closeTime/2}; //TODO: remove that
 	for(size_t j = 0; j < op.m_walks_num; ++j){
 		List<TA> walk;
 		for(auto& sol: sols){

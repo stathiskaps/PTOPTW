@@ -363,3 +363,5 @@ MigrationBackup/
 FodyWeavers.xsd
 
 build/
+!plotting.ipynb
+!.ipynb_checkpoints

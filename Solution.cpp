@@ -186,7 +186,7 @@ void Solution::jsonOutput(){
 
     // std::cout << output.dump(2) << std::endl;
 
-    std::ofstream o("../topology/solution.json");
+    std::ofstream o("./output/solution.json");
     o << std::setw(4) << output << std::endl;
 
 }
