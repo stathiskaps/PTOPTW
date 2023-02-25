@@ -55,6 +55,7 @@ std::pair<int, double> init(std::string filepath, std::string filename, int numR
 		json j;
 		i >> j;
 		
+		json preferences = j["preferences"];
 		json nodes = j["nodes"];
 		json routes = j["routes"];
 
@@ -66,7 +67,7 @@ std::pair<int, double> init(std::string filepath, std::string filename, int numR
 				id::generate(),
 				p,
 				node["visit_time"],
-				node["profit"],
+				preferences[node["category"]],
 				timeWindow["start_time"],
 				timeWindow["end_time"]
 			));

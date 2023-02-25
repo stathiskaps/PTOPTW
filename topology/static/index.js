@@ -10,7 +10,9 @@ const icons = [
 const extraColors = ["purple", "red", "orange", "green"];
 
 const categories = {
+    Hotel: {prefix: "fas", icon:"fa-hotel"},
     ArtLife: {prefix: "fas", icon: "fa-palette"},
+    SightSeeings: {prefix: "fas", icon:"fa-monument"},
     Casino: {prefix: "fas", icon: "fa-coins"},
     GreekFood: {prefix: "fas", icon: "fa-utensils"},
     ShoppingCenters: {prefix: "fas", icon: "fa-store"},
@@ -18,8 +20,13 @@ const categories = {
     Theaters: {prefix: "fas", icon: "fa-theater-masks"},
     VillageCinemas: {prefix: "fas", icon: "fa-video"},
     Museums: {prefix: "fas", icon: "fa-landmark"},
-    LunaPark: {prefix: "fas", icon: "fa-tree"},
 };
+
+
+const rowsHTML = () => Object.entries(categories).map(([k, v]) =>`
+    <tr><td><i class='${v.prefix} ${v.icon}'></i></td><td>${k}</td><td>${v.profit || 'N/A'}</td></tr>
+    `
+).join('');
 
 // Create a map instance
 var map = L.map('mapid').setView([37.9786, 23.7274], 13);
@@ -39,7 +46,14 @@ const readFile = async () => {
 
     console.log("topology", topology);
 
-    let coords = [];
+    for(const [k, v] of Object.entries(topology.preferences)){
+        if(categories[k]){
+            categories[k]["profit"] = v;
+        }
+    }
+
+    console.log(categories);
+
 
     var unvisitedIcon = new L.Icon({
         iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-grey.png',
@@ -50,12 +64,11 @@ const readFile = async () => {
         shadowSize: [41, 41]
     });
 
-    
-
     if(solution.unvisited){
         for(const ta of solution.unvisited){
-
             const node = topology.nodes.find(x => x.id == ta.id);
+            console.log(ta)
+            console.log(node)
             const customMarker = L.ExtraMarkers.icon({
                 icon: categories[node.category]?.icon,
                 markerColor: "#8E8E8E",
@@ -66,16 +79,23 @@ const readFile = async () => {
             
             const point = [ta.lat, ta.lon];
             const html = `
-            <div class="metadata">
-            <div>p: ${ta.profit}</div>
-            <div>tw: [${ta.time_window.open} - ${ta.time_window.close}]</div>
-            </div>
+                <table class="table">
+                    <tbody>
+                        <tr><th scope="row">Profit</th><td>${ta.profit}</td></tr>
+                        <tr><th scope="row">Visit duration</th><td>${ta.visit_duration}</td></tr>
+                        <tr><th scope="row">Time Window</th><td>[${ta.time_window.open}-${ta.time_window.close}]</td></tr>
+                    </tbody>
+                </table>
             `;
-            L.marker(point, { icon: customMarker} ).addTo(map);
-            // L.marker(point, { icon: L.divIcon({
-            //     html: html,
-            //     className: 'text-below-marker',
-            // })}).addTo(map);
+            const marker = L.marker(point, { icon: customMarker} ).addTo(map);
+
+            marker.on('click', function(e) {
+                // do something when the marker is clicked
+                const popup = L.popup()
+                    .setLatLng(e.latlng)
+                    .setContent(html)
+                    .openOn(map);
+            });
         }
     }
 
@@ -117,25 +137,30 @@ const readFile = async () => {
                 
                 const point = [ta.lat, ta.lon];
                 const html = `
-                <div style="background:${colors[i]}" class="metadata in">
-                <div>${node?.category}</div>
-                <div>p: ${ta.profit}</div>
-                <div>tw: [${ta.time_window.open} - ${ta.time_window.close}]</div>
-                </div>
+                    <table class="table">
+                    <tbody>
+                        <tr><th scope="row">Profit</th><td>${ta.profit}</td></tr>
+                        <tr><th scope="row">Arrival Time</th><td>${ta.arrival_time}</td></tr>
+                        <tr><th scope="row">Wait duration</th><td>${ta.wait_duration}</td></tr>
+                        <tr><th scope="row">Start of visit time</th><td>${ta.start_visit_time}</td></tr>
+                        <tr><th scope="row">Departure time</th><td>${ta.departure_time}</td></tr>
+                        <tr><th scope="row">Shift</th><td>${ta.shift}</td></tr>
+                        <tr><th scope="row">Time Window</th><td>[${ta.time_window.open}-${ta.time_window.close}]</td></tr>
+                    </tbody>
+                    </table>
                 `;
-                L.marker(point, { icon: customMarker }).addTo(map);
-                // L.marker(point, { icon: L.divIcon({
-                //     html: html,
-                //     className: 'text-below-marker',
-                // })}).addTo(map);
+                const marker = L.marker(point, { icon: customMarker }).addTo(map);
+
+                marker.on('click', function(e) {
+                    // do something when the marker is clicked
+                    const popup = L.popup()
+                        .setLatLng(e.latlng)
+                        .setContent(html)
+                        .openOn(map);
+                });
             }
         }
     }
-
-    const hotel = solution.walks[0][0];
-    console.log("hotel", hotel)
-
-    console.log("solution", solution)
 
     if(solution.walks){
         for(const [i, walk] of solution.walks.entries()){
@@ -174,32 +199,13 @@ const readFile = async () => {
         container.innerHTML = `
             <table class="table">
                 <thead>
-                    <tr><th>Icon</th><th>Meaning</th><th>Score</th></tr>
+                    <tr><th>Icon</th><th>Meaning</th><th>Profit</th></tr>
                 </thead>
                 <tbody>
-                    <tr><td><i class='fas fa-palette'></i></td><td>ArtLife</td><td>30</td></tr>
-                    <tr><td><i class='fas fa-coins'></i></td><td>Casino</td><td>30</td></tr>
-                    <tr><td><i class='fas fa-utensils'></i></td><td>Greek Food</td><td>30</td></tr>
-                    <tr><td><i class='fas fa-store'></i></td><td>Shopping Center</td><td>30</td></tr>
-                    <tr><td><i class='fas fa-hot-tub'></i></td><td>Spa</td><td>30</td></tr>
-                    <tr><td><i class='fas fa-theater-masks'></i></td><td>Theater</td><td>30</td></tr>
-                    <tr><td><i class='fas fa-video'></i></td><td>Cinema</td><td>30</td></tr>
-                    <tr><td><i class='fas fa-landmark'></i></td><td>Museum</td><td>30</td></tr>
-                    <tr><td><i class='fas fa-tree'></i></td><td>Luna Park</td><td>30</td></tr>
+                ${rowsHTML()}
                 </tbody>
             </table>
         `;
-        // container.innerHTML = "<ul>" +
-        // "<li><i class='fas fa-palette'></i><span>ArtLife</span></li>" +
-        // "<li><i class='fas fa-coins'></i><span>Casino</span></li>" +
-        // "<li><i class='fas fa-utensils'></i><span>Greek Food</span></li>" +
-        // "<li><i class='fas fa-store'></i><span>Shopping Center</span></li>" +
-        // "<li><i class='fas fa-hot-tub'></i><span>Spa</span></li>" +
-        // "<li><i class='fas fa-theater-masks'></i><span>Theater</span></li>" +
-        // "<li><i class='fas fa-video'></i><span>Cinema</span></li>" +
-        // "<li><i class='fas fa-landmark'></i><span>Museum</span></li>" +
-        // "<li><i class='fas fa-tree'></i><span>Luna Park</span></li>" +
-        // "</ul>";
 
         // return the container element
         return container;

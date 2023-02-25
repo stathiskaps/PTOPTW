@@ -1,14 +1,16 @@
 const xlsx = require('node-xlsx').default;
 const classifyPoint = require("robust-point-in-polygon");
+const polyline = require('@mapbox/polyline');
 const axios = require('axios').default;
 const fs = require('fs');
 
 var topology = {
+    preferences: {Hotel: 0},
     nodes: [],
     routes: [],
 };
 
-const TimeBudget = {openTime: 0, closeTime: 760};
+const TimeBudget = {openTime: 0, closeTime: 1000};
 
 const TIME_WINDOWS = [
     {startTime: 540, endTime: 960},
@@ -65,13 +67,13 @@ const getRoute = async({lat:latX, lon:lonX}, {lat:latY, lon:lonY}) => {
     };
 
     const res = await axios.get('http://localhost:8080/otp/routers/default/plan',{ params });
-    console.log({params})
-    // console.log(res)
     const {data:{plan: {itineraries}}} = res;
     if(itineraries?.length > 0){
-        const minutes = Math.ceil(itineraries[0]?.duration/60);
-        const steps = itineraries[0]?.legs[0]?.steps;
-        const path = steps.map(s => [s.lat, s.lon]);
+        const itinerary = itineraries[0];
+        const leg = itinerary.legs[0]; // assume we want the first leg of the itinerary
+        const encodedPolyline = leg.legGeometry.points; // get the encoded polyline from the leg
+        const path = polyline.decode(encodedPolyline); // decode the polyline to get the coordinates
+        const minutes = Math.ceil(itinerary?.duration/60);
         return {valid: true, duration: minutes, path};
     }
     return {valid: false, duration:0, path: []};
@@ -110,7 +112,7 @@ const writeSights = (points, writeStream) => {
     // console.log(`Writing depot: ${depot}`);
     writeStream.write(`${depot}\n`); 
 
-    const depotNode = {id: pointId, lat: parseFloat(depotPoint.lat), lon: parseFloat(depotPoint.lon), visit_time: 0, profit: 0, time_window:{start_time: TimeBudget.openTime, end_time: TimeBudget.closeTime}};
+    const depotNode = {id: pointId, lat: parseFloat(depotPoint.lat), lon: parseFloat(depotPoint.lon), visit_time: 0, category: "Hotel", time_window:{start_time: TimeBudget.openTime, end_time: TimeBudget.closeTime}};
     topology.nodes.push(depotNode);
 
     for(const point of poiPoints) {
@@ -124,7 +126,7 @@ const writeSights = (points, writeStream) => {
         // console.log(`Writing node: ${sight}`);
         writeStream.write(`${sight}\n`);
 
-        const node = {id: pointId, lat: parseFloat(lat), lon: parseFloat(lon), visit_time: visitTime, profit, time_window:{start_time: timeWindow.startTime, end_time: timeWindow.endTime}, category: point.category};
+        const node = {id: pointId, lat: parseFloat(lat), lon: parseFloat(lon), visit_time: visitTime, category: point.category, time_window:{start_time: timeWindow.startTime, end_time: timeWindow.endTime}};
         topology.nodes.push(node);
     }
 }
@@ -154,24 +156,22 @@ const create = async () => {
     const data = fs.readFileSync('./athens_box.geojson', 'utf8');
     const geojson = JSON.parse(data);
     const polygon = geojson.features[0].geometry.coordinates[0];
-    let totalPoints = {};
-    let totalValidPoints = [{lat: 37.97616, lon: 23.73530}]; 
+    let totalPoints = [{lat: 37.97616, lon: 23.73530}];
 
     const dir = "./pois";
     fs.readdirSync(dir).forEach(filename => {
         const content = xlsx.parse(`${dir}/${filename}`);
-        let points = content[0].data.map(x => {return {lat: x[3], lon: x[2], category: filename.split(".")[0]}});
-        points = points.slice(0, 10);
-        totalPoints[filename.split(".")[0]] = points;
+        const category = filename.split(".")[0];
+        let points = content[0].data.map(x => {return {lat: x[3], lon: x[2], category }});
+        topology.preferences[category] = SCORES[getRandom(0, 8)];
+        points = points.slice(0, 20);
+        totalPoints.push(...points);
     });
 
-    for(const [k, v] of Object.entries(totalPoints)) {
-        const validPoints = v.filter(x => {
-            return inside(x, polygon);
-        });
-        totalValidPoints.push(...validPoints);
-    }
-    
+    const validPoints = totalPoints.filter(x => {
+        return inside(x, polygon);
+    });
+
     writeStream.on('finish', () => {
         console.log(`wrote all routes to file ${pathName}`);
     });
@@ -179,12 +179,12 @@ const create = async () => {
         console.error(`Error while writing routes: ${pathName} => ${err}`)
     });
 
-    writeStream.write(`${totalValidPoints.length} ${totalValidPoints.length * totalValidPoints.length}\n`);
+    writeStream.write(`${validPoints.length} ${validPoints.length * validPoints.length}\n`);
     writeStream.write(`0 0\n`);
 
-    await writeSights(totalValidPoints, writeStream);
+    await writeSights(validPoints, writeStream);
     
-    await writeRoutes(totalValidPoints, writeStream);
+    await writeRoutes(validPoints, writeStream);
 
     const outputFilename = "./topology.json";
     fs.writeFile(outputFilename, JSON.stringify(topology, null, 4), function(err) {

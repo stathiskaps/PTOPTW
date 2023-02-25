@@ -133,6 +133,12 @@ public:
             std::cout << it.iter->data.timeWindow.closeTime << "\t";
         }
         std::cout << std::endl;
+
+        std::cout << "shift:\t";
+        for(iterator it = begin(); it != end(); ++it){
+            std::cout << it.iter->data.shift << "\t";
+        }
+        std::cout << std::endl;
         
         std::cout << "maxShift:\t";
         for(iterator it = begin(); it != end(); ++it){

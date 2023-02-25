@@ -8,18 +8,6 @@
   white-space:nowrap;
 }
 
-.metadata{
-  background: #f1f1f1;
-  border-radius: 4px;
-  border: 1px solid #000;
-  opacity: .6;
-  width: fit-content;
-}
-
-.metadata.in{
-  background: #4592DF;
-}
-
 .leaflet-popup-close-button {
   display: none;
 }

@@ -963,22 +963,30 @@ std::vector<std::string> ILS::fixWalk(List<TA>& walk, const OP& op, TimeWindow t
 	if(walk.size() < 2){
 		throw std::runtime_error("Invalid walk size: " + std::to_string(walk.size()));
 	}
-	std::vector<std::string> remove_nodes;
-	while(!updateTimes(walk, walk.begin(), false, op.mTravelTimes, time_budget)){
-		double minScore = DBL_MAX;
-		List<TA>::iterator remove_it = walk.end();
-		for(List<TA>::iterator it = walk.begin()+1; it != walk.end()-1; ++it){
-			double score = pow(it.iter->data.profit, 2) / it.iter->data.shift;
-			if(score < minScore){
-				remove_it = it;
-				minScore = score;
-			}
-		}
 
-		if(remove_it != walk.end()){
+	std::vector<std::string> remove_nodes;
+	bool valid = updateTimes(walk, walk.begin(), false, op.mTravelTimes, time_budget);
+	while(!valid){
+		if(walk.size() == 2){
+			throw std::runtime_error("The start and end depot are not compatible");
+		}
+		// double minScore = DBL_MAX;
+		double maxOfShifts = DBL_MIN;
+		List<TA>::iterator remove_it = walk.end();
+		// for(List<TA>::iterator it = walk.begin()+1; it != walk.end()-1; ++it){
+		// 	// double score = pow(it.iter->data.profit, 2) / it.iter->data.shift; 
+		// 	if(it.iter->data.shift > maxOfShifts){
+		// 		remove_it = it;
+		// 		maxOfShifts = it.iter->data.shift;
+		// 	}
+		// }
+		remove_it = walk.end() - 2;
+
+		if(remove_it != walk.end() && remove_it != walk.begin()){
 			remove_nodes.push_back(remove_it.iter->data.id);
 			walk.erase(remove_it);
 		}
+		valid = updateTimes(walk, walk.begin(), false, op.mTravelTimes, time_budget);
 	}
 	return remove_nodes;
 }

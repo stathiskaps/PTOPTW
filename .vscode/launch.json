@@ -10,7 +10,7 @@
             "request": "launch",
             "program": "${workspaceFolder}/build/AMTOPTW",
             // "args": ["-f", "Custom", "-i", "AthensTopology", "-w", "4", "-s", "4", "-c"],
-            "args": ["-f", "Cordeau", "-i", "pr11", "-m", "1", "-s", "2"],
+            "args": ["-f", "Custom", "-i", "AthensTopology", "-m", "1", "-s", "2", "-c"],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}/build/",
             "environment": [],

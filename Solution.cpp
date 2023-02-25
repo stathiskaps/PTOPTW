@@ -153,7 +153,8 @@ void Solution::jsonOutput(){
         json node_json = {
             {"id", ta.point.id},
             {"lat", ta.point.pos.lat},
-            {"lon", ta.point.pos.lon}
+            {"lon", ta.point.pos.lon},
+            {"visit_duration", ta.visitDuration},
         };
         json window_json = {
             {"open", ta.timeWindow.openTime},
@@ -171,13 +172,19 @@ void Solution::jsonOutput(){
             json node_json = {
                 {"id", ta.point.id},
                 {"lat", ta.point.pos.lat},
-                {"lon", ta.point.pos.lon}
+                {"lon", ta.point.pos.lon},
+                {"arrival_time", ta.arrTime},
+                {"wait_duration", ta.waitDuration},
+                {"start_visit_time", ta.startOfVisitTime},
+                {"departure_time", ta.depTime},
+                {"shift", ta.shift},
             };
             json window_json = {
                 {"open", ta.timeWindow.openTime},
                 {"close", ta.timeWindow.closeTime}
             };
             node_json["time_window"] = window_json;
+
             node_json["profit"] = ta.profit;
             walk_json.push_back(node_json);
         }
