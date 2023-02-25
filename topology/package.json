@@ -10,6 +10,7 @@
   "license": "ISC",
   "dependencies": {
     "@mapbox/maki": "^8.0.1",
+    "@mapbox/polyline": "^1.1.1",
     "axios": "^0.21.1",
     "node-fetch": "^3.3.0",
     "node-xlsx": "^0.16.1",
