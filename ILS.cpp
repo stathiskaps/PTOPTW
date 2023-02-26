@@ -2,7 +2,7 @@
 
 ILS::ILS() {}
 
-ILS::ILS(int intervalsNum, std::string instance, Configuration conf) : mIntervalsNum(intervalsNum), mInstance(instance), mConf(conf) {
+ILS::ILS(int intervalsNum, std::string instance, Options conf) : mIntervalsNum(intervalsNum), mInstance(instance), mOptions(conf) {
 	metrics.local_search = std::vector<double>(intervalsNum, 0);
 	metrics.split_unvisited = 0.0;
 	metrics.shake = 0.0;
@@ -241,7 +241,7 @@ std::pair<int, double> ILS::Solve(OP& op) {
 
 	// std::cout.setstate(std::ios_base::failbit);
 	
-	if(mConf.graphics){
+	if(mOptions.graphics){
 		Graphics::myInit();
 		// Set the OpenGL display mode
 		glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB);
@@ -286,11 +286,11 @@ std::pair<int, double> ILS::Solve(OP& op) {
 	const size_t split_iteration = 10;
 
 	std::function<bool()> stopping_criterion = [&]() { return times_not_improved > MAX_TIMES_NOT_IMPROVED; };
-	if(mConf.time_limited_execution){
+	if(mOptions.time_limited_execution){
 		stopping_criterion = [&]() {
 			auto end = std::chrono::high_resolution_clock::now();
 			auto time_elapsed = std::chrono::duration_cast<std::chrono::seconds>(end - start);
-			return std::chrono::duration_cast<std::chrono::duration<double>>(end - start).count() >= mConf.execution_time_limit;
+			return std::chrono::duration_cast<std::chrono::duration<double>>(end - start).count() >= mOptions.execution_time_limit;
     	};
 	}
  
@@ -303,7 +303,7 @@ std::pair<int, double> ILS::Solve(OP& op) {
 		splitUnvisitedList(process_solutions, pool, mIntervalsNum, reg, activities);
 		connectAndValidateSolutions(process_solutions, op);
 		SplitSearch(process_solutions, pool, intervals, op, reg);
-		checkSolutions(process_solutions, intervals, op);
+		trimSolutions(process_solutions, intervals, op);
 		connectAndValidateSolutions(process_solutions, op);
 		int score = collectScores(process_solutions);
 
@@ -346,19 +346,19 @@ std::pair<int, double> ILS::Solve(OP& op) {
 	std::cout << "Execution time(s): " << metrics.total_execution_time << std::endl;
 	std::cout << "Visits: " << best_solution.getVisits(2) << std::endl << std::endl;
 	
-	if(mConf.write_results) {
+	if(mOptions.write_results) {
 		std::ofstream outputFile;
-		outputFile.open("./output/benchmarks.txt", std::ios::out | std::ios::app);
-		outputFile << mInstance << " -m " << op.m_walks_num << " -s " << mIntervalsNum << ":\t" << 
-			best_score << "\t" << metrics.total_execution_time << "\t" << best_solution.getVisits(2) << "\t" << std::endl;
+		outputFile.open("./output/benchmarks.csv", std::ios::out | std::ios::app);
+		outputFile << mInstance << "," << op.m_walks_num << "," << mIntervalsNum << "," << 
+			best_score << "," << metrics.total_execution_time << "," << best_solution.getVisits(2) << std::endl;
 		outputFile.close();
 	}
 
-	if(mConf.write_solution){
+	if(mOptions.write_solution){
 		best_solution.jsonOutput();
 	}
 
-	if(mConf.graphics){
+	if(mOptions.graphics){
 		glutMainLoop();
 	}
 
@@ -711,19 +711,15 @@ void ILS::SplitSearch(std::vector<Solution>& solutions, List<TA>& pool, const st
 		}
 
 		if (i > 0) {
-			
-			//Make a local search betweem current solution and previous
 			for (size_t j = 0; j < solutions[i].m_walks.size(); ++j) {
 				solutions[i].m_walks[j].pop_front();
 
-				//TODO: check if these comments are needed
-				// if(!solutions[i].m_walks[j].empty()){
-				// 	const TA prev_last = getValidPreviousTA(solutions, i, j);
-				// 	TA &curr_first = solutions[i].m_walks[j].front();
-				// 	double start_time = std::max(prev_last.depTime+op.mTravelTimes[prev_last.point.id][curr_first.point.id], intervals[i].openTime);
-				// 	updateTimes(solutions[i].m_walks[j], solutions[i].m_walks[j].begin(), false, op.mTravelTimes, TimeWindow{start_time, intervals[i].closeTime});
-				// }
-				
+				if(!solutions[i].m_walks[j].empty()){
+					const TA prev_last = getValidPreviousTA(solutions, i, j);
+					TA &curr_first = solutions[i].m_walks[j].front();
+					double start_time = std::max(prev_last.depTime+op.mTravelTimes[prev_last.point.id][curr_first.point.id], intervals[i].openTime);
+					updateTimes(solutions[i].m_walks[j], solutions[i].m_walks[j].begin(), false, op.mTravelTimes, TimeWindow{start_time, intervals[i].closeTime});
+				}
 			}
 		}
 
@@ -959,7 +955,7 @@ bool compareByShift(const TA &a, const TA &b) {
     return a.shift < b.shift;
 }
 
-std::vector<std::string> ILS::fixWalk(List<TA>& walk, const OP& op, TimeWindow time_budget){
+std::vector<std::string> ILS::getNodesToRemove(List<TA>& walk, const OP& op, TimeWindow time_budget){
 	if(walk.size() < 2){
 		throw std::runtime_error("Invalid walk size: " + std::to_string(walk.size()));
 	}
@@ -970,35 +966,24 @@ std::vector<std::string> ILS::fixWalk(List<TA>& walk, const OP& op, TimeWindow t
 		if(walk.size() == 2){
 			throw std::runtime_error("The start and end depot are not compatible");
 		}
-		// double minScore = DBL_MAX;
 		double maxOfShifts = DBL_MIN;
-		List<TA>::iterator remove_it = walk.end();
-		// for(List<TA>::iterator it = walk.begin()+1; it != walk.end()-1; ++it){
-		// 	// double score = pow(it.iter->data.profit, 2) / it.iter->data.shift; 
-		// 	if(it.iter->data.shift > maxOfShifts){
-		// 		remove_it = it;
-		// 		maxOfShifts = it.iter->data.shift;
-		// 	}
-		// }
-		remove_it = walk.end() - 2;
+		List<TA>::iterator remove_it = walk.end() - 2;
 
-		if(remove_it != walk.end() && remove_it != walk.begin()){
-			remove_nodes.push_back(remove_it.iter->data.id);
-			walk.erase(remove_it);
-		}
+		remove_nodes.push_back(remove_it.iter->data.id);
+		walk.erase(remove_it);
 		valid = updateTimes(walk, walk.begin(), false, op.mTravelTimes, time_budget);
 	}
 	return remove_nodes;
 }
 
-void ILS::checkSolutions(std::vector<Solution>& sols,  const std::vector<TimeWindow>& intervals, const OP& op){
+void ILS::trimSolutions(std::vector<Solution>& sols,  const std::vector<TimeWindow>& intervals, const OP& op){
 	for(size_t j = 0; j < op.m_walks_num; ++j){
 		List<TA> walk;
 		for(auto& sol: sols){
 			walk.append(sol.m_walks[j]);
 		}
 		walk.push_back(op.mEndDepot);
-		std::vector<std::string> unvisit_ids = fixWalk(walk, op, op.mTimeWindow);
+		std::vector<std::string> unvisit_ids = getNodesToRemove(walk, op, op.mTimeWindow);
 		if(unvisit_ids.empty()) {
 			continue;
 		}

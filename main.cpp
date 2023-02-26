@@ -34,7 +34,7 @@ std::vector<std::string> split(const std::string& line) {
 	return tokens;
 }
 
-std::pair<int, double> init(std::string filepath, std::string filename, int numRoutes, int numIntervals, InstanceType instance_type, ILS::Configuration conf) {
+std::pair<int, double> init(std::string filepath, std::string filename, int numRoutes, int numIntervals, InstanceType instance_type, Options options) {
 
 	std::vector<TA> touristAttractions;
 	std::vector<Point> points;
@@ -116,24 +116,29 @@ std::pair<int, double> init(std::string filepath, std::string filename, int numR
 				if (poi_data[0].empty()) {
 					Point p = Point(pointId++, std::stod(poi_data[2]), std::stod(poi_data[3]));
 					points.push_back(p);
+					const double openTime = std::stoi(poi_data[8 + std::stoi(poi_data[7])]);
+					const double closeTime = std::stoi(poi_data[9 + std::stoi(poi_data[7])]);
 					touristAttractions.push_back(Sight(
 						id::generate(),
 						p,
 						std::stoi(poi_data[4]),
 						std::stoi(poi_data[5]),
-						std::stoi(poi_data[8 + std::stoi(poi_data[7])]),
-						std::stoi(poi_data[9 + std::stoi(poi_data[7])])
+						openTime,
+						closeTime
 					));
+					
 				} else {
 					Point p = Point(pointId++, std::stod(poi_data[1]), std::stod(poi_data[2]));
 					points.push_back(p);
+					const double openTime = std::stoi(poi_data[7 + std::stoi(poi_data[6])]);
+					const double closeTime = std::stoi(poi_data[8 + std::stoi(poi_data[6])]);
 					touristAttractions.push_back(Sight(
 						id::generate(),
 						p,
 						std::stoi(poi_data[3]),
 						std::stoi(poi_data[4]),
-						std::stoi(poi_data[7 + std::stoi(poi_data[6])]),
-						std::stoi(poi_data[8 + std::stoi(poi_data[6])])
+						openTime,
+						closeTime
 					));
 				}
 				break;
@@ -165,7 +170,7 @@ std::pair<int, double> init(std::string filepath, std::string filename, int numR
 	}
 	
 
-	ILS ils = ILS(numIntervals, filename, conf);
+	ILS ils = ILS(numIntervals, filename, options);
 
 	return ils.Solve(op);
 
@@ -180,7 +185,7 @@ int main(int argc, char** argv) {
 	std::string instance;
 	double execution_time_limit = 0;
 	int num_of_walks, num_of_intervals, total_score = 0;
-	ILS::Configuration conf;
+	Options options;
 	bool run_all = false, run_all_cases = false;
 
 	int c;
@@ -222,11 +227,11 @@ int main(int argc, char** argv) {
 			break;
 		}
 		case 'w': {
-			conf.write_results = true;
+			options.write_results = true;
 			break;
 		}
 		case 'j': {
-			conf.write_solution = true;
+			options.write_solution = true;
 			break;
 		}
 		case 'r': {
@@ -234,14 +239,14 @@ int main(int argc, char** argv) {
 			break;
 		}
 		case 'g':{
-			conf.graphics = true;
+			options.graphics = true;
 			break;
 		}
 		case 't':{
 			if(optarg) {
-				conf.execution_time_limit = std::atof(optarg);
-				conf.time_limited_execution = true;
-				std::cout << "Will run ILS for " << conf.execution_time_limit << " seconds" << std::endl;
+				options.execution_time_limit = std::atof(optarg);
+				options.time_limited_execution = true;
+				std::cout << "Will run ILS for " << options.execution_time_limit << " seconds" << std::endl;
 			} else {
 				std::cerr << "Error: argument for option -t is required" << std::endl;
 				exit(EXIT_FAILURE);
@@ -323,7 +328,7 @@ int main(int argc, char** argv) {
 		exit(EXIT_FAILURE);
 	}
 
-	if(conf.graphics){
+	if(options.graphics){
 		glutInit(&argc, argv);
 	}
 
@@ -334,7 +339,7 @@ int main(int argc, char** argv) {
 
 	if(!run_all && !run_all_cases){
 		std::string filepath = "./instances/"+folder+"/"+instance+".txt";
-		init(filepath, instance, num_of_walks, num_of_intervals, instance_type, conf);
+		init(filepath, instance, num_of_walks, num_of_intervals, instance_type, options);
 	} else {
 		if(run_all_cases){
 			std::string filepath = "./instances/"+folder+"/"+instance+".txt";
@@ -342,7 +347,7 @@ int main(int argc, char** argv) {
 			outfile << "s,score,time" << std::endl;
 
 			for(size_t k = 1; k < 5; ++k){
-				auto [score, time] = init(filepath, instance, num_of_walks, k, instance_type, conf);
+				auto [score, time] = init(filepath, instance, num_of_walks, k, instance_type, options);
 				outfile << k << "," << score << "," << time << std::endl;
 			}
 			outfile.close();
@@ -364,7 +369,7 @@ int main(int argc, char** argv) {
 					auto filename = entry.filename();
 					for(size_t j = 1; j < 5; ++j){
 						for(size_t k = 1; k < 5; ++k){
-							auto [score, time] = init(entry.string(), filename.replace_extension().string(), j, k, instance_type, conf);
+							auto [score, time] = init(entry.string(), filename.replace_extension().string(), j, k, instance_type, options);
 							total_score += score;
 						}
 					}

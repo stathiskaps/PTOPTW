@@ -44,15 +44,11 @@ using Walk = List<TA>;
 
 class ILS{
 public:
-	struct Configuration{
-		bool time_limited_execution = false, write_results = false, write_solution = false, graphics = false;
-		double execution_time_limit = 0;
-	};
 
 	void draw();
 	void drawSolution(const Solution&);
     ILS();
-	ILS(int, std::string, Configuration);
+	ILS(int, std::string, Options);
     ~ILS();
 	std::pair<int, double> Solve(OP&);
 private:
@@ -99,7 +95,7 @@ private:
 	int mIntervalsNum;
 	std::string mInstance;
 	static ILS* currentInstance;
-	Configuration mConf;
+	Options mOptions;
 	std::vector<Solution> best_solutions;
 	Solution best_solution;
 
@@ -142,8 +138,8 @@ private:
 	size_t countNodes(const std::vector<Solution>&);
 	void printMetrics();
 	void setupDrawCallback();
-	void checkSolutions(std::vector<Solution>&,  const std::vector<TimeWindow>& intervals, const OP&);
-	std::vector<std::string> fixWalk(List<TA>&, const OP&, TimeWindow time_budget);
+	void trimSolutions(std::vector<Solution>&,  const std::vector<TimeWindow>& intervals, const OP&);
+	std::vector<std::string> getNodesToRemove(List<TA>&, const OP&, TimeWindow time_budget);
 	void validateDirectedSolution(const Solution&, const OP& op, const bool);
 	void validateTimes(const std::vector<Solution>&, const Vector2D<double>&, const bool);
 	void validateTimes(const Solution&, const Vector2D<double>&, const bool);

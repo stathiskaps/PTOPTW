@@ -1,7 +1,6 @@
 #include "OP.h"
 
 OP::OP() {
-	
 }
 
 OP::~OP() {

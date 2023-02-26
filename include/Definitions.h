@@ -1,3 +1,4 @@
+#pragma once
 #include <random>
 #include <sstream>
 #include <iostream>
@@ -41,6 +42,15 @@
 #define MAX_MINUTES 1440
 #define OPEN_DAY_TIME 0
 #define CLOSE_DAY_TIME 1260
+
+struct Options{
+	bool time_limited_execution = false, 
+		write_results = false, 
+		write_solution = false, 
+		graphics = false,
+		simple_intervals = false;
+	double execution_time_limit = 0;
+};
 
 bool contains(std::list<std::string>&, std::string);
 bool contains(const std::vector<std::string>&, std::string);

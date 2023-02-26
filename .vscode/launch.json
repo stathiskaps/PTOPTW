@@ -9,7 +9,7 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/build/AMTOPTW",
-            "args": ["-f", "Custom", "-i", "topology", "-m", "1", "-s", "2", "-c"],
+            "args": ["-f", "Cordeau", "-i", "pr11", "-m", "1", "-s", "2"],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}/build/",
             "environment": [],

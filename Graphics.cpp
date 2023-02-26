@@ -14,10 +14,6 @@ bool Graphics::isDragging = false;
 void Graphics::onResize(int w, int h) {	
 	int windowWidth = glutGet(GLUT_WINDOW_WIDTH);
 	int windowHeight = glutGet(GLUT_WINDOW_HEIGHT);
-
-	// int minSize = 500;
-    // if (windowWidth < minSize) windowWidth = minSize;
-    // if (windowHeight > minSize) windowHeight = minSize;
 	
 	// Calculate the aspect ratio of the window
 	float aspectRatio = (float) windowWidth / (float) windowHeight;
