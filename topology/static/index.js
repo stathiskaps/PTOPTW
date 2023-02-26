@@ -52,23 +52,9 @@ const readFile = async () => {
         }
     }
 
-    console.log(categories);
-
-
-    var unvisitedIcon = new L.Icon({
-        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-grey.png',
-        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-        iconSize: [25, 41],
-        iconAnchor: [12, 41],
-        popupAnchor: [1, -34],
-        shadowSize: [41, 41]
-    });
-
     if(solution.unvisited){
         for(const ta of solution.unvisited){
             const node = topology.nodes.find(x => x.id == ta.id);
-            console.log(ta)
-            console.log(node)
             const customMarker = L.ExtraMarkers.icon({
                 icon: categories[node.category]?.icon,
                 markerColor: "#8E8E8E",
@@ -88,9 +74,7 @@ const readFile = async () => {
                 </table>
             `;
             const marker = L.marker(point, { icon: customMarker} ).addTo(map);
-
             marker.on('click', function(e) {
-                // do something when the marker is clicked
                 const popup = L.popup()
                     .setLatLng(e.latlng)
                     .setContent(html)
@@ -101,17 +85,6 @@ const readFile = async () => {
 
     if(solution.walks){
         for(const [i, walk] of solution.walks.entries()){
-            
-            let icon = new L.Icon({
-                iconUrl: `https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/${icons[i]}`,
-                shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-                iconSize: [25, 41],
-                iconAnchor: [12, 41],
-                popupAnchor: [1, -34],
-                shadowSize: [41, 41]
-            });
-
-           console.log(topology.nodes);
 
             for(const ta of walk){
 
@@ -150,7 +123,6 @@ const readFile = async () => {
                     </table>
                 `;
                 const marker = L.marker(point, { icon: customMarker }).addTo(map);
-
                 marker.on('click', function(e) {
                     // do something when the marker is clicked
                     const popup = L.popup()
@@ -187,7 +159,6 @@ const readFile = async () => {
        
     }
 
-    // create the memorandum control
     var legend = L.control({ position: 'topleft' });
 
     // add the onAdd method to the control

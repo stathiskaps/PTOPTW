@@ -108,12 +108,6 @@ std::pair<int, double> init(std::string filepath, std::string filename, int numR
 				));
 				break;
 			}
-			case 'D': {
-				int id = std::stoi(poi_data[1]), from = std::stoi(poi_data[2]), to = std::stoi(poi_data[3]);
-				double duration = std::stod(poi_data[4]);
-				durations.push_back(RouteDuration{id, from , to, duration});
-				break;
-			}
 			case '#': {
 				continue;
 				break;
@@ -255,7 +249,7 @@ int main(int argc, char** argv) {
 			break;
 		}
 		case 'c':{
-			std::cout << "Will use custom times" << std::endl;
+			std::cout << "Will use custom topology" << std::endl;
 			instance_type = custom;
 			break;
 		}
