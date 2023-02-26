@@ -183,8 +183,9 @@ int main(int argc, char** argv) {
 
 	std::string folder;
 	std::string instance;
-	double execution_time_limit = 0;
+	double execution_time_limit = 0, double total_execution_time = 0;;
 	int num_of_walks, num_of_intervals, total_score = 0;
+	
 	Options options;
 	bool run_all = false, run_all_cases = false;
 
@@ -371,11 +372,13 @@ int main(int argc, char** argv) {
 						for(size_t k = 1; k < 5; ++k){
 							auto [score, time] = init(entry.string(), filename.replace_extension().string(), j, k, instance_type, options);
 							total_score += score;
+							total_execution_time += time;
 						}
 					}
 				}
 			}
 			std::cout << "Total score: " << total_score << std::endl;
+			std::cout << "Total time: " << total_execution_time << std::endl;
 		}
 	}
 	

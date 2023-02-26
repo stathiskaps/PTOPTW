@@ -301,17 +301,14 @@ std::pair<int, double> ILS::Solve(OP& op) {
 		}
 
 		splitUnvisitedList(process_solutions, pool, mIntervalsNum, reg, activities);
-		connectAndValidateSolutions(process_solutions, op);
 		SplitSearch(process_solutions, pool, intervals, op, reg);
 		trimSolutions(process_solutions, intervals, op);
-		connectAndValidateSolutions(process_solutions, op);
 		int score = collectScores(process_solutions);
 
 		if (score > best_score) {
 			bestCounter = counter;
 			best_score = score;
 			best_solutions = process_solutions;
-			validateTimes(best_solutions, op.mTravelTimes, false);
 			for(auto& sr : shake_settings){
 				sr.R = 1;
 			}
@@ -722,8 +719,6 @@ void ILS::SplitSearch(std::vector<Solution>& solutions, List<TA>& pool, const st
 				}
 			}
 		}
-
-		validateTimes(solutions[i], op.mTravelTimes, false);
 
 		auto end = std::chrono::high_resolution_clock::now();
 		auto elapsed_time = std::chrono::duration_cast<std::chrono::duration<double>>(end - start).count();
