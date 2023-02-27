@@ -191,8 +191,6 @@ void Solution::jsonOutput(){
         output["walks"].push_back(walk_json);
     }
 
-    // std::cout << output.dump(2) << std::endl;
-
     std::ofstream o("./output/solution.json");
     o << std::setw(4) << output << std::endl;
 
