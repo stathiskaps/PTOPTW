@@ -10,23 +10,22 @@ folders=("Cordeau" "Solomon")
 m_values=(1 2 3 4)
 s_values=(1 2 3 4)
 
-# Loop over the folders
-for folder in "${folders[@]}"
+# Loop over the values of m and s
+for m in "${m_values[@]}"
 do
-  # Find all files in the folder and sort them by name
-  files=$(find "./instances/$folder" -name '*.txt' -type f | sort)
-
-  # Loop over the files
-  for file in $files
+  for s in "${s_values[@]}"
   do
-    # Remove the path prefix from the file name
-    file=$(basename "$file")
-
-    # Loop over the values of m and s
-    for m in "${m_values[@]}"
+    # Loop over the folders
+    for folder in "${folders[@]}"
     do
-      for s in "${s_values[@]}"
+      # Find all files in the folder and sort them by name
+      files=$(find "./instances/$folder" -name '*.txt' -type f | sort)
+
+      # Loop over the files
+      for file in $files
       do
+        # Remove the path prefix from the file name
+        file=$(basename "$file")
         # Construct the command to run the binary with the current arguments
         cmd="./AMTOPTW -f $folder -i ${file%.*} -m $m -s $s -w"
 
