@@ -414,7 +414,6 @@ std::vector<List<TA>> ILS::splitUnvisitedList(std::vector<Solution>& solutions, 
 		std::vector<double>::iterator duratio_it;
 		for(usage_it = reg[ta_it.iter->data.id].begin(), duratio_it = activities[ta_it.iter->data.id].begin(); usage_it != reg[ta_it.iter->data.id].end() ; ++usage_it, ++duratio_it){
 			double score = *duratio_it * (usage_it->solved / static_cast<double>(usage_it->imported));
-			// double score = *duratio_it;
 			if (score>best_score){
 				best_score = score;
 				best_it = usage_it;
