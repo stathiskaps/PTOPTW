@@ -183,7 +183,7 @@ int main(int argc, char** argv) {
 
 	std::string folder;
 	std::string instance;
-	double execution_time_limit = 0, double total_execution_time = 0;;
+	double execution_time_limit = 0, total_execution_time = 0;
 	int num_of_walks, num_of_intervals, total_score = 0;
 	
 	Options options;
@@ -199,7 +199,6 @@ int main(int argc, char** argv) {
 		{"help", no_argument, 0, 'h'},
 		{"write", no_argument, 0, 'w'},
 		{"json", no_argument, 0, 'j'},
-		{"python", no_argument, 0, 'p'},
 		{"custom", no_argument, 0, 'c'},
 		{"graphics", no_argument, 0, 'g'},
 		{"folder", required_argument, 0, 'f'},

@@ -17,6 +17,6 @@ do
     for m in "${m_values[@]}"
     do
         # Call the binary with the given inputs
-        ./AMTOPTW -f $folder -i $file -m $m -s $s -w
+        ./AMTOPTW -f $folder -i $file -m $m -s $s -r
     done
 done
