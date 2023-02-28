@@ -339,9 +339,8 @@ std::pair<int, double> ILS::Solve(OP& op) {
 	}
 	
 	validateDirectedSolution(best_solution, op, false);
-	std::cout << "Best counter: " << bestCounter << std::endl;
-	std::cout << "Best score: " << best_score << std::endl;
-	std::cout << "Execution time(s): " << metrics.total_execution_time << std::endl;
+	std::cout << "Score: " << best_score << std::endl;
+	std::cout << "Time: " << metrics.total_execution_time << std::endl;
 	std::cout << "Visits: " << best_solution.getVisits(2) << std::endl << std::endl;
 	
 	if(mOptions.write_results) {
