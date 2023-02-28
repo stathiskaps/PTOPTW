@@ -5,7 +5,7 @@ const axios = require('axios').default;
 const fs = require('fs');
 
 var topology = {
-    preferences: {Hotel: 0},
+    categories: {Hotel: {profit: 0, count: 1}},
     nodes: [],
     routes: [],
 };
@@ -22,11 +22,11 @@ const TIME_WINDOWS = [
     {startTime: 540, endTime: 900},
 ];
 
-const VISIT_TIMES = [20, 23, 14, 13, 17, 30, 19, 10, 18];
+const VISIT_TIME_RANGES = [[10, 15], [20, 25], [30, 35], [40, 45]];
 
-const SCORES = [6, 7, 10, 12, 13, 16, 18, 19, 21];
+const PROFIT_RANGES = [[5, 10], [10, 15], [15, 20], [20, 25], [25, 30], [30, 40], [40, 50], [50, 60], [60, 70]];
 
-getRandom = (min, max) => { 
+getRandom = ([min, max]) => { 
     return Math.floor(Math.random() * (max - min + 1) + min);
 }
 
@@ -84,14 +84,38 @@ const addSights = (points) => {
     let pointId = 0;
    
     const depotPoint = points[0];
-    const poiPoints = points.slice(1);
+    const pois = points.slice(1);
 
     const depot = {id: pointId, lat: parseFloat(depotPoint.lat), lon: parseFloat(depotPoint.lon), visit_time: 0, category: "Hotel", time_window:{start_time: TimeBudget.openTime, end_time: TimeBudget.closeTime}};
     topology.nodes.push(depot);
 
-    for(const point of poiPoints) {
-        const timeWindow = TIME_WINDOWS[getRandom(0, 6)];
-        const visitTime = VISIT_TIMES[getRandom(0, 8)];
+    for(const point of pois) {
+        let visitTime, timeWindow;
+        if(pointId < pois.length * 0.25){
+           visitTime = getRandom(VISIT_TIME_RANGES[0]);
+        } else if(pointId < pois.length * .5){
+            visitTime = getRandom(VISIT_TIME_RANGES[1]);
+        } else if ([pointId < pois.length * 0.75]){
+            visitTime = getRandom(VISIT_TIME_RANGES[2]);
+        } else {
+            visitTime = getRandom(VISIT_TIME_RANGES[3]);
+        }
+
+        if(pointId < pois.length * 0.14){
+            timeWindow = TIME_WINDOWS[0];
+        } else if (pointId < pois.length * 0.28){
+            timeWindow = TIME_WINDOWS[1];
+        } else if (pointId < pois.length * 0.42){
+            timeWindow = TIME_WINDOWS[2];
+        } else if (pointId < pois.length * 0.56){
+            timeWindow = TIME_WINDOWS[3];
+        } else if (pointId < pois.length * 0.70){
+            timeWindow = TIME_WINDOWS[4];
+        } else if (pointId < pois.length * 0.84){
+            timeWindow = TIME_WINDOWS[5];
+        } else {
+            timeWindow = TIME_WINDOWS[6];
+        }
         const lat = (+point.lat).toFixed(5);
         const lon = (+point.lon).toFixed(5);        
         const node = {id: ++pointId, lat: parseFloat(lat), lon: parseFloat(lon), visit_time: visitTime, category: point.category, time_window:{start_time: timeWindow.startTime, end_time: timeWindow.endTime}};
@@ -118,25 +142,45 @@ function inside(point, polygon) {
     return inside;
 };
 
+/* Randomize array in-place using Durstenfeld shuffle algorithm */
+function shuffleArray(array) {
+    for (var i = array.length - 1; i > 0; i--) {
+        var j = Math.floor(Math.random() * (i + 1));
+        var temp = array[i];
+        array[i] = array[j];
+        array[j] = temp;
+    }
+}
+
 const create = async () => {
     const data = fs.readFileSync('./athens_box.geojson', 'utf8');
     const geojson = JSON.parse(data);
     const polygon = geojson.features[0].geometry.coordinates[0];
-    let totalPoints = [{lat: 37.97616, lon: 23.73530}];
+    let depotPoint = {lat: 37.97616, lon: 23.73530, category: "Hotel"};
+    let totalPoints = [];
+    let categories = [];
 
     const dir = "./pois";
     fs.readdirSync(dir).forEach(filename => {
         const content = xlsx.parse(`${dir}/${filename}`);
         const category = filename.split(".")[0];
         let points = content[0].data.map(x => {return {lat: x[3], lon: x[2], category }});
-        topology.preferences[category] = SCORES[getRandom(0, 8)];
-        points = points.slice(0, 3);
+        points = points.slice(0, 4);
         totalPoints.push(...points);
+
+        const randomIndex = getRandom([0, PROFIT_RANGES.length-1]);
+        topology.categories[category] = {profit: getRandom(PROFIT_RANGES[randomIndex]), count: points.length};
+        PROFIT_RANGES.splice(randomIndex, 1);
     });
 
     const validPoints = totalPoints.filter(x => {
         return inside(x, polygon);
     });
+
+    shuffleArray(validPoints);
+    validPoints.unshift(depotPoint);
+
+    console.log(validPoints);
 
     await addSights(validPoints);
     await addRoutes(validPoints);

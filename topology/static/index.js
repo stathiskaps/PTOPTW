@@ -46,9 +46,9 @@ const readFile = async () => {
 
     console.log("topology", topology);
 
-    for(const [k, v] of Object.entries(topology.preferences)){
+    for(const [k, v] of Object.entries(topology.categories)){
         if(categories[k]){
-            categories[k]["profit"] = v;
+            categories[k]["profit"] = v["profit"];
         }
     }
 

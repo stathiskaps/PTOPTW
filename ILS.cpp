@@ -142,7 +142,7 @@ std::vector<TimeWindow> ILS::getIntervals(std::vector<TA> unvisited, int interva
 		time_cuts[most_used_bin->right_cut_index]-=reduce_right;
 	}
 
-	for(size_t i = 0; i < mIntervalsNum; ++i){
+	for(size_t i = 0; i < intervals_num; ++i){
 		intervals.push_back(TimeWindow{best_time_cuts[i], best_time_cuts[i+1]});
 	}
 
@@ -162,6 +162,7 @@ std::map<std::string, std::vector<ILS::Usage>> ILS::initRegistry(List<TA>& unvis
 	}
 	return reg;
 }
+
 
 void ILS::printSolution(const std::string tag, const Solution& sol){
 	std::cout << "===================================================" << std::endl;
