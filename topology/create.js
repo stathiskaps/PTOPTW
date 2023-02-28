@@ -158,14 +158,13 @@ const create = async () => {
     const polygon = geojson.features[0].geometry.coordinates[0];
     let depotPoint = {lat: 37.97616, lon: 23.73530, category: "Hotel"};
     let totalPoints = [];
-    let categories = [];
 
     const dir = "./pois";
     fs.readdirSync(dir).forEach(filename => {
         const content = xlsx.parse(`${dir}/${filename}`);
         const category = filename.split(".")[0];
         let points = content[0].data.map(x => {return {lat: x[3], lon: x[2], category }});
-        points = points.slice(0, 4);
+        points = points.slice(0, 24);
         totalPoints.push(...points);
 
         const randomIndex = getRandom([0, PROFIT_RANGES.length-1]);
