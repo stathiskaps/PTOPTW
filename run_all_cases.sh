@@ -3,6 +3,8 @@
 #Change to the build directory
 cd "$(dirname "$0")/build"
 
+binary=$1
+
 #Define the folders to process
 folders=("Cordeau" "Solomon")
 
@@ -11,7 +13,7 @@ m_values=(1 2 3 4)
 s_values=(1 2 3 4)
 
 #Create the header row for the excel file
-echo "instance,m,s,score,time" > benchmarks.csv
+echo "instance,m,s,score,time" > ./output/"$binary"_benchmarks.csv
 
 #Loop over the values of m and s
 for m in "${m_values[@]}"
@@ -31,7 +33,7 @@ do
                 file=$(basename "$file")
                 
                 # Construct the command to run the binary with the current arguments
-                cmd="./AMTOPTW -f $folder -i ${file%.*} -m $m -s $s"
+                cmd="./$binary -f $folder -i ${file%.*} -m $m -s $s"
 
                 # Print the command being executed
                 echo "Running command: $cmd"
@@ -44,7 +46,7 @@ do
                 time=$(echo "$output" | grep "Time" | awk '{print $2}')
 
                 # Write the results to the excel file
-                echo "${file%.*},$m,$s,$score,$time" >> benchmarks.csv
+                echo "${file%.*},$m,$s,$score,$time" >> ./output/"$binary"_benchmarks.csv
             done
         done
     done
