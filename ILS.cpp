@@ -466,9 +466,6 @@ void ILS::PrepareForShake(std::vector<Solution>& sols){
 				walk_it->front().id = DUMMY_ID;
 			}
 		}
-		// if(sol_it != sols.end() - 1) {
-
-		// }
 		for(std::vector<List<TA>>::iterator walk_it = sol_it->m_walks.begin(); walk_it != sol_it->m_walks.end(); ++walk_it){
 			walk_it->push_back(walk_it->back());
 			walk_it->back().id = DUMMY_ID;;
