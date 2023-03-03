@@ -22,9 +22,9 @@ const TIME_WINDOWS = [
     {startTime: 540, endTime: 900},
 ];
 
-const VISIT_TIME_RANGES = [[10, 15], [20, 25], [30, 35], [40, 45]];
+const VISIT_TIME_RANGES = [[30, 35], [40, 45], [20, 30], [50, 60]];
 
-const PROFIT_RANGES = [[5, 10], [10, 15], [15, 20], [20, 25], [25, 30], [30, 40], [40, 50], [50, 60], [60, 70]];
+const RANGES = [[5, 10], [10, 15], [15, 20], [20, 25], [25, 30], [30, 40], [40, 50], [50, 60], [60, 70]];
 
 getRandom = ([min, max]) => { 
     return Math.floor(Math.random() * (max - min + 1) + min);
@@ -164,7 +164,7 @@ const create = async () => {
         const content = xlsx.parse(`${dir}/${filename}`);
         const category = filename.split(".")[0];
         let points = content[0].data.map(x => {return {lat: x[3], lon: x[2], category }});
-        points = points.slice(0, 24);
+        points = points.slice(0, 40);
         totalPoints.push(...points);
 
         const randomIndex = getRandom([0, PROFIT_RANGES.length-1]);

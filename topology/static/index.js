@@ -16,7 +16,6 @@ const categories = {
     Casino: {prefix: "fas", icon: "fa-coins"},
     GreekFood: {prefix: "fas", icon: "fa-utensils"},
     ShoppingCenters: {prefix: "fas", icon: "fa-store"},
-    SPA: {prefix: "fas", icon: "fa-hot-tub"},
     Theaters: {prefix: "fas", icon: "fa-theater-masks"},
     VillageCinemas: {prefix: "fas", icon: "fa-video"},
     Museums: {prefix: "fas", icon: "fa-landmark"},
