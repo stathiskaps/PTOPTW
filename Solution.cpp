@@ -189,6 +189,7 @@ void Solution::jsonOutput(){
             walk_json.push_back(node_json);
         }
         output["walks"].push_back(walk_json);
+        output["score"] = getScores();
     }
 
     std::ofstream o("./output/solution.json");

@@ -67,7 +67,7 @@ std::pair<int, double> init(std::string filepath, std::string filename, int numR
 				id::generate(),
 				p,
 				node["visit_time"],
-				categories[node["category"]]["profit"],
+				node["profit"],
 				timeWindow["start_time"],
 				timeWindow["end_time"]
 			));

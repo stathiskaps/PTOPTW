@@ -20,11 +20,12 @@ const TIME_WINDOWS = [
     {startTime: 360, endTime: 720},
     {startTime: 540, endTime: 720},
     {startTime: 540, endTime: 900},
+    {startTime: 120, endTime: 360},
+    {startTime: 60, endTime: 480},
+    {startTime: 120, endTime: 660}
 ];
 
-const VISIT_TIME_RANGES = [[30, 35], [40, 45], [20, 30], [50, 60]];
-
-const RANGES = [[5, 10], [10, 15], [15, 20], [20, 25], [25, 30], [30, 40], [40, 50], [50, 60], [60, 70]];
+const PROFIT_RANGES = [[5, 10], [10, 15], [15, 20], [20, 25], [25, 30], [30, 40], [40, 50]];
 
 getRandom = ([min, max]) => { 
     return Math.floor(Math.random() * (max - min + 1) + min);
@@ -78,8 +79,6 @@ const addRoutes = async(points) => {
     }
 }
 
-
-
 const addSights = (points) => {
     let pointId = 0;
    
@@ -89,37 +88,23 @@ const addSights = (points) => {
     const depot = {id: pointId, lat: parseFloat(depotPoint.lat), lon: parseFloat(depotPoint.lon), visit_time: 0, category: "Hotel", time_window:{start_time: TimeBudget.openTime, end_time: TimeBudget.closeTime}};
     topology.nodes.push(depot);
 
-    for(const point of pois) {
-        let visitTime, timeWindow;
-        if(pointId < pois.length * 0.25){
-           visitTime = getRandom(VISIT_TIME_RANGES[0]);
-        } else if(pointId < pois.length * .5){
-            visitTime = getRandom(VISIT_TIME_RANGES[1]);
-        } else if ([pointId < pois.length * 0.75]){
-            visitTime = getRandom(VISIT_TIME_RANGES[2]);
-        } else {
-            visitTime = getRandom(VISIT_TIME_RANGES[3]);
-        }
+    const groupSize = Math.ceil(pois.length / 10);
 
-        if(pointId < pois.length * 0.14){
-            timeWindow = TIME_WINDOWS[0];
-        } else if (pointId < pois.length * 0.28){
-            timeWindow = TIME_WINDOWS[1];
-        } else if (pointId < pois.length * 0.42){
-            timeWindow = TIME_WINDOWS[2];
-        } else if (pointId < pois.length * 0.56){
-            timeWindow = TIME_WINDOWS[3];
-        } else if (pointId < pois.length * 0.70){
-            timeWindow = TIME_WINDOWS[4];
-        } else if (pointId < pois.length * 0.84){
-            timeWindow = TIME_WINDOWS[5];
-        } else {
-            timeWindow = TIME_WINDOWS[6];
+    for(let i = 0; i < 10; i++){
+        let start = i * groupSize;
+        let end = start + groupSize;
+
+        for(let j = start; j < end && j < pois.length; ++j){
+            const poi = pois[j];
+            const timeWindow = TIME_WINDOWS[i];
+            const duration = TIME_WINDOWS[i].endTime - TIME_WINDOWS[i].startTime;
+            const visitTime = getRandom([duration/6, duration/5]);
+            const lat = (+poi.lat).toFixed(5);
+            const lon = (+poi.lon).toFixed(5);        
+            const node = {id: ++pointId, lat: parseFloat(lat), lon: parseFloat(lon), visit_time: visitTime, profit: getRandom(topology.categories[poi.category].profit_range),
+                category: poi.category, time_window:{start_time: timeWindow.startTime, end_time: timeWindow.endTime}};
+            topology.nodes.push(node);
         }
-        const lat = (+point.lat).toFixed(5);
-        const lon = (+point.lon).toFixed(5);        
-        const node = {id: ++pointId, lat: parseFloat(lat), lon: parseFloat(lon), visit_time: visitTime, category: point.category, time_window:{start_time: timeWindow.startTime, end_time: timeWindow.endTime}};
-        topology.nodes.push(node);
     }
 }
 
@@ -164,11 +149,10 @@ const create = async () => {
         const content = xlsx.parse(`${dir}/${filename}`);
         const category = filename.split(".")[0];
         let points = content[0].data.map(x => {return {lat: x[3], lon: x[2], category }});
-        points = points.slice(0, 40);
+        points = points.slice(0, 46);
         totalPoints.push(...points);
-
         const randomIndex = getRandom([0, PROFIT_RANGES.length-1]);
-        topology.categories[category] = {profit: getRandom(PROFIT_RANGES[randomIndex]), count: points.length};
+        topology.categories[category] = {profit_range: PROFIT_RANGES[randomIndex], count: 0};
         PROFIT_RANGES.splice(randomIndex, 1);
     });
 
@@ -176,16 +160,18 @@ const create = async () => {
         return inside(x, polygon);
     });
 
+    for(const validPoint of validPoints){
+        topology.categories[validPoint.category].count++;
+    }
+
     shuffleArray(validPoints);
     validPoints.unshift(depotPoint);
-
-    console.log(validPoints);
 
     await addSights(validPoints);
     await addRoutes(validPoints);
 
     const outputFilename = "./topology.json";
-    fs.writeFile(outputFilename, JSON.stringify(topology, null, 4), function(err) {
+    fs.writeFile(outputFilename, JSON.stringify(topology), function(err) {
         if(err) {
           console.log(err);
         } else {
@@ -193,7 +179,6 @@ const create = async () => {
         }
     }); 
 }
-
 
 create();
 
