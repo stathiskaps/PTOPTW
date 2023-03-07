@@ -13,11 +13,14 @@ const categories = {
     Museums: {prefix: "fas", icon: "fa-landmark"},
 };
 
+const mean = ([a,b]) => (a+b)/2;
+
 function compare( a, b ) {
-    if ( a.profit < b.profit ){
+    console.log(a, b)
+    if ( mean(a.profitRange) < mean(b.profitRange) ){
       return 1;
     }
-    if ( a.profit > b.profit ){
+    if ( mean(a.profitRange) > mean(b.profitRange)){
       return -1;
     }
     return 0;
@@ -189,7 +192,7 @@ const readFile = async () => {
                 ${rowsHTML()}
                 </tbody>
             </table>
-            <div>Score=${solution.score}</div>
+            <div>Solution score: ${solution.score}</div>
         `;
 
         // return the container element

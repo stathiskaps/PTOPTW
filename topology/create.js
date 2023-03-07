@@ -5,7 +5,7 @@ const axios = require('axios').default;
 const fs = require('fs');
 
 var topology = {
-    categories: {Hotel: {profit: 0, count: 1}},
+    categories: {Hotel: {count: 1, profit_range: [0, 0]}},
     nodes: [],
     routes: [],
 };
@@ -85,7 +85,8 @@ const addSights = (points) => {
     const depotPoint = points[0];
     const pois = points.slice(1);
 
-    const depot = {id: pointId, lat: parseFloat(depotPoint.lat), lon: parseFloat(depotPoint.lon), visit_time: 0, category: "Hotel", time_window:{start_time: TimeBudget.openTime, end_time: TimeBudget.closeTime}};
+    const depot = {id: pointId, lat: parseFloat(depotPoint.lat), lon: parseFloat(depotPoint.lon), visit_time: 0, profit:0,
+        category: "Hotel", time_window:{start_time: TimeBudget.openTime, end_time: TimeBudget.closeTime}};
     topology.nodes.push(depot);
 
     const groupSize = Math.ceil(pois.length / 10);

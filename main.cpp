@@ -55,7 +55,6 @@ std::pair<int, double> init(std::string filepath, std::string filename, int numR
 		json j;
 		i >> j;
 		
-		json categories = j["categories"];
 		json nodes = j["nodes"];
 		json routes = j["routes"];
 
