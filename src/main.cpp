@@ -241,7 +241,7 @@ int main(int argc, char** argv) {
 				num_of_walks = std::stoi(optarg);
 				walks_option_provided = true;
 			} else{
-				std::cerr << "Error: argument for option -w is required" << std::endl;
+				std::cerr << "Error: argument for option -m is required" << std::endl;
 				exit(EXIT_FAILURE);
 			}
 			break;
@@ -280,8 +280,6 @@ int main(int argc, char** argv) {
 		std::cerr << "Error: Option -s is required" << std::endl;
 		exit(EXIT_FAILURE);
 	}
-
-	glutInit(&argc, argv);
 
 	if(!run_all){
 		std::string filepath = "./instances/"+folder+"/"+instance+".txt";

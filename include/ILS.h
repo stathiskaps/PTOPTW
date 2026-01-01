@@ -17,7 +17,6 @@
 #include "Solution.h"
 #include "OP.h"
 #include "Custom.h"
-#include "Graphics.h"
 
 #ifndef ILS_H
 #define ILS_H
@@ -103,10 +102,6 @@ private:
 	std::vector<Solution> best_solutions;
 	Solution best_solution;
 
-	static void drawCallback(){
-		currentInstance->draw();
-	}
-
 	void AddStartDepots(std::vector<Solution>&, const std::vector<TimeWindow>&, const int, const OP&);
 	bool compareTimeWindowCenter(const List<TA>::iterator&, const List<TA>::iterator&);
 	std::tuple<Walks::iterator, List<TA>::iterator, double, int, int> getBestPos(const TA&, Walks&, const Vector2D<double>&, 
@@ -140,7 +135,6 @@ private:
 	void connectAndValidateSolutions(const std::vector<Solution>&, const OP&);
 	size_t countNodes(const std::vector<Solution>&);
 	void printMetrics();
-	void setupDrawCallback();
 	void checkSolutions(std::vector<Solution>&,  const std::vector<TimeWindow>& intervals, const OP&);
 	std::vector<std::string> fixWalk(List<TA>&, const OP&, TimeWindow time_budget);
 	void validateDirectedSolution(const Solution&, const OP& op, const bool);

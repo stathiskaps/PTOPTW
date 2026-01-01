@@ -3,6 +3,8 @@
 #include <iostream>
 #include <ctime>
 #include <list>
+#include <algorithm>
+#include <random>
 
 #define DEFAULT_GENERIC_CLUSTER_ID -10
 #define DEFAULT_DISTANCE_CLUSTER_ID -20
