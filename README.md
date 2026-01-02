@@ -1,15 +1,123 @@
-## Adaptive Mixed Team Orienteering Problem with Time Windows
+# PTOPTW (Athens instance demo)
 
-Iterated Local Search is consisted mainly of two components:  
-1. Local search
-1. Shake step
+This repository contains a C++ implementation of an Iterated Local Search approach for an orienteering / routing problem with time windows, demonstrated on a custom **AthensTopology** instance.
 
-### Split Local Search
-We will have a list that holds the unvisited nodes. At each revision, before we enter the Split Local Search (SLS) phase, 
-we will assign each unvisited node to a Solution bucket based on some criteria.  
+The project includes:
+- a solver (`ptoptw`) that reads a single instance file
+- a small Leaflet-based visualization under `viz/topology/` to inspect the instance / routes
 
-After we finish the SLS phase which constructs a Route plan for all Solution buckets, 
-we will connnect the unvisited nodes again to be ready for the next revision.
+> Note: the included AthensTopology instance is **incomplete** (not all POIs / routes are present). This repo is mainly a reproducible demo of the solver + visualization pipeline.
 
-### Shake Step
-Shake procedure will be applied at a single solution with multiple walks.  
+---
+
+## Requirements
+
+- CMake (>= 3.16 recommended)
+- A C++20 compiler (GCC/Clang)
+- (Optional, for visualization) Node.js + npm
+
+---
+
+## Build
+
+From the repository root:
+
+```bash
+cmake -S . -B build
+cmake --build build -j
+```
+
+This produces:
+
+```bash
+./build/ptoptw
+```
+
+---
+
+## Quickstart: run the Athens instance
+
+### 1) Put the Athens instance where the solver expects it
+
+The solver currently loads instances from:
+
+`./instances/<folder>/<instance>.txt`
+
+So create an `instances/Athens/` directory and copy the provided topology file:
+
+```bash
+mkdir -p instances/Athens
+cp viz/topology/AthensTopology.txt instances/Athens/athens.txt
+```
+
+### 2) Run
+
+**Important:** run from the repo root (paths are relative).
+
+```bash
+./build/ptoptw -f Athens -i athens -m 4 -s 4 -c
+```
+
+- `-f` : dataset folder name under `./instances/` (here: `Athens`)
+- `-i` : instance name (without `.txt`) (here: `athens`)
+- `-m` : numeric parameter (internally used as number of routes / walks)
+- `-s` : numeric parameter (internally used as number of sub-intervals / partitions)
+- `-c` : use custom travel times embedded in the instance file (required for AthensTopology which includes `D` duration lines)
+
+Optional flags:
+- `-t <seconds>` : time-limited execution (e.g. `-t 10`)
+- `-w` : enable writing solution output (see solver output logs / generated files)
+- `-a` : run all instances under `./instances/Solomon/` and `./instances/Cordeau/` (legacy; not recommended for this Athens-only demo)
+
+Help:
+
+```bash
+./build/ptoptw -h
+```
+
+---
+
+## Visualization (Leaflet)
+
+The visualization lives under:
+
+`viz/topology/static/`
+
+If you only want to open the static page:
+
+```bash
+cd viz/topology/static
+python3 -m http.server 8000
+```
+
+Then open:
+
+`http://localhost:8000`
+
+If you want to regenerate or preprocess data (if applicable), check:
+
+- `viz/topology/create.js`
+- `viz/topology/package.json`
+
+---
+
+## Screenshot
+
+Place your screenshot under `docs/athens_instance.png` and it will render here:
+
+![Athens instance](docs/athens_instance.png)
+
+---
+
+## Notes / limitations
+
+- The solver currently constructs the instance file path internally as:
+  `./instances/<folder>/<instance>.txt`
+  (so `-f` and `-i` are identifiers, not full paths).
+- The included Athens topology is incomplete; treat it as a demo dataset.
+
+---
+
+## License
+
+Add a license file (MIT/Apache-2.0/etc.) if you plan to share or reuse this repository publicly.
