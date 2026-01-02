@@ -100,7 +100,6 @@ If you need to regenerate or preprocess visualization assets, check:
 ## Screenshot
 
 ![Athens instance demo](docs/athens_instance.png)
-
 *Figure 1 — Unpartitioned (s=1) Athens instance with 7 routes (m=7).*
 
 ---
