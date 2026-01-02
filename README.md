@@ -1,3 +1,7 @@
+## Thesis context
+
+This project studies the Team Orienteering Problem with Time Windows (TOPTW), an NP-hard extension of the Orienteering Problem. It implements an Iterated Local Search (ILS) approach and explores reducing runtime by partitioning the problem graph and applying local search per sub-graph, trading off solution score for faster execution on large instances.
+
 # PTOPTW (Athens instance demo)
 
 This repository contains a C++ implementation of an Iterated Local Search approach for an orienteering / routing problem with time windows, demonstrated on a custom **AthensTopology** instance.
