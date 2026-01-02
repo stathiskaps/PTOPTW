@@ -37,20 +37,7 @@ This produces:
 
 ## Quickstart: run the Athens instance
 
-### 1) Put the Athens instance where the solver expects it
-
-The solver currently loads instances from:
-
-`./instances/<folder>/<instance>.txt`
-
-So create an `instances/Athens/` directory and copy the provided topology file:
-
-```bash
-mkdir -p instances/Athens
-cp viz/topology/AthensTopology.txt instances/Athens/athens.txt
-```
-
-### 2) Run
+### 1) Run
 
 **Important:** run from the repo root (paths are relative).
 
@@ -103,9 +90,7 @@ If you want to regenerate or preprocess data (if applicable), check:
 
 ## Screenshot
 
-Place your screenshot under `docs/athens_instance.png` and it will render here:
-
-![Athens instance](docs/athens_instance.png)
+![Unpartitioned (S=1) Athens instance with 7 routes (m = 7)](docs/athens_instance.png)
 
 ---
 
@@ -117,7 +102,3 @@ Place your screenshot under `docs/athens_instance.png` and it will render here:
 - The included Athens topology is incomplete; treat it as a demo dataset.
 
 ---
-
-## License
-
-Add a license file (MIT/Apache-2.0/etc.) if you plan to share or reuse this repository publicly.
